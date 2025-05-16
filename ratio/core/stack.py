@@ -27,6 +27,7 @@ class RatioCoreStack(Stack):
         self.jwt_signing_key = cdk_kms.Key(
             self,
             "RatioCoreJWTKey",
+            alias="ratio-signing-key",
             key_spec=cdk_kms.KeySpec.RSA_2048,
             key_usage=cdk_kms.KeyUsage.SIGN_VERIFY,
         )

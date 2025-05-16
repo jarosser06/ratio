@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "ratio"
+version = "0.1.0"
+description = "AWS Intelligence Lake - Lake storage backed Agent Operating System"
+authors = ["Jim Rosser <me@j4r.wtf>"]
+license = "Apache v2"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+aiohttp = "^3.9.3"
+boto3 = "^1.35.10"
+cryptography = "^44.0.2"
+da-vinci = { git = "https://github.com/jarosser06/da-vinci", develop = true, subdirectory = "da_vinci", branch = "sidecar" }
+Jinja2 = "^3.1.6"
+
+[tool.poetry.group.dev.dependencies]
+da-vinci-cdk = { git = "https://github.com/jarosser06/da-vinci", develop = true, subdirectory = "da_vinci-cdk", branch = "sidecar" }
+pytest = "^8.3.5"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+rto = "rto.shell:main"

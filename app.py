@@ -1,0 +1,37 @@
+import os
+
+from da_vinci_cdk.application import Application, ResourceDiscoveryStorageSolution
+from da_vinci_cdk.stack import Stack
+
+from ratio.core.api.stack import RatioAPIStack
+
+from ratio.agents.andy.stack import RatioAgentAndy
+from ratio.agents.bedrock_anthropic.stack import RatioBedrockAnthropicAgent
+from ratio.agents.object_mapper.stack import RatioObjectMapperAgent
+from ratio.agents.render_template.stack import RatioRenderTemplateAgent
+
+base_dir = Stack.absolute_dir(__file__)
+
+ratio = Application(
+    app_entry=base_dir,
+    app_name='ratio',
+    create_hosted_zone=False,
+    deployment_id=os.getenv('RATIO_DEPLOYMENT_ID', 'dev'),
+    disable_docker_image_cache=True,
+    enable_exception_trap=True,
+    enable_event_bus=True,
+    log_level='DEBUG',
+    resource_discovery_storage_solution=ResourceDiscoveryStorageSolution.DYNAMODB,
+)
+
+ratio.add_uninitialized_stack(RatioAPIStack)
+
+ratio.add_uninitialized_stack(RatioAgentAndy)
+
+ratio.add_uninitialized_stack(RatioBedrockAnthropicAgent)
+
+ratio.add_uninitialized_stack(RatioObjectMapperAgent)
+
+ratio.add_uninitialized_stack(RatioRenderTemplateAgent)
+
+ratio.synth()

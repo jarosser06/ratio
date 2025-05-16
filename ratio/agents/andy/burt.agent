@@ -1,0 +1,20 @@
+{
+    "arguments": [
+        {
+            "type_name": "string",
+            "description": "Path to a file Burt should respond about. Optional",
+            "name": "file_for_review",
+            "required": false
+        }
+    ],
+    "description": "This is the Burt Macklin agent. It provides a simple response based on whether information is provided",
+    "responses": [
+        {
+            "type_name": "string",
+            "description": "The response Burt provides",
+            "name": "response",
+            "required": true
+        }
+    ],
+    "system_event_endpoint": "ratio::agent::andy::execution"
+}

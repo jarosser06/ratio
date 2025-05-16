@@ -12,7 +12,7 @@ from da_vinci.core.immutable_object import (
 from ratio.core.core_lib.definitions.events import FileEventType
 
 
-FILE_PATH_REGEX = "^/.*[^/]$"
+FILE_PATH_REGEX = "^/(.*[^/])?$"
 
 
 ### Event Bus Event Definitions ###

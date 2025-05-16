@@ -78,9 +78,6 @@ class ChangeDirectoryCommand(RTOCommand):
             elif resp.status_code != 200:
                 raise RTOErrorMessage(f"error accessing directory {resp.status_code} -- {resp.response_body}")
 
-            if resp.status_code != 200:
-                raise RTOErrorMessage(f"Directory {new_dir} does not exist")
-
             # Confirm it's a directory
             file_info = resp.response_body
 

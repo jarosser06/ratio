@@ -29,6 +29,9 @@ from ratio.core.services.storage_manager.runtime.events import (
     FileEventType,
     publish_file_update_event,
 )
+from ratio.core.services.storage_manager.runtime.files import (
+    normalize_path,
+)
 from ratio.core.services.storage_manager.request_definitions import (
     ChangeFilePermissionsRequest,
     CopyFileRequest,
@@ -65,9 +68,7 @@ class ActionsAPI(ChildAPI):
         """
         files_client = FilesTableClient()
 
-        f_name = os.path.basename(request_body["file_path"])
-
-        f_path = os.path.dirname(request_body["file_path"])
+        f_path, f_name = normalize_path(request_body["file_path"])
 
         file_name_hash = File.generate_hash(f_name)
 
@@ -171,9 +172,7 @@ class ActionsAPI(ChildAPI):
         """
         dest_path = os.path.dirname(destination_file_path)
 
-        dest_path_path = os.path.dirname(dest_path)
-
-        dest_file_name = os.path.basename(dest_path)
+        dest_path_path, dest_file_name = normalize_path(dest_path)
 
         logging.debug(f"Looking for destination directory {dest_file_name} at path {dest_path_path}")
 
@@ -391,9 +390,7 @@ class ActionsAPI(ChildAPI):
         """
         files_client = FilesTableClient()
 
-        source_f_name = os.path.basename(request_body["source_file_path"])
-
-        source_f_path = os.path.dirname(request_body["source_file_path"])
+        source_f_path, source_f_name = normalize_path(request_body["source_file_path"])
 
         source_file_name_hash = File.generate_hash(source_f_name)
 

@@ -228,6 +228,77 @@ class ChangeFileGroupCommand(RTOCommand):
         print(f"Changed group of {file_path} to {args.group}")
 
 
+def pretty_print_file_info(file_data):
+    """
+    Pretty print file information in a readable way.
+
+    Keyword arguments:
+    file_data -- The file data to format as a dictionary
+    """
+    # Determine file type
+    type_str = "Directory" if file_data.get('is_directory', False) else "File"
+
+    # Format dates
+    def format_date(date_str):
+        if not date_str:
+            return "Never"
+
+        try:
+            dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+
+            return dt.strftime('%Y-%m-%d %H:%M:%S')
+
+        except (ValueError, TypeError):
+            return date_str
+
+    # Print file summary
+    print(f"  {type_str}: {file_data.get('file_path')}")
+
+    print(f"  Type: {file_data.get('file_type', 'Unknown')}")
+
+    print(f"  Name: {file_data.get('file_name', 'Unknown')}")
+
+    # Print permissions, owner, group
+    print(f"\nPermissions:")
+
+    print(f"  Mode: {file_data.get('permissions', 'Unknown')}")
+
+    print(f"  Owner: {file_data.get('owner', 'Unknown')}")
+
+    print(f"  Group: {file_data.get('group', 'Unknown')}")
+
+    # Print timestamps
+    print(f"\nTimestamps:")
+
+    print(f"  Added: {format_date(file_data.get('added_on'))}")
+
+    print(f"  Modified: {format_date(file_data.get('last_updated_on'))}")
+
+    print(f"  Accessed: {format_date(file_data.get('last_accessed_on'))}")
+
+    print(f"  Read: {format_date(file_data.get('last_read_on'))}")
+
+    # Print version info
+    print(f"\nVersion:")
+
+    print(f"  Latest Version ID: {file_data.get('latest_version_id', 'None')}")
+
+    # Print metadata if present
+    metadata = file_data.get("metadata", {})
+
+    if metadata:
+        print(f"\nMetadata:")
+
+        for key, value in metadata.items():
+            print(f"  {key}: {value}")
+
+    # Print description if present
+    description = file_data.get("description")
+
+    if description:
+        print(f"\nDescription: {description}")
+
+
 class CreateDirectoryCommand(RTOCommand):
     """
     Create a new directory
@@ -245,6 +316,8 @@ class CreateDirectoryCommand(RTOCommand):
         Keyword arguments:
         parser -- The argument parser to configure
         """
+        parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
+
         parser.add_argument("--file-type", help="The file type to use (default: ratio::directory)", type=str, default="ratio::directory")
 
         parser.add_argument("--permissions", help="Directory permissions (e.g. '755')", type=str, default="755")
@@ -339,7 +412,12 @@ class CreateDirectoryCommand(RTOCommand):
             else:
                 raise RTOErrorMessage(f"Error creating directory: {resp.status_code}")
 
-        print(f"Directory {directory_path} created successfully")
+        if args.json and resp.response_body:
+            print(json.dumps(resp.response_body, indent=2))
+
+            return
+
+        pretty_print_file_info(resp.response_body)
 
 
 class CreateFileCommand(RTOCommand):
@@ -360,6 +438,8 @@ class CreateFileCommand(RTOCommand):
         parser -- The argument parser to configure
         """
         parser.add_argument("--file-type", help="The file type to use (default: ratio::file)", type=str, default="ratio::file")
+
+        parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
         parser.add_argument("--permissions", help="File permissions (e.g. '644')", type=str, default="644")
 
@@ -478,8 +558,13 @@ class CreateFileCommand(RTOCommand):
             if content_resp.status_code not in [200, 201]:
                 raise RTOErrorMessage(f"File created but failed to add content: {content_resp.status_code}")
 
-        print(f"File {file_path} created successfully")
+        if args.json and file_resp.response_body:
+            print(json.dumps(file_resp.response_body, indent=2))
 
+            return
+
+        # Print the file information
+        pretty_print_file_info(file_resp.response_body)
 
 class DeleteFileCommand(RTOCommand):
     """
@@ -541,7 +626,7 @@ class DeleteFileCommand(RTOCommand):
                 try:
                     error_msg = json.loads(resp.response_body)
 
-                    raise RTOErrorMessage(f"Invalid request: {error_msg.get('message', resp.response_body)}")
+                    raise RTOErrorMessage(f"Invalid request: {error_msg.get("message", resp.response_body)}")
 
                 except json.JSONDecodeError:
                     raise RTOErrorMessage(f"Invalid request: {resp.response_body}")

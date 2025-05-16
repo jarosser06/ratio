@@ -1,7 +1,6 @@
 """
 Handles sending the FS events
 """
-
 from da_vinci.core.immutable_object import (
     ObjectBodySchema,
     RequiredCondition,

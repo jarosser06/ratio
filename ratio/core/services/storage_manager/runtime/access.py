@@ -1,7 +1,6 @@
 """
 Access control for file operations in the storage manager.
 """
-
 import logging
 
 from enum import StrEnum

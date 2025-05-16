@@ -6,7 +6,7 @@ import os
 import re
 
 from datetime import datetime, UTC as utc_tz
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 import boto3
 
@@ -55,6 +55,30 @@ from ratio.core.services.storage_manager.request_definitions import (
     PutFileVersionRequest,
     ValidateFileAccessRequest,
 )
+
+
+def normalize_path(file_path: str) -> Tuple[str, str]:
+    """
+    Splits a path into its directory and file name components.
+
+    Keyword arguments:
+    path_name -- The path to split.
+
+    Returns:
+        Tuple of the in the order of (directory, file name)
+    """
+    logging.debug(f"Normalizing path {file_path}")
+
+    if file_path == "/":
+        return "/", "/"
+
+    original_path = file_path.rstrip("/")
+
+    f_path = os.path.dirname(original_path)
+
+    f_name = os.path.basename(original_path)
+
+    return f_path, f_name
 
 
 class FileAPI(ChildAPI):
@@ -313,9 +337,13 @@ class FileAPI(ChildAPI):
         request_body -- The request body containing the file to delete.
         request_context -- The request context.
         """
-        f_name = os.path.basename(request_body["file_path"])
+        f_path, f_name = normalize_path(request_body["file_path"])
 
-        f_path = os.path.dirname(request_body["file_path"])
+        if f_path == "/" and f_name == "/":
+            return self.respond(
+                status_code=400,
+                body={"message": "lol no"},
+            )
 
         file_name_hash = File.generate_hash(f_name)
 
@@ -349,9 +377,7 @@ class FileAPI(ChildAPI):
         request_body -- The request body containing the file version to delete.
         request_context -- The request context.
         """
-        f_name = os.path.basename(request_body["file_path"])
-
-        f_path = os.path.dirname(request_body["file_path"])
+        f_path, f_name = normalize_path(request_body["file_path"])
 
         file_name_hash = File.generate_hash(f_name)
 
@@ -523,9 +549,7 @@ class FileAPI(ChildAPI):
         request_body -- The request body containing the file to describe.
         request_context -- The request context.
         """
-        f_name = os.path.basename(request_body["file_path"])
-
-        f_path = os.path.dirname(request_body["file_path"])
+        f_path, f_name = normalize_path(request_body["file_path"])
 
         file_name_hash = File.generate_hash(f_name)
 
@@ -583,9 +607,7 @@ class FileAPI(ChildAPI):
         request_body -- The request body containing the file version to describe.
         request_context -- The request context.
         """
-        f_name = os.path.basename(request_body["file_path"])
-
-        f_path = os.path.dirname(request_body["file_path"])
+        f_path, f_name = normalize_path(request_body["file_path"])
 
         file_name_hash = File.generate_hash(f_name)
 
@@ -666,9 +688,7 @@ class FileAPI(ChildAPI):
         request_body -- The request body containing the data to get.
         request_context -- The request context.
         """
-        f_name = os.path.basename(request_body["file_path"])
-
-        f_path = os.path.dirname(request_body["file_path"])
+        f_path, f_name = normalize_path(request_body["file_path"])
 
         file_name_hash = File.generate_hash(f_name)
 
@@ -748,17 +768,7 @@ class FileAPI(ChildAPI):
         files_client = FilesTableClient()
 
         # Attempt stripping any trailing slashes from the file path if exists
-        if request_body["file_path"] == "/":
-            root_directory = "/"
-
-            root_filename = "/"
-
-        else:
-            original_path = request_body["file_path"].rstrip("/")
-
-            root_directory = os.path.dirname(original_path)
-
-            root_filename = os.path.basename(original_path)
+        root_directory, root_filename = normalize_path(request_body["file_path"])
 
         logging.debug(f"Root directory: {root_directory} Root filename: {root_filename}")
 
@@ -827,9 +837,7 @@ class FileAPI(ChildAPI):
         request_body -- The request body containing the file to list.
         request_context -- The request context.
         """
-        f_name = os.path.basename(request_body["file_path"])
-
-        f_path = os.path.dirname(request_body["file_path"])
+        f_path, f_name = normalize_path(request_body["file_path"])
 
         file_name_hash = File.generate_hash(f_name)
 
@@ -882,13 +890,11 @@ class FileAPI(ChildAPI):
         request_body -- The request body containing the file to put.
         request_context -- The request context.
         """
-        logging.debug(f"Put file request body: {request_body}")
+        logging.debug(f"Put file request body: {request_body.to_dict()}")
 
         claims = JWTClaims.from_claims(request_context["request_claims"])
 
-        file_name = os.path.basename(request_body["file_path"])
-
-        path_name = os.path.dirname(request_body["file_path"])
+        path_name, file_name = normalize_path(request_body["file_path"])
 
         file_name_hash = File.generate_hash(file_name)
 
@@ -951,15 +957,7 @@ class FileAPI(ChildAPI):
 
         else:
             # Handle root separately
-            root_directory = os.path.dirname(path_name)
-
-            root_filename = os.path.basename(path_name)
-
-            # If root file name works out to the root directory, set root filename correctly
-            if root_directory == "/" and root_filename == "":
-                root_filename = "/"
-
-                logging.debug(f"Attempting to add {path_name} to root directory")
+            root_directory, root_filename = normalize_path(os.path.dirname(path_name))
 
             logging.debug(f"Root directory is {root_directory} for file {path_name}")
 
@@ -1050,7 +1048,6 @@ class FileAPI(ChildAPI):
                     }
                 )
 
-
         file_response = file.to_dict(
             exclude_attribute_names=[
                 "path_hash",
@@ -1077,9 +1074,7 @@ class FileAPI(ChildAPI):
         request_body -- The request body containing the file version to put.
         request_context -- The request context.
         """
-        file_name = os.path.basename(request_body["file_path"])
-
-        file_path = os.path.dirname(request_body["file_path"])
+        file_path, file_name = normalize_path(request_body["file_path"])
 
         file_name_hash = File.generate_hash(file_name)
 
@@ -1270,9 +1265,7 @@ class FileAPI(ChildAPI):
         request_body -- The request body containing the file to validate.
         request_context -- The request context.
         """
-        file_name = os.path.basename(request_body["file_path"])
-
-        file_path = os.path.dirname(request_body["file_path"])
+        file_path, file_name = normalize_path(request_body["file_path"])
 
         file_name_hash = File.generate_hash(file_name)
 

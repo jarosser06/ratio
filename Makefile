@@ -60,7 +60,6 @@ deploy_storage:
 	@echo "Deploying Storage..."
 
 	$(call cdk_deploy, -e ratio-dev-storagemanagerstack)
-	on
 
 deploy_agents:
 	@echo "Deploying Agents..."
@@ -69,3 +68,6 @@ deploy_agents:
 	$(call cdk_deploy, -e ratio-dev-ratiobedrockanthropicagent)
 	$(call cdk_deploy, -e ratio-dev-ratioobjectmapperagent)
 	$(call cdk_deploy, -e ratio-dev-ratiorendertemplateagent)
+
+
+deploy_compute: deploy_api, deploy_storage, deploy_agents, deploy_process, deploy_scheduler

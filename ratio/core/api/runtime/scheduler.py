@@ -46,7 +46,7 @@ class SchedulerAPI(ChildAPI):
 
     def __init__(self):
         """
-        Initialize the StorageAPI
+        Initialize the ScehdulerAPI
         """
         super().__init__()
 

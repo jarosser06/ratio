@@ -164,7 +164,7 @@ class ObjectMapper:
             The transformed object structure
         """
         try:
-            logging.debug(f"Starting object mapping with schema: {response_definitions}")
+            logging.debug(f"Starting object mapping {original_object} to {object_map} with schema: {response_definitions}")
 
             response_definitions = response_definitions or []
 
@@ -174,7 +174,7 @@ class ObjectMapper:
             logging.debug(f"Response keys from schema: {response_keys}")
 
             # Initialize result structure based on response keys
-            result = {key: {} for key in response_keys}
+            result = {}
 
             # Process each mapping rule
             for output_path, mapping_rule in object_map.items():
@@ -198,7 +198,7 @@ class ObjectMapper:
 
                     else:
                         # Nested path - need to build the structure
-                        self._set_nested_value(result[response_key], path_parts[1:], value)
+                        result[response_key] = self._set_nested_value(result[response_key], path_parts[1:], value)
 
                 except Exception as e:
                     if isinstance(e, MappingError):

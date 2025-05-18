@@ -48,10 +48,6 @@ def handler(event: Dict, context: Dict):
 
         model_id = system.arguments["model_id"]
 
-        logging.debug(f"DEBUG!!!!!!!!!!!!!!!!!!!!! Model ID: {model_id}")
-
-        logging.debug(f"DEBUG!!!!!!!!!!!!!!!!!!!!! Loaded Args: {system.arguments.to_dict()}")
-
         temperature = system.arguments.get("temperature", default_return=0.7)
 
         max_tokens = system.arguments.get("max_tokens", default_return=1000)

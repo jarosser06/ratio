@@ -654,7 +654,7 @@ def execute_composite_agent_handler(event: Dict, context: Dict):
                 "process_id": proc.process_id,
                 "response_schema": agent_definition.responses,
                 "token": token,
-                "working_directory": execution_engine.get_path(),
+                "working_directory": execution_engine.get_path(working_dir=execution_engine.get_path(), process_id=proc.process_id),
             },
             schema=SystemExecuteAgentRequest,
         )

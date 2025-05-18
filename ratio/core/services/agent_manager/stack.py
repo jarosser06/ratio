@@ -156,6 +156,7 @@ class AgentManagerStack(Stack):
 
         RegisteredFileType(
             scope=self,
+            content_type="application/json",
             description="Agent File Type",
             name_restrictions="^[a-zA-Z0-9_-]+\\.agent$",
             type_name="ratio::agent",
@@ -163,6 +164,7 @@ class AgentManagerStack(Stack):
 
         RegisteredFileType(
             scope=self,
+            content_type="application/json",
             description="Arguments/Responses from an agent run. AIO stands for Agent Input/Output",
             name_restrictions="^[a-zA-Z0-9_-]+\\.aio$",
             type_name="ratio::agent_io",

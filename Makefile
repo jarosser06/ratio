@@ -64,10 +64,10 @@ deploy_storage:
 deploy_agents:
 	@echo "Deploying Agents..."
 
-	$(call cdk_deploy, -e ratio-dev-ratioagentandy)
 	$(call cdk_deploy, -e ratio-dev-ratiobedrockanthropicagent)
 	$(call cdk_deploy, -e ratio-dev-ratioobjectmapperagent)
 	$(call cdk_deploy, -e ratio-dev-ratiorendertemplateagent)
+	$(call cdk_deploy, -e ratio-dev-ratioagentinternalapi)
 
 
 deploy_compute: deploy_api, deploy_storage, deploy_agents, deploy_process, deploy_scheduler

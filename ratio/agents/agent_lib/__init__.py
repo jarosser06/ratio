@@ -53,6 +53,13 @@ class ResponseStatus(StrEnum):
     FAILURE = "failure"
 
 
+API_TARGETS = {
+    "PROCESS": "agent_manager",
+    "SCHEDULER": "scheduler",
+    "STORAGE": "storage_manager",
+}
+
+
 class RatioSystem:
     def __init__(self, parent_process_id: str, process_id: str, token: str, working_directory: str,
                  arguments_path: Optional[str] = None, argument_schema: Optional[List[Dict]] = None,
@@ -431,6 +438,38 @@ class RatioSystem:
             )
 
         return resp.response_body
+
+    def internal_api_request(self, api_target: str, path: str, request: Union[Dict, ObjectBody], auth_header: str = AUTH_HEADER,
+                             raise_on_failure: bool = True) -> RESTClientResponse:
+        """
+        Make a request to the internal API. Constructs the appropriate client and sends the request.
+        This is a generic method for making requests to the internal API with .
+
+        Keyword arguments:
+        api_target -- The target API to send the request to
+        path -- The path to the API endpoint
+        request -- The request body to send to the API
+        auth_header -- The authentication header to use
+        raise_on_failure -- Whether to raise an exception on failure
+        """
+        logging.debug(f"Making internal API request to {api_target} - {path}")
+
+        if api_target not in API_TARGETS:
+            raise ValueError(f"Invalid API target: {api_target}. Valid targets are: {', '.join(API_TARGETS.keys())}")
+
+        headers = {auth_header: self._acquired_token}
+
+        if isinstance(request, ObjectBody):
+            # If the request is an ObjectBody, convert it to a dictionary
+            request = request.to_dict()
+
+        api_target_value = API_TARGETS[api_target]
+
+        rest_client = RESTClientBase(resource_name=api_target_value, raise_on_failure=raise_on_failure)
+
+        response = rest_client.post(body=request, headers=headers, path=path)
+
+        return response
 
     def put_file(self, file_path: str, file_type: str, data: Optional[Union[str, bytes]] = None, metadata: Optional[Dict] = None,
                  permissions: Optional[str] = "644"):

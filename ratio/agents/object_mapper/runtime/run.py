@@ -70,7 +70,7 @@ _FN_NAME = "ratio.agents.object_mapper"
 @fn_event_response(exception_reporter=ExceptionReporter(), function_name=_FN_NAME, logger=Logger(_FN_NAME))
 def handler(event: Dict, context: Dict):
     """
-    Execute the Bedrock Anthropic agent
+    Execute the Agent
     """
     logging.debug(f"Received request: {event}")
 
@@ -86,7 +86,15 @@ def handler(event: Dict, context: Dict):
 
         original_object = system.arguments["original_object"]
 
+        if isinstance(original_object, ObjectBody):
+            original_object = original_object.to_dict()
+
         object_map = system.arguments["object_map"]
+
+        if isinstance(object_map, ObjectBody):
+            object_map = object_map.to_dict()
+
+        logging.debug(f"Mapping original_object: {original_object} with object_map: {object_map}")
 
         response_schema_dict = system.response_schema.to_dict()
 

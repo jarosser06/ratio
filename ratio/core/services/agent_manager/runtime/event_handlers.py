@@ -182,6 +182,14 @@ def _execute_children(claims: JWTClaims, execution_engine: ExecutionEngine, exec
     """
     base_working_dir = execution_engine.working_directory
 
+    if "agent_exec" not in base_working_dir:
+        logging.debug(f"Parent process working directory provided ... appending parent process directory")
+
+        base_working_dir = os.path.join(
+            base_working_dir,
+            f"agent_exec-{parent_process.process_id}",
+        )
+
     logging.debug(f"Base working directory for child processes: {base_working_dir}")
 
     # Create the event bus client

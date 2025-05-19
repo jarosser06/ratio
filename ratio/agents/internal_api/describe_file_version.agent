@@ -1,0 +1,241 @@
+{
+  "arguments": [
+    {
+      "name": "file_path",
+      "type_name": "string",
+      "description": "The full path of the file to describe the version for",
+      "required": true
+    },
+    {
+      "name": "version_id",
+      "type_name": "string",
+      "description": "The version ID to describe. If not provided, describes the latest version",
+      "required": false
+    },
+    {
+      "name": "include_lineage",
+      "type_name": "boolean",
+      "description": "Whether to include lineage information in the response",
+      "required": false,
+      "default_value": false
+    }
+  ],
+  "description": "A T2 agent that describes a specific version of a file by calling the storage manager's describe file version API",
+  "instructions": [
+    {
+      "agent_definition": {
+        "arguments": [
+          {
+            "name": "path",
+            "type_name": "string",
+            "description": "The API path for the request",
+            "required": true
+          },
+          {
+            "name": "fail_on_error",
+            "type_name": "bool",
+            "description": "Whether the agent run should fail in the case of an error",
+            "default_value": true,
+            "required": false
+          },
+          {
+            "name": "request",
+            "type_name": "object",
+            "description": "The API request object",
+            "required": true
+          },
+          {
+            "name": "target_service",
+            "type_name": "string",
+            "enum": ["PROCESS", "SCHEDULER", "STORAGE"],
+            "description": "The internal service to send the request to",
+            "required": true
+          }
+        ],
+        "responses": [
+          {
+            "name": "status_code",
+            "type_name": "number",
+            "description": "The responding status code from the API call",
+            "required": true
+          },
+          {
+            "name": "response_body",
+            "type_name": "object",
+            "description": "The response body from the API call",
+            "required": false
+          }
+        ],
+        "system_event_endpoint": "ratio::agent::internal_api::execution"
+      },
+      "arguments": {
+        "path": "/describe_file_version",
+        "target_service": "STORAGE",
+        "request": {
+          "file_path": "REF:arguments.file_path",
+          "version_id": "REF:arguments.version_id",
+          "include_lineage": "REF:arguments.include_lineage"
+        }
+      },
+      "execution_id": "describe_file_version_request"
+    },
+    {
+      "agent_definition": {
+        "arguments": [
+          {
+            "name": "original_object",
+            "type_name": "object",
+            "description": "The source object to be mapped",
+            "required": true
+          },
+          {
+            "name": "object_map",
+            "type_name": "object",
+            "description": "Mapping configuration that defines how to transform the original object",
+            "required": true
+          }
+        ],
+        "description": "Object mapper for describe file version response",
+        "responses": [
+          {
+            "name": "file_path",
+            "type_name": "string",
+            "description": "The full path of the file",
+            "required": true
+          },
+          {
+            "name": "file_name",
+            "type_name": "string",
+            "description": "The name of the file",
+            "required": true
+          },
+          {
+            "name": "version_id",
+            "type_name": "string",
+            "description": "The version ID of the file",
+            "required": true
+          },
+          {
+            "name": "metadata",
+            "type_name": "object",
+            "description": "Additional metadata associated with the file version",
+            "required": false
+          },
+          {
+            "name": "originator_id",
+            "type_name": "string",
+            "description": "The ID of the originator who created this version",
+            "required": true
+          },
+          {
+            "name": "origin",
+            "type_name": "string",
+            "description": "The origin of the file version (internal/external)",
+            "required": true
+          },
+          {
+            "name": "added_on",
+            "type_name": "string",
+            "description": "When the file version was added",
+            "required": true
+          },
+          {
+            "name": "previous_version_id",
+            "type_name": "string",
+            "description": "The version ID of the previous version",
+            "required": false
+          },
+          {
+            "name": "next_version_id",
+            "type_name": "string",
+            "description": "The version ID of the next version",
+            "required": false
+          }
+        ],
+        "system_event_endpoint": "ratio::agent::object_mapper::execution"
+      },
+      "arguments": {
+        "original_object": "REF:describe_file_version_request.response_body",
+        "object_map": {
+          "file_path": "file_path",
+          "file_name": "file_name",
+          "version_id": "version_id",
+          "metadata": "metadata",
+          "originator_id": "originator_id",
+          "origin": "origin",
+          "added_on": "added_on",
+          "previous_version_id": "previous_version_id",
+          "next_version_id": "next_version_id"
+        }
+      },
+      "execution_id": "map_response"
+    }
+  ],
+  "response_reference_map": {
+    "file_path": "REF:map_response.file_path",
+    "file_name": "REF:map_response.file_name",
+    "version_id": "REF:map_response.version_id",
+    "metadata": "REF:map_response.metadata",
+    "originator_id": "REF:map_response.originator_id",
+    "origin": "REF:map_response.origin",
+    "added_on": "REF:map_response.added_on",
+    "previous_version_id": "REF:map_response.previous_version_id",
+    "next_version_id": "REF:map_response.next_version_id"
+  },
+  "responses": [
+    {
+      "name": "file_path",
+      "type_name": "string",
+      "description": "The full path of the file",
+      "required": true
+    },
+    {
+      "name": "file_name",
+      "type_name": "string",
+      "description": "The name of the file",
+      "required": true
+    },
+    {
+      "name": "version_id",
+      "type_name": "string",
+      "description": "The version ID of the file",
+      "required": true
+    },
+    {
+      "name": "metadata",
+      "type_name": "object",
+      "description": "Additional metadata associated with the file version",
+      "required": false
+    },
+    {
+      "name": "originator_id",
+      "type_name": "string",
+      "description": "The ID of the originator who created this version",
+      "required": true
+    },
+    {
+      "name": "origin",
+      "type_name": "string",
+      "description": "The origin of the file version (internal/external)",
+      "required": true
+    },
+    {
+      "name": "added_on",
+      "type_name": "string",
+      "description": "When the file version was added",
+      "required": true
+    },
+    {
+      "name": "previous_version_id",
+      "type_name": "string",
+      "description": "The version ID of the previous version",
+      "required": false
+    },
+    {
+      "name": "next_version_id",
+      "type_name": "string",
+      "description": "The version ID of the next version",
+      "required": false
+    }
+  ]
+}

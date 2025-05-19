@@ -322,10 +322,8 @@ class Reference:
             if attribute:
                 raise InvalidReferenceError("Attribute access is not supported for arguments.")
 
-            if key not in self.arguments:
-                raise InvalidReferenceError(f"Unknown argument key: {key}")
-
-            return self.arguments[key]
+            # Since default arguments are supported, need to let upstream handle None if that's the case
+            return self.arguments.get(key)
 
         # It's an execution_id
         if context not in self.responses:

@@ -278,19 +278,8 @@ class ExecuteAPI(ChildAPI):
         except (InvalidSchemaError, InvalidObjectSchemaError) as invalid_err:
             logging.debug(f"Error creating execution engine: {invalid_err}")
 
-            # Mark the process as failed
-            proc.execution_status = ProcessStatus.FAILED
-
-            proc.ended_on = datetime.now(tz=utc_tz)
-
-            proc.status_message = str(invalid_err)
-
-            process_client.put(proc)
-
-            return self.respond(
-                status_code=400,
-                body={"message": str(invalid_err)},
-            )
+            # Delete the process as it never started
+            process_client.delete(proc)
 
         # Create the base directory for the process
         execution_engine.initialize_path()
@@ -341,23 +330,11 @@ class ExecuteAPI(ChildAPI):
                 except (InvalidSchemaError, InvalidObjectSchemaError, InvalidReferenceError) as invalid_err:
                     logging.debug(f"Error preparing for execution: {invalid_err}")
 
-                    # Mark the child process as failed
-                    child_proc.execution_status = ProcessStatus.FAILED
+                    # Delete the child process as it never started
+                    process_client.delete(child_proc)
 
-                    child_proc.ended_on = datetime.now(tz=utc_tz)
-
-                    child_proc.status_message = str(invalid_err)
-
-                    process_client.put(child_proc)
-
-                    # Update the parent process with the error
-                    proc.execution_status = ProcessStatus.FAILED
-
-                    proc.ended_on = datetime.now(tz=utc_tz)
-
-                    proc.status_message = str(invalid_err)
-
-                    process_client.put(proc)
+                    # Delete the parent process as it never started
+                    process_client.delete(proc)
 
                     return self.respond(
                         status_code=400,

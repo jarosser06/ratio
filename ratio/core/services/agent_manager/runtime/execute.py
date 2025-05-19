@@ -35,6 +35,7 @@ from ratio.core.services.agent_manager.runtime.events import (
     ExecuteAgentInternalRequest,
     SystemExecuteAgentRequest,
 )
+from ratio.core.services.agent_manager.runtime.no_op import execute_no_ops
 from ratio.core.services.agent_manager.runtime.reference import InvalidReferenceError
 
 from ratio.core.services.agent_manager.runtime.validator import RefValidator
@@ -289,7 +290,19 @@ class ExecuteAPI(ChildAPI):
 
         if execution_engine.is_composite:
             # Schedule the instruction executions
-            execution_ids = execution_engine.get_available_executions()
+            execution_ids, skipped = execution_engine.get_available_executions()
+
+            if skipped:
+                logging.debug(f"Skipped execution IDs: {skipped}")
+
+                execute_no_ops(
+                    claims=claims,
+                    execution_engine=execution_engine,
+                    parent_process=proc,
+                    process_client=process_client,
+                    skipped_ids=skipped,
+                    token=request_context["signed_token"],
+                )
 
             if not execution_ids:
                 logging.debug(f"No available executions for agent: {agent_definition}")

@@ -319,6 +319,8 @@ class Reference:
         context, key, attribute = self.parse_ref(reference_string)
 
         if context == "arguments":
+            logging.debug(f"Resolving argument: {key} from {self.arguments}")
+
             if attribute:
                 raise InvalidReferenceError("Attribute access is not supported for arguments.")
 

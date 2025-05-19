@@ -217,6 +217,7 @@ class AgentInstruction:
     """
     definition: AgentDefinition
     execution_id: str
+    conditions: List[Dict] = None
     response: Dict[str, Any] = None
     provided_arguments: Dict[str, Any] = None
 
@@ -224,6 +225,9 @@ class AgentInstruction:
         """
         Post-initialization method to set default values for the agent instruction.
         """
+        if self.conditions is None:
+            self.conditions = []
+
         if self.response is None:
             self.response = {}
 
@@ -233,6 +237,11 @@ class AgentInstruction:
     def _load_aio(self, file_path: str, token: str, parameter_name: str):
         """
         Loads an agent IO file from the given path
+
+        Keyword arguments:
+        file_path -- The path to the agent IO file
+        token -- The token to use for authentication
+        parameter_name -- The name of the parameter to load
         """
         internal_client = RatioInternalClient(service_name="storage_manager", token=token)
 

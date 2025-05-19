@@ -7,7 +7,7 @@ import json
 import logging
 import os
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from da_vinci.core.immutable_object import (
     ObjectBody,
@@ -33,6 +33,7 @@ from ratio.core.services.agent_manager.runtime.agent import (
     AIO_EXT,
     AGENT_IO_FILE_TYPE,
 )
+from ratio.core.services.agent_manager.runtime.conditions import ConditionEvaluator
 from ratio.core.services.agent_manager.runtime.reference import Reference
 
 
@@ -147,6 +148,8 @@ class ExecutionEngine:
 
         self.process_id = process_id
 
+        logging.debug(f"Initializing references with arguments: {self.arguments}")
+
         self.reference = Reference(arguments=self.arguments)
 
     @classmethod
@@ -240,8 +243,11 @@ class ExecutionEngine:
 
             logging.debug(f"Loaded agent definition: {agent_definition}")
 
+            conditions = instruction.get("conditions", [])
+
             # Create the agent instruction object
             loaded_instructions[instruction["execution_id"]] = AgentInstruction(
+                conditions=conditions,
                 execution_id=instruction["execution_id"],
                 definition=agent_definition,
                 provided_arguments=instruction.get("arguments"),
@@ -381,28 +387,56 @@ class ExecutionEngine:
 
         return response_body_path
 
-    def get_available_executions(self) -> List[Dict[str, Any]]:
+    def _meets_conditions(self, execution_id: str) -> bool:
+        """
+        Check if the execution meets the conditions for execution.
+
+        Keyword arguments:
+        execution_id -- The ID of the execution to evaluate conditions for
+        """
+        instruction = self.instructions[execution_id]
+
+        conditions = instruction.conditions
+
+        if not conditions:
+            return True
+
+        evaluator = ConditionEvaluator(self.reference, self.token)
+
+        logging.debug(f"Evaluator initialized {evaluator} with conditions {conditions} and reference with {self.reference.arguments} and {self.reference.responses}")
+
+        return evaluator.evaluate(conditions)
+
+    def get_available_executions(self) -> Tuple[List[str], List[str]]:
         """
         Get the available executions for the task. This is a no-op for now.
+
+        Returns:
+        available -- A list of available executions
+        skipped -- A list of skipped executions, meaning their dependencies are met but they had specified conditions that were not met
         """
         available = []
 
-        logging.debug(f"Available executions: {self.instructions.keys()}")
-
-        logging.debug(f"Running executions: {self.in_progress}")
-
-        logging.debug(f"Completed executions: {self.completed}")
+        skipped = []
 
         for exec_id in list(self.instructions.keys()):
             # Skip if already running or completed
             if exec_id in self.in_progress or exec_id in self.completed:
                 continue
-            
+
             # Check if all dependencies are completed
             if all(dep in self.completed for dep in self.dependency_graph[exec_id]):
-                available.append(exec_id)
-        
-        return available
+                # Evaluate conditions
+                if self._meets_conditions(execution_id=exec_id):
+                    # Add to available list
+                    available.append(exec_id)
+
+                else:
+                    logging.debug(f"Execution {exec_id} does not meet conditions .. skipping")
+
+                    skipped.append(exec_id)
+
+        return available, skipped
 
     def get_path(self, process_id: Optional[str] = None, working_dir: Optional[str] = None) -> str:
         """
@@ -410,7 +444,7 @@ class ExecutionEngine:
 
         Keyword arguments:
         process_id -- The ID of the process, defaults to the current process ID
-
+        working_dir -- The working directory for the execution, defaults to the current working directory
         """
         proc_id = process_id or self.process_id
 
@@ -469,10 +503,17 @@ class ExecutionEngine:
 
             required = response_definition.get("required")
 
+            # Need to set the default value so the response handler can have them loaded
+            # in the event that something directly references those values such as the
+            # conditions handler.
+            default_value = response_definition.get("default_value")
+
             if required and response_key not in instruction.response:
                 raise InvalidSchemaError(f"Missing required response key: {response_key}")
 
-            response_value = instruction.response.get(response_key)
+            response_value = instruction.response.get(response_key, default_value)
+
+            logging.debug(f"Response value of type {response_type} for {execution_id}.{response_key}: {response_value}")
 
             self.reference.add_response(
                 execution_id=execution_id,

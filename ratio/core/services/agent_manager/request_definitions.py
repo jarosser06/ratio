@@ -103,6 +103,58 @@ class AgentDefinitionSchema(ObjectBodySchema):
   ]
 
 
+class ConditionSchema(ObjectBodySchema):
+    attributes = [
+        SchemaAttribute(
+            name="param",
+            type_name=SchemaAttributeType.STRING,
+            description="REF string to the parameter to evaluate",
+            required=True,
+        ),
+        SchemaAttribute(
+            name="operator",
+            type_name=SchemaAttributeType.STRING,
+            description="Comparison operator",
+            required=True,
+            enum=[
+                "equals",
+                "not_equals",
+                "greater_than",
+                "less_than",
+                "exists",
+                "not_exists",
+                "contains",
+                "in",
+                "starts_with"
+            ]
+        ),
+        SchemaAttribute(
+            name="value",
+            type_name=SchemaAttributeType.ANY,
+            description="Value to compare against",
+            required=False,
+        ),
+    ]
+
+class ConditionGroupSchema(ObjectBodySchema):
+    attributes = [
+        SchemaAttribute(
+            name="logic",
+            type_name=SchemaAttributeType.STRING,
+            description="Logic operator for this group",
+            required=False,
+            default_value="AND",
+            enum=["AND", "OR"]
+        ),
+        SchemaAttribute(
+            name="conditions",
+            type_name=SchemaAttributeType.OBJECT_LIST,
+            description="List of conditions or nested condition groups",
+            required=True,
+        ),
+    ]
+
+
 class DescribeProcessRequest(ObjectBodySchema):
     """
     Schema for describing a process. This is used to get the details of a process that is currently running.
@@ -151,11 +203,17 @@ class ExecuteAgentRequest(ObjectBodySchema):
             ]
         ),
         SchemaAttribute(
-           name="execute_as",
-           type_name=SchemaAttributeType.STRING,
-           description="The entity to execute the agent as. This is the entity that will be used to execute the agent. ONLY SUPPORTED IF THE REQUESTOR IS AN ADMIN",
-           required=False,
-           regex_pattern="^[a-z0-9_\\-]+$",
+            name="conditions",
+            type_name=SchemaAttributeType.OBJECT_LIST,
+            description="A list of conditions to evaluate before executing the agent. This is used to determine if the agent should be executed or not",
+            required=False,
+        ),
+        SchemaAttribute(
+            name="execute_as",
+            type_name=SchemaAttributeType.STRING,
+            description="The entity to execute the agent as. This is the entity that will be used to execute the agent. ONLY SUPPORTED IF THE REQUESTOR IS AN ADMIN",
+            required=False,
+            regex_pattern="^[a-z0-9_\\-]+$",
         ),
         SchemaAttribute(
             name="working_directory",

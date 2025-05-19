@@ -35,7 +35,11 @@ from ratio.core.services.agent_manager.runtime.agent import (
     AgentInstruction,
 )
 
-from ratio.core.services.agent_manager.runtime.engine import ExecutionEngine, InvalidSchemaError
+from ratio.core.services.agent_manager.runtime.engine import (
+    ExecutionEngine,
+    InvalidSchemaError,
+)
+
 
 from ratio.core.services.agent_manager.runtime.events import (
     ExecuteAgentInternalRequest,
@@ -43,11 +47,11 @@ from ratio.core.services.agent_manager.runtime.events import (
     SystemExecuteAgentRequest,
 )
 
+from ratio.core.services.agent_manager.runtime.no_op import execute_no_ops
+
 from ratio.core.services.agent_manager.runtime.reference import (
     InvalidReferenceError,
 )
-
-_COMPLETE_FN_NAME = "ratio.services.agents.process_complete_handler"
 
 
 def _close_out_process(process: Process, token: str, failure_reason: Optional[str] = None, notify_parent: bool = False,
@@ -301,6 +305,9 @@ def _execute_children(claims: JWTClaims, execution_engine: ExecutionEngine, exec
         logging.debug(f"Event published for {execution_id}: {event}")
 
 
+_COMPLETE_FN_NAME = "ratio.services.agents.process_complete_handler"
+
+
 @fn_event_response(exception_reporter=ExceptionReporter(), function_name=_COMPLETE_FN_NAME, logger=Logger(_COMPLETE_FN_NAME))
 def process_complete_handler(event: Dict, context: Dict):
     """
@@ -408,7 +415,7 @@ def process_complete_handler(event: Dict, context: Dict):
 
             already_executed.append(child.execution_id)
 
-        elif child.execution_status == ProcessStatus.COMPLETED:
+        elif child.execution_status == ProcessStatus.COMPLETED or child.execution_status == ProcessStatus.SKIPPED:
             logging.debug(f"Execution id {child.execution_id} is marked as complete")
 
             execution_engine.mark_completed(execution_id=child.execution_id, response_path=child.response_path)
@@ -427,12 +434,29 @@ def process_complete_handler(event: Dict, context: Dict):
 
             return
 
-    execution_ids = execution_engine.get_available_executions()
+    execution_ids, skipped_ids = execution_engine.get_available_executions()
+
+    claims = InternalJWTManager.verify_token(token=event_body["token"])
+
+    # Add skipped IDs to already executed
+    already_executed.extend(skipped_ids)
 
     already_executed_intersection = set(execution_ids).intersection(set(already_executed))
 
     if already_executed_intersection:
         raise Exception(f"Execution IDs {already_executed_intersection} already executed")
+
+    if skipped_ids:
+        logging.debug(f"Skipped IDs: {skipped_ids}")
+
+        execute_no_ops(
+            claims=claims,
+            skipped_ids=skipped_ids,
+            execution_engine=execution_engine,
+            parent_process=parent_proc,
+            process_client=process_client,
+            token=event_body["token"],
+        )
 
     logging.debug(f"Execution IDs: {execution_ids}")
 
@@ -457,7 +481,6 @@ def process_complete_handler(event: Dict, context: Dict):
 
         return
 
-    claims = InternalJWTManager.verify_token(token=event_body["token"])
 
     _execute_children(
         claims=claims,
@@ -609,7 +632,19 @@ def execute_composite_agent_handler(event: Dict, context: Dict):
 
     if execution_engine.is_composite:
         # Schedule the instruction executions
-        execution_ids = execution_engine.get_available_executions()
+        execution_ids, skipped = execution_engine.get_available_executions()
+
+        if skipped:
+            logging.debug(f"Skipped IDs: {skipped}")
+
+            execute_no_ops(
+                skipped_ids=skipped,
+                execution_engine=execution_engine,
+                parent_process=proc,
+                process_client=process_client,
+                claims=claims,
+                token=token,
+            )
 
         if not execution_ids:
             logging.debug(f"No available executions for agent: {agent_definition}")

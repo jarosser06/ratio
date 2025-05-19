@@ -99,15 +99,15 @@ class SystemExecuteAgentResponse(ObjectBodySchema):
             required=False,
         ),
         SchemaAttribute(
-            name="token",
-            type_name=SchemaAttributeType.STRING,
-            description="The token to use for authentication",
-            required=True,
-        ),
-        SchemaAttribute(
             name="status",
             type_name=SchemaAttributeType.STRING,
             description="The status of the agent execution",
+            required=True,
+        ),
+        SchemaAttribute(
+            name="token",
+            type_name=SchemaAttributeType.STRING,
+            description="The token to use for authentication",
             required=True,
         ),
     ]

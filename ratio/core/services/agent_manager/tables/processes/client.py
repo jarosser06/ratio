@@ -21,6 +21,7 @@ class ProcessStatus(StrEnum):
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
     RUNNING = "RUNNING"
+    SKIPPED = "SKIPPED"
     TERMINATED = "TERMINATED"
 
 
@@ -67,6 +68,13 @@ class Process(TableObject):
         ),
 
         TableObjectAttribute(
+            name="execution_status",
+            attribute_type=TableObjectAttributeType.STRING,
+            description="The status of the process.",
+            default=ProcessStatus.RUNNING,
+        ),
+
+        TableObjectAttribute(
             name="process_owner",
             attribute_type=TableObjectAttributeType.STRING,
             description="The owner of the process.",
@@ -78,13 +86,6 @@ class Process(TableObject):
             attribute_type=TableObjectAttributeType.STRING,
             description="The path to the response of the process.",
             optional=True,
-        ),
-
-        TableObjectAttribute(
-            name="execution_status",
-            attribute_type=TableObjectAttributeType.STRING,
-            description="The status of the process.",
-            default=ProcessStatus.RUNNING,
         ),
 
         TableObjectAttribute(
@@ -109,19 +110,21 @@ class Process(TableObject):
         ),
     ]
 
-    def create_child(self, execution_id: str, working_directory: str, process_owner: Optional[str] = None,
-                     process_id: Optional[str] = None) -> None:
+    def create_child(self, execution_id: str, working_directory: str, execution_status: Optional[str] = None,
+                     process_owner: Optional[str] = None, process_id: Optional[str] = None) -> None:
         """
         Create a child process.
 
         Keyword arguments:
         execution_id -- The execution id of the child process.
         working_directory -- The working directory of the child process.
+        execution_status -- The status of the child process. If not provided, the status will be set to RUNNING.
         process_owner -- The owner of the child process.
         process_id -- The id of the child process. If not provided, a new id will be generated.
         """
         return Process(
             execution_id=execution_id,
+            execution_status=execution_status,
             parent_process_id=self.process_id,
             working_directory=working_directory,
             process_owner=process_owner or self.process_owner,

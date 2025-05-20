@@ -1,3 +1,4 @@
+import json
 import os
 from argparse import ArgumentParser
 
@@ -116,3 +117,55 @@ class ConfigureCommand(RTOCommand):
 
         if args.set_default:
             print(f"Set '{profile_name}' as the default profile.")
+
+
+class GetCurrentProfileCommand(RTOCommand):
+    """
+    Get current profile information
+    """
+    name = "get-profile"
+
+    description = "Get current profile information"
+
+    requires_authentication = False  # No auth needed to view profile
+
+    @classmethod
+    def configure_parser(cls, parser: ArgumentParser):
+        """
+        Configure the command line argument parser.
+        """
+        parser.add_argument("--json", help="Output as JSON", action="store_true", default=False)
+
+    def execute(self, client: Ratio, args):
+        """
+        Execute the command.
+        """
+        config = RTOConfig(config_dir=args.config_path)
+
+        # Get profile info
+        profile_name = args.profile or config.get_default_profile()
+
+        if not profile_name:
+            print("No profile selected or configured")
+
+            return
+
+        try:
+            profile_data = config.get_profile(profile_name)
+
+            if args.json:
+                # Add profile name to the output
+                output = {"profile_name": profile_name}
+
+                output.update(profile_data)
+
+                print(json.dumps(output, indent=2))
+
+            else:
+                print(f"Profile Name: {profile_name}")
+
+                for key, value in profile_data.items():
+                    print(f"{key}: {value}")
+
+        except ValueError as e:
+            raise RTOErrorMessage(f"Error getting profile: {e}")

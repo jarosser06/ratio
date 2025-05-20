@@ -2,7 +2,10 @@
 
 ## Overview
 
-The Ratio Agent Manager is the core orchestration service responsible for executing agents, managing processes, resolving dependencies, and coordinating complex workflows within the Ratio platform. It provides both simple (direct) and composite (workflow-based) agent execution capabilities with comprehensive process tracking, event-driven coordination, and reference resolution.
+The Ratio Agent Manager is the core orchestration service responsible for executing agents, managing processes, resolving
+dependencies, and coordinating complex workflows within the Ratio platform. It provides both simple (direct) and composite
+(workflow-based) agent execution capabilities with comprehensive process tracking, event-driven coordination, and reference
+resolution.
 
 ## Architecture
 
@@ -61,7 +64,7 @@ Composite agents orchestrate multiple sub-agents to accomplish complex tasks. Th
 - Multi-step workflow orchestration
 - Dependency management between steps
 - Conditional execution support
-- Defined by `instructions` array
+- Defined by `instructions` list
 - Support for nested composite agents (unlimited depth)
 
 **Event Flow:**

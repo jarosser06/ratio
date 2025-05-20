@@ -2,7 +2,8 @@
 
 ## Overview
 
-The Ratio Client Library provides a Python interface for interacting with the Ratio system. Based on the codebase, it offers APIs for authentication, file storage, agent execution, and scheduling.
+The Ratio Client Library provides a Python interface for interacting with the Ratio system. Based on the codebase, it offers APIs
+for authentication, file storage, agent execution, and scheduling.
 
 ## Client Initialization
 

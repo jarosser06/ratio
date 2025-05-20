@@ -2,7 +2,8 @@
 
 ## Overview
 
-The Ratio CLI (`rto`) uses a configuration system to manage authentication credentials, connection settings, and state information like the current working directory. This guide explains how configuration works, how to set it up, and how it's used.
+The Ratio CLI (`rto`) uses a configuration system to manage authentication credentials, connection settings, and state information
+like the current working directory. This guide explains how configuration works, how to set it up, and how it's used.
 
 ## Configuration Directory Structure
 

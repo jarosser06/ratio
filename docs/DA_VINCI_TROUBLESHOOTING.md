@@ -2,7 +2,8 @@
 
 ## Overview
 
-The Da Vinci framework provides two critical subsystems for troubleshooting Ratio agent issues: the Exception Trap and the Event Bus System. Understanding how these work is crucial for diagnosing problems in agent execution.
+The Da Vinci framework provides two critical subsystems for troubleshooting Ratio agent issues: the Exception Trap and the Event Bus
+System. Understanding how these work is crucial for diagnosing problems in agent execution.
 
 ## Exception Trap System
 

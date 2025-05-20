@@ -2,7 +2,9 @@
 
 ## Overview
 
-The Ratio REF (Reference) system enables dynamic value resolution and dependency management in agent execution workflows. REF strings allow agents to reference values from previous executions or input arguments, creating a flexible and powerful data flow mechanism.
+The Ratio REF (Reference) system enables dynamic value resolution and dependency management in agent execution workflows. REF
+strings allow agents to reference values from previous executions or input arguments, creating a flexible and powerful data flow
+mechanism.
 
 ## Reference String Format
 

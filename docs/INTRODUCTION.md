@@ -1,30 +1,30 @@
-# Introduction to Ratio: Distributed AI Operating System
+# Introduction to Ratio: AI Operating System
 
 ## What is Ratio?
 
-Ratio is a distributed AI Operating System that enables organizations to build, deploy, and manage
+Ratio is a AI Operating System that enables organizations to build, deploy, and manage
 complex data processing workflows through autonomous agents. Unlike traditional monolithic systems
 or simple task orchestration platforms, Ratio provides a complete distributed operating environment
 for agent development with integrated storage, authentication, scheduling, and execution management.
 
-At its core, Ratio approaches AI and data processing by providing a distributed operating system
+At its core, Ratio approaches AI and data processing by providing a operating system
 specifically designed for autonomous agents. Just as traditional operating systems provide essential
-services for applications on a single machine, Ratio provides the fundamental distributed
-infrastructure that agents need to operate effectively across cloud environments.
+services for applications on a single machine, Ratio provides the fundamental infrastructure
+that agents need to operate effectively across cloud environments.
 
 ## Key Principles
 
-### Distributed Operating System for Agents
+### Operating System for Agents
 Ratio provides the foundational services that agents need across a distributed infrastructure:
-process management, distributed file systems, inter-process communication, and resource management.
+process management, file systems, inter-process communication, and resource management.
 Just as a traditional OS abstracts hardware complexity, Ratio abstracts the complexity of
-distributed cloud infrastructure.
+cloud infrastructure.
 
-### Distributed System-Level Services
+### System-Level Services
 All agent interactions flow through operating system services: the event bus for inter-process
-communication across the cluster, the distributed storage manager for global file system access, and
+communication across the cluster, the storage manager for global file system access, and
 the process manager for execution control of the agents. This provides the reliability and
-observability that agents need to operate effectively in a distributed environment.
+observability that agents need to operate effectively in a environment.
 
 ### Integrated Environment
 The integrated storage manager provides a Unix-like file system with automatic versioning, lineage
@@ -72,8 +72,8 @@ composite agents to wire together complex dependencies without hard-coding value
 - `REF:validator.results.status` - Reference outputs from previous steps
 - `REF:processor.files.0.path` - Access nested data with type-aware attributes
 
-### Distributed File System (Storage Manager)
-A comprehensive distributed file system providing:
+### File System (Storage Manager)
+A file system providing:
 
 - **Global namespace** accessible from any agent anywhere
 - **Automatic versioning** with complete history across the cluster
@@ -99,7 +99,7 @@ Event-driven automation that triggers agents based on:
 - One-time or recurring executions
 
 ## Debugging & Observability
-One of Ratio's greatest strengths as is its comprehensive debugging capabilities:
+One of Ratio's greatest strengths is its debugging capabilities:
 
 ### Centralized Exception Handling
 The Da Vinci framework's exception trap automatically captures:
@@ -132,7 +132,7 @@ The process management system provides crystal-clear visibility:
 - Workflows can be replayed reliably with identical inputs
 
 ## Beyond Core: Compute Flexibility
-While Ratio includes AWS Lambda integration out of the box, the distributed operating system's
+While Ratio includes AWS Lambda integration out of the box, the operating system's
 event-driven design enables deployment flexibility that spans across any compute infrastructure.
 
 ### Any Compute, Same OS Interface
@@ -166,12 +166,6 @@ The event bus acts as a universal API layer. As long as your agent can:
 - Wrap legacy systems as Ratio agents
 - Maintain sensitive data processing within corporate boundaries
 - Integrate with existing data centers via VPN or direct connect
-
-**Multi-Cloud and Hybrid Deployments**
-- Distribute agents across multiple cloud providers
-- Hybrid cloud setups with some agents on-premises  
-- Edge computing nodes for latency-sensitive operations
-- Automatic failover and distributed resilience
 
 ### Event Type Flexibility
 

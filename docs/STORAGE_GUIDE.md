@@ -2,7 +2,9 @@
 
 ## Overview
 
-The Ratio Storage Manager provides a comprehensive file system abstraction layer that manages files, directories, permissions, versioning, and metadata within the Ratio platform. It acts as the central data storage and retrieval service, offering Unix-like file system semantics with advanced features like automatic versioning, lineage tracking, and event-driven notifications.
+The Ratio Storage Manager provides a file system abstraction layer that manages files, directories, permissions,
+versioning, and metadata within the Ratio platform. It acts as the central data storage and retrieval service, offering Unix-like
+file system semantics with advanced features like automatic versioning, lineage tracking, and event-driven notifications.
 
 ## Core Concepts
 
@@ -39,27 +41,30 @@ The Storage Manager implements a hierarchical file system similar to Unix/Linux:
 
 #### Files Table (`files`)
 Stores metadata about files and directories:
+
 - **Primary Key**: `path_hash` (partition) + `name_hash` (sort)
 - **Key Attributes**: `file_name`, `file_path`, `file_type`, `owner`, `group`, `permissions`
 - **Features**: Permission masks, metadata storage, version tracking
 
 #### File Versions Table (`file_versions`)
 Stores individual file versions:
+
 - **Primary Key**: `full_path_hash` (partition) + `version_id` (sort)
 - **Key Attributes**: Version linking (previous/next), originator tracking
 - **Features**: Linked list structure for version history
 
 #### File Types Table (`file_types`)
 Defines available file types:
+
 - **Primary Key**: `type_name`
 - **Key Attributes**: `description`, `name_restrictions`, `is_directory_type`
 - **Features**: Validation rules, content type definitions
 
 #### File Lineage Table (`file_lineage`)
 Tracks relationships between files:
+
 - **Primary Key**: `source_file_id` (partition) + `lineage_file_id` (sort)
 - **Key Attributes**: Source and target file information
-- **Features**: Dependency tracking, impact analysis
 
 ### S3 Integration
 
@@ -206,6 +211,7 @@ Permissions follow Unix conventions with three levels:
 ### Permission Format
 
 Permissions are specified as a 3-digit octal number:
+
 - First digit: Owner permissions
 - Second digit: Group permissions
 - Third digit: Everyone permissions

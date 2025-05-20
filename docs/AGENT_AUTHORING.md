@@ -687,8 +687,8 @@ rto sync my_agent_prod.agent ratio:/agents/prod/my_agent.agent
 ## Getting Help
 
 - **CLI Commands**: See the [CLI Command Cheat Sheet](CLI_CHEAT_SHEET.md)
-- **Testing Issues**: Check the [Testing & Debugging Guide](AGENT_TESTING_DEBUGGING.md)
-- **Deployment Problems**: Review the [Deployment Guide](AGENT_DEPLOYMENT.md)
+- **Agent Debugging**: Check the [Testing & Debugging Guide](AGENT_TESTING_DEBUGGING.md)
+- **Agent Deployment Problems**: Review the [Deployment Guide](AGENT_DEPLOYMENT.md)
 - **System Logs**: Use `rto list-processes` and `rto describe-process` to investigate issues
 
 This guide provides a comprehensive foundation for authoring agents in the Ratio system. Start with simple agents, test thoroughly, and gradually build more complex workflows as you become familiar with the system.

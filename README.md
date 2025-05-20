@@ -1,6 +1,5 @@
 Ratio
 =====
-
 An AI Operating System built on Cloud Native AWS Technologies.
 
 Ratio is named after the Golden Ratio, representing the ideal balance between AI capabilities and engineering infrastructure.
@@ -8,6 +7,8 @@ The system is designed to enable AI expansion within the confines of thoughtful,
 capabilities grow, they do so within a secure, manageable framework.
 
 To get started check out the [Getting Started Guide](GETTING_STARTED.md)
+
+For further reading about the system internals, check out the [introduction](docs/INTRODUCTION.md)
 
 
 The Intent
@@ -50,44 +51,6 @@ Prerequisites
 - AWS account with appropriate permissions
 - AWS CDK
 - Poetry for dependency management
-
-
-Setup
------
-
-### Deployment
-```bash
-# Deploy all stacks
-make deploy
-
-# Deploy specific stacks
-make deploy_api
-make deploy_storage
-```
-
-### Testing
-```bash
-# Run all tests (automatically wipes test data first)
-make test
-
-# Run tests directly with pytest
-pytest tests/
-
-# Run a specific test
-pytest tests/test_storage_api.py::TestStorageAPI::test_create_file_type
-```
-
-### Useful Developer Commands
-```bash
-# Wipe the entire system (removes all entities, resets initialization)
-make wipe
-
-# Clean local deployment artifacts
-make clean
-
-# Clean up ECR repository
-make ecr_garbage_collection
-```
 
 License
 -------

@@ -1,0 +1,292 @@
+#!/bin/bash
+
+# ratio-shell - Interactive shell for Ratio CLI
+
+# Configuration
+RATIO_HOME="$HOME/.ratio"
+RATIO_SHELL_HOME="$RATIO_HOME/shell"
+RATIO_BIN="$RATIO_SHELL_HOME/bin"
+RATIO_HISTORY="$RATIO_SHELL_HOME/history"
+
+# Create directories if they don't exist
+mkdir -p "$RATIO_SHELL_HOME"
+mkdir -p "$RATIO_BIN"
+mkdir -p "$RATIO_HISTORY"
+
+# Add bin directory to PATH
+export PATH="$RATIO_BIN:$PATH"
+
+# Define color codes
+BLUE="\033[0;34m"
+GREEN="\033[0;32m"
+YELLOW="\033[0;33m"
+RED="\033[0;31m"
+MAGENTA="\033[0;35m"
+CYAN="\033[0;36m"
+BOLD="\033[1m"
+RESET="\033[0m"
+
+# Store the last command's exit status
+LAST_STATUS=0
+
+
+# Profile selection using get-profile command
+select_profile() {
+    # Check if default profile exists using get-profile
+    default_profile_info=$(rto get-profile --json 2>/dev/null)
+
+    if [ $? -eq 0 ] && [ -n "$default_profile_info" ]; then
+        # Extract profile name
+        profile_name=$(echo "$default_profile_info" | grep "profile_name" | cut -d'"' -f4)
+
+        if [ -n "$profile_name" ]; then
+            echo -e "Using profile: ${GREEN}$profile_name${RESET}"
+            export RATIO_PROFILE="$profile_name"
+
+            # Extract entity ID
+            entity_id=$(echo "$default_profile_info" | grep "entity_id" | cut -d'"' -f4)
+
+            if [ -n "$entity_id" ]; then
+                export ENTITY_ID="$entity_id"
+
+            else
+                export ENTITY_ID="unknown"
+
+            fi
+
+            # Extract deployment ID
+            deployment_id=$(echo "$default_profile_info" | grep "deployment_id" | cut -d'"' -f4)
+
+            if [ -n "$deployment_id" ]; then
+                export DEPLOYMENT_ID="$deployment_id"
+
+            else
+                export DEPLOYMENT_ID="dev"
+            fi
+
+            return 0
+        fi
+    fi
+
+    # If we get here, there's no default profile or we failed to get it
+    echo -e "${YELLOW}No default profile found. Would you like to select one?${RESET}"
+    read -p "Select a profile? (y/n): " select_profile_answer
+
+    if [[ "$select_profile_answer" =~ ^[Yy] ]]; then
+        # TODO: Implement profile selection
+        echo "Profile selection not implemented yet"
+
+    else
+        echo -e "${YELLOW}No profile selected. Using default settings.${RESET}"
+    fi
+}
+
+# Function to get entity ID using get-profile command
+get_entity_id() {
+    if [ -n "$RATIO_PROFILE" ]; then
+        echo -e "Using profile: ${GREEN}$RATIO_PROFILE${RESET}"
+
+        entity_id=$(rto get-profile --profile "$RATIO_PROFILE" --json 2>/dev/null | grep "entity_id" | cut -d'"' -f4)
+
+        echo "${entity_id:-unknown}"
+
+    else
+        profile_info=$(rto get-profile --json 2>/dev/null)
+        if [ $? -eq 0 ]; then
+            entity_id=$(echo "$profile_info" | grep -o "entity_id" | cut -d'"' -f4)
+            echo "${entity_id:-unknown}"
+
+        else
+            echo "unknown"
+        fi
+    fi
+}
+
+# Function to get deployment ID using get-profile command
+get_deployment_id() {
+    if [ -n "$RATIO_PROFILE" ]; then
+        deployment_id=$(rto get-profile --profile "$RATIO_PROFILE" --json 2>/dev/null | grep "deployment_id" | cut -d'"' -f4)
+        echo "${deployment_id:-dev}"
+
+    else
+        profile_info=$(rto get-profile --json 2>/dev/null)
+
+        if [ $? -eq 0 ]; then
+            deployment_id=$(echo "$profile_info" | grep "deployment_id" | cut -d'"' -f4)
+            echo "${deployment_id:-dev}"
+
+        else
+            echo "dev"
+
+        fi
+    fi
+}
+
+# Run a Ratio command with profile if set
+run_ratio() {
+    if [ -n "$RATIO_PROFILE" ]; then
+        rto --profile "$RATIO_PROFILE" "$@"
+        LAST_STATUS=$?
+
+    else
+        rto "$@"
+        LAST_STATUS=$?
+    fi
+
+    return $LAST_STATUS
+}
+
+# Helper function to check if a command is a custom bin script
+is_bin_script() {
+    local cmd=$1
+    [[ -f "$RATIO_BIN/$cmd" && -x "$RATIO_BIN/$cmd" ]]
+}
+
+
+initialize_working_directory() {
+    # Check if we already have a working directory set
+    CURRENT_PWD=$(run_ratio print-working-directory 2>/dev/null)
+
+    # If we already have a working directory, keep it
+    if [ -n "$CURRENT_PWD" ] && [ $? -eq 0 ]; then
+        echo -e "Using current working directory: ${BLUE}$CURRENT_PWD${RESET}"
+        return 0
+    fi
+
+    # Only if no directory is set, default to home directory
+    ENTITY_ID=$(get_entity_id)
+
+    if [ "$ENTITY_ID" = "admin" ] || [ "$ENTITY_ID" = "root" ]; then
+        echo -e "No working directory set. Changing to ${BLUE}/root${RESET}"
+        run_ratio change-directory "/root" >/dev/null 2>&1 || echo -e "${RED}Could not access /root${RESET}"
+
+    elif [ -n "$ENTITY_ID" ] && [ "$ENTITY_ID" != "unknown" ]; then
+        # Try to get home directory for regular entities
+        HOME_DIR=$(run_ratio describe-entity "$ENTITY_ID" 2>/dev/null | grep "Home Directory" | awk '{print $NF}')
+
+        if [ -n "$HOME_DIR" ] && [ "$HOME_DIR" != "N/A" ]; then
+            echo -e "No working directory set. Changing to home: ${BLUE}$HOME_DIR${RESET}"
+            run_ratio change-directory "$HOME_DIR" >/dev/null 2>&1 || echo -e "${RED}Could not access home directory${RESET}"
+
+        else
+            echo -e "No working directory set. Defaulting to ${BLUE}/${RESET}"
+            run_ratio change-directory / >/dev/null 2>&1
+
+        fi
+    else
+        echo -e "No working directory set. Defaulting to ${BLUE}/${RESET}"
+        run_ratio change-directory / >/dev/null 2>&1
+    fi
+}
+
+# Display help information for the shell
+show_help() {
+    echo -e "${BOLD}${CYAN}Ratio Shell Help:${RESET}"
+    echo -e "  ${GREEN}sys [command]${RESET}           - Run a local system (i.e. not ratio) command"
+    echo -e "  ${GREEN}ls${RESET}                      - List files (alias for list-files)"
+    echo -e "  ${GREEN}cd${RESET}                      - Change directory (alias for change-directory)"
+    echo -e "  ${GREEN}pwd${RESET}                     - Print working directory (alias for print-working-directory)"
+    echo -e "  ${GREEN}mkdir${RESET}                   - Create directory (alias for create-directory)"
+    echo -e "  ${GREEN}rm${RESET}                      - Delete file (alias for delete-file)"
+    echo -e "  ${GREEN}cat${RESET}                     - Get file content (alias for get-file)"
+    echo -e "  ${GREEN}chmod${RESET}                   - Change file permissions"
+    echo -e "  ${GREEN}chown${RESET}                   - Change file owner"
+    echo -e "  ${GREEN}help${RESET}                    - Display this help message"
+    echo -e "  ${GREEN}exit${RESET}                    - Exit the Ratio shell"
+    echo
+    echo -e "For more commands, try ${YELLOW}rto --help${RESET}"
+}
+
+# Set up command line editing and history
+export HISTFILE="$RATIO_HISTORY/history"
+export HISTSIZE=1000
+export HISTFILESIZE=2000
+shopt -s histappend
+
+# Welcome and setup with colors
+echo -e "${BOLD}${BLUE}Welcome to Ratio Shell${RESET}"
+echo
+echo -e "${YELLOW}System commands${RESET} are available with ${GREEN}'sys'${RESET} prefix (e.g., ${GREEN}'sys ls'${RESET})"
+echo -e "Custom scripts can be placed in ${CYAN}$RATIO_BIN${RESET}"
+echo
+echo -e "Type ${GREEN}'help'${RESET} for available commands or ${GREEN}'exit'${RESET} to return to your regular shell"
+echo
+
+# Offer profile selection
+select_profile
+
+# Initialize working directory
+initialize_working_directory
+
+# Update working directory and deployment ID
+RATIO_PWD=$(run_ratio print-working-directory 2>/dev/null || echo "/")
+
+
+# Main shell loop
+while true; do
+    # Print colored prompt with entity and path
+    printf "${GREEN}(%s)${RESET} ${MAGENTA}%s${RESET}@${BLUE}%s${RESET} ${YELLOW}λ${RESET} " "$DEPLOYMENT_ID" "$ENTITY_ID" "$RATIO_PWD"
+
+    # Read command
+    read -e cmd
+    
+    if [ -z "$cmd" ]; then
+        continue
+    fi
+
+    # Add to history
+    history -s "$cmd"
+
+    # Break the command line into words
+    read -ra CMDARR <<< "$cmd"
+    command="${CMDARR[0]}"
+
+    args=("${CMDARR[@]:1}")
+
+    # Process commands with explicit handling for each case
+    case "$command" in
+        "exit"|"quit")
+            echo -e "${CYAN}Exiting Ratio Shell${RESET}"
+            exit 0
+            ;;
+        "help")
+            show_help
+            ;;
+        "\$?")
+            echo $LAST_STATUS
+            ;;
+        "\$"*)
+            # Handle variable references
+            eval "echo $command"
+            ;;
+        "sys")
+            # Expand ~ in arguments for system commands
+            expanded_args=()
+            for arg in "${args[@]}"; do
+                # Replace ~ with $HOME
+                expanded_arg="${arg/#\~/$HOME}"
+
+                expanded_args+=("$expanded_arg")
+            done
+            
+            # Execute with expanded arguments and pass through all output
+            "${expanded_args[@]}"
+
+            LAST_STATUS=$?
+            ;;
+        *)
+            # Check for custom scripts first
+            if is_bin_script "$command"; then
+                "$RATIO_BIN/$command" "${args[@]}"
+                LAST_STATUS=$?
+
+            else 
+                run_ratio "$command" "${args[@]}"
+
+            fi
+            ;;
+    esac
+
+    # Update working directory and entity after each command
+    RATIO_PWD=$(run_ratio print-working-directory 2>/dev/null || echo "/")
+done

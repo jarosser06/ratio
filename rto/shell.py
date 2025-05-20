@@ -22,7 +22,10 @@ from rto.commands.authorization import (
     RotateEntityKeyCommand,
 )
 
-from rto.commands.config import ConfigureCommand
+from rto.commands.config import (
+    ConfigureCommand,
+    GetCurrentProfileCommand,
+)
 
 from rto.commands.files import (
     ChangeFilePermissionsCommand,
@@ -279,8 +282,6 @@ class RTO:
         """
         args = self._prepare()
 
-        #os.environ['DA_VINCI_RESOURCE_DISCOVERY_STORAGE'] = "dynamodb"
-
         self._execute_command(args)
 
 
@@ -314,6 +315,7 @@ def main():
         DescribeProcessCommand,
         DescribeSubscriptionCommand,
         ExecuteAgentCommand,
+        GetCurrentProfileCommand,
         GetFileVersionCommand,
         ListEntitiesCommand,
         ListFilesCommand,

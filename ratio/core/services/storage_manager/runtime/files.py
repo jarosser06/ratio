@@ -78,6 +78,8 @@ def normalize_path(file_path: str) -> Tuple[str, str]:
 
     f_name = os.path.basename(original_path)
 
+    logging.debug(f"Normalized path {f_path} and file name {f_name}")
+
     return f_path, f_name
 
 
@@ -957,7 +959,11 @@ class FileAPI(ChildAPI):
 
         else:
             # Handle root separately
-            root_directory, root_filename = normalize_path(os.path.dirname(path_name))
+            logging.debug(f"File {request_body["file_path"]} does not exist ... creating")
+
+            logging.debug(f"Checking for parent directory access {path_name}")
+
+            root_directory, root_filename = normalize_path(path_name)
 
             logging.debug(f"Root directory is {root_directory} for file {path_name}")
 

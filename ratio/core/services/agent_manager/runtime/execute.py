@@ -4,7 +4,6 @@ Execution API Interface
 import logging
 import os
 
-from datetime import datetime, UTC as utc_tz
 from typing import Dict
 
 from da_vinci.core.immutable_object import ObjectBody, InvalidObjectSchemaError
@@ -25,7 +24,6 @@ from ratio.core.services.storage_manager.request_definitions import ValidateFile
 
 from ratio.core.services.agent_manager.tables.processes.client import (
     Process,
-    ProcessStatus,
     ProcessTableClient,
 )
 

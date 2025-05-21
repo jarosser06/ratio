@@ -20,25 +20,45 @@ class ConditionEvaluator:
         token -- A token to be used for resolving parameters
         """
         self.reference = reference
-
         self.token = token
 
-    def evaluate(self, conditions: Union[List, Dict]) -> bool:
+    def evaluate(self, conditions: List) -> bool:
         """
         Main entry point for condition evaluation
-
+        
         Keyword arguments:
-        conditions -- A list of conditions or a condition group
+        conditions -- A list containing direct conditions or condition groups
         """
-        if isinstance(conditions, list):
-            # Simple list of conditions (backward compatibility)
-            return self._evaluate_condition_list(conditions, "AND")
+        return self._evaluate_condition_list(conditions, "AND")
 
-        if isinstance(conditions, dict):
-            # Structured condition object
-            return self._evaluate_condition_group(conditions)
+    def _evaluate_condition_list(self, conditions: List, logic: str = "AND") -> bool:
+        """
+        Evaluate a list of conditions/groups
+        
+        Keyword arguments:
+        conditions -- A list of conditions or condition groups
+        logic -- The logic to apply (AND/OR)
+        """
+        if not conditions:
+            return True
 
-        return True  # No conditions
+        results = []
+        for condition in conditions:
+            if isinstance(condition, dict) and "logic" in condition:
+                # This is a condition group
+                result = self._evaluate_condition_group(condition)
+
+            else:
+                # This is a direct condition
+                result = self._evaluate_single_condition(condition)
+
+            results.append(result)
+
+        if logic == "AND":
+            return all(results)
+
+        else:  # OR
+            return any(results)
 
     def _evaluate_condition_group(self, group: Dict) -> bool:
         """
@@ -49,61 +69,10 @@ class ConditionEvaluator:
         """
         logic = group.get("logic", "AND")
 
-        # Evaluate direct conditions in this group
-        direct_conditions = group.get("conditions", [])
+        conditions = group.get("conditions", [])
 
-        direct_results = []
-
-        for condition in direct_conditions:
-            result = self._evaluate_single_condition(condition)
-
-            direct_results.append(result)
-
-        # Evaluate nested groups
-        nested_groups = group.get("groups", [])
-
-        nested_results = []
-
-        for nested_group in nested_groups:
-            result = self._evaluate_condition_group(nested_group)
-
-            nested_results.append(result)
-
-        # Combine all results
-        all_results = direct_results + nested_results
-
-        if not all_results:
-            return True  # Empty group passes
-
-        if logic == "AND":
-            return all(all_results)
-
-        else:  # OR
-            return any(all_results)
-
-    def _evaluate_condition_list(self, conditions: List, logic: str = "AND") -> bool:
-        """
-        Evaluate a simple list of conditions
-
-        Keyword arguments:
-        conditions -- A list of conditions
-        logic -- The logic to apply (AND/OR)
-        """
-        if not conditions:
-            return True
-
-        results = []
-
-        for condition in conditions:
-            result = self._evaluate_single_condition(condition)
-
-            results.append(result)
-
-        if logic == "AND":
-            return all(results)
-
-        else:  # OR
-            return any(results)
+        # Just delegate to the condition list evaluator
+        return self._evaluate_condition_list(conditions, logic)
 
     def _evaluate_single_condition(self, condition: Dict) -> bool:
         """
@@ -127,14 +96,12 @@ class ConditionEvaluator:
                 logging.debug(f"Resolved value: {param_value}")
 
             operator = condition["operator"]
-
             expected_value = condition.get("value")
 
             return self._apply_operator(param_value, operator, expected_value)
 
         except Exception as e:
             logging.warning(f"Condition evaluation failed: {e}")
-
             return False
 
     def _apply_operator(self, actual: Any, operator: str, expected: Any) -> bool:

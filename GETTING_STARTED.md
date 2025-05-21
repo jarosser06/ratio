@@ -42,16 +42,86 @@ make deploy
 System Initialization
 ---------------------
 
-Initialize the system:
-```bash
-# Initialize the system with default admin entity
-rto init
+### Step 1: Initialize the System
 
-# Initialize with a custom public key file
-rto init --public-key /path/to/public_key
+Initialize a fresh system and register your admin user using the `init` command:
+
+```bash
+rto init
 ```
 
-This creates an admin entity and saves the private key to `private_key.pem`.
+**Options:**
+- `--public-key PUBLIC_KEY`: Path to an existing public key file (optional)
+
+**Notes:**
+- If no public key is provided, the system automatically generates a public/private key pair
+- The public key is sent to the server
+- The private key is saved locally as `private_key.pem` in your working directory
+- The admin entity name defaults to "admin"
+- You can set the entity using the root flag `--entity` or `-E` (e.g., `rto --entity admin`)
+
+**Expected output:**
+```
+Ratio system initialized successfully.
+```
+
+### Step 2: Configure the CLI
+
+Set up the default profile by configuring the CLI:
+
+```bash
+rto configure
+```
+
+This interactive command will prompt you for:
+- Entity ID (default: admin)
+- App name (default: ratio)
+- Deployment ID (default: dev)
+- Private key path (default: path to working directory)
+
+**Example session:**
+```
+Creating new profile: default
+Entity ID [admin]: 
+App name [ratio]: 
+Deployment ID [dev]: 
+Private key path [/Users/username/private_key.pem]: /Users/username/.rto/admin_private_key.pem
+Warning: Private key file not found: /Users/username/.rto/admin_private_key.pem
+Do you want to continue anyway? (y/n): y
+Profile 'default' saved successfully.
+```
+
+After configuration, move your generated private key to the specified location:
+```bash
+mv ./private_key.pem ~/.rto/admin_private_key.pem
+```
+
+**Additional configuration options:**
+```
+rto configure --help
+```
+- `--name NAME`: Profile name to configure (default: default)
+- `--config-entity CONFIG_ENTITY`: Entity ID for this profile
+- `--config-app CONFIG_APP`: App name for this profile
+- `--config-deployment CONFIG_DEPLOYMENT`: Deployment ID for this profile
+- `--config-key CONFIG_KEY`: Path to private key file
+- `--set-default`: Set as default profile
+- `--non-interactive`: Don't prompt for missing values
+
+### Step 3: Verify Initialization
+
+Confirm the system is initialized properly by listing the root directories:
+
+```bash
+rto ls
+```
+
+**Expected output:**
+```
+home/    root/
+```
+
+These directories indicate that the Ratio system has been successfully set up and is ready to use.
 
 Authentication and Configuration
 --------------------------------

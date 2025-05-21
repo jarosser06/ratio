@@ -219,7 +219,7 @@ class RTO:
 
                     cmd = cmd_klass()
 
-                    cmd.execute(ratio, args)
+                    cmd.execute(ratio, self._config, args)
 
                     return
 
@@ -274,7 +274,7 @@ class RTO:
 
         cmd = cmd_klass()
 
-        cmd.execute(ratio, args)
+        cmd.execute(ratio, self._config, args)
 
     def execute(self):
         """

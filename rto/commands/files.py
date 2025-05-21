@@ -44,7 +44,7 @@ class ChangeFilePermissionsCommand(RTOCommand):
 
         parser.add_argument("file", help="The path to the file or directory", type=str)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 
@@ -52,8 +52,6 @@ class ChangeFilePermissionsCommand(RTOCommand):
         client -- The Ratio client
         args -- The command line arguments
         """
-        config = RTOConfig(config_dir=args.config_path)
-
         # Resolve the file path
         file_path = config.resolve_path(args.file)
 
@@ -113,7 +111,7 @@ class ChangeFileOwnerCommand(RTOCommand):
 
         parser.add_argument("file", help="The path to the file or directory", type=str)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 
@@ -121,8 +119,6 @@ class ChangeFileOwnerCommand(RTOCommand):
         client -- The Ratio client
         args -- The command line arguments
         """
-        config = RTOConfig(config_dir=args.config_path)
-
         # Resolve the file path
         file_path = config.resolve_path(args.file)
 
@@ -181,7 +177,7 @@ class ChangeFileGroupCommand(RTOCommand):
         parser.add_argument("group", help="The new group", type=str)
         parser.add_argument("file", help="The path to the file or directory", type=str)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 
@@ -189,8 +185,6 @@ class ChangeFileGroupCommand(RTOCommand):
         client -- The Ratio client
         args -- The command line arguments
         """
-        config = RTOConfig(config_dir=args.config_path)
-
         # Resolve the file path
         file_path = config.resolve_path(args.file)
 
@@ -332,7 +326,7 @@ class CreateDirectoryCommand(RTOCommand):
 
         parser.add_argument("directory", help="The full path to the directory to create", type=str)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 
@@ -340,8 +334,6 @@ class CreateDirectoryCommand(RTOCommand):
         client -- The Ratio client
         args -- The command line arguments
         """
-        config = RTOConfig(config_dir=args.config_path)
-
         # Resolve the directory path
         directory_path = config.resolve_path(args.directory)
 
@@ -457,7 +449,7 @@ class CreateFileCommand(RTOCommand):
 
         parser.add_argument("content", help="Content to write to the file (optional)", nargs="?")
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 
@@ -465,8 +457,6 @@ class CreateFileCommand(RTOCommand):
         client -- The Ratio client
         args -- The command line arguments
         """
-        config = RTOConfig(config_dir=args.config_path)
-
         file_path = config.resolve_path(args.file)
 
         # Check if the file already exists
@@ -593,7 +583,7 @@ class DeleteFileCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 
@@ -601,8 +591,6 @@ class DeleteFileCommand(RTOCommand):
         client -- The Ratio client
         args -- The command line arguments
         """
-        config = RTOConfig(config_dir=args.config_path)
-
         # Resolve the file path
         file_path = config.resolve_path(args.file)
 
@@ -673,7 +661,7 @@ class DeleteFileVersionCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 
@@ -681,8 +669,6 @@ class DeleteFileVersionCommand(RTOCommand):
         client -- The Ratio client
         args -- The command line arguments
         """
-        config = RTOConfig(config_dir=args.config_path)
-
         # Resolve the file path
         file_path = config.resolve_path(args.file)
 
@@ -746,7 +732,7 @@ class DescribeFileCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 
@@ -754,8 +740,6 @@ class DescribeFileCommand(RTOCommand):
         client -- The Ratio client
         args -- The command line arguments
         """
-        config = RTOConfig(config_dir=args.config_path)
-
         # Resolve the file path
         file_path = config.resolve_path(args.file)
 
@@ -883,7 +867,7 @@ class DescribeFileVersionCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 
@@ -891,7 +875,6 @@ class DescribeFileVersionCommand(RTOCommand):
         client -- The Ratio client
         args -- The command line arguments
         """
-        config = RTOConfig(config_dir=args.config_path)
         # Resolve the file path
         file_path = config.resolve_path(args.file)
 
@@ -1011,7 +994,7 @@ class GetFileVersionCommand(RTOCommand):
 
         parser.add_argument("--quiet", "-q", help="Suppress informational messages", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 
@@ -1019,8 +1002,6 @@ class GetFileVersionCommand(RTOCommand):
         client -- The Ratio client
         args -- The command line arguments
         """
-        config = RTOConfig(config_dir=args.config_path)
-
         # Resolve the file path
         file_path = config.resolve_path(args.file)
 
@@ -1131,7 +1112,7 @@ class ListFileVersionsCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 
@@ -1139,8 +1120,6 @@ class ListFileVersionsCommand(RTOCommand):
         client -- The Ratio client
         args -- The command line arguments
         """
-        config = RTOConfig(config_dir=args.config_path)
-
         # Resolve the file path
         file_path = config.resolve_path(args.file)
 

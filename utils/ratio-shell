@@ -3,7 +3,7 @@
 # ratio-shell - Interactive shell for Ratio CLI
 
 # Configuration
-RATIO_HOME="$HOME/.ratio"
+RATIO_HOME="$HOME/.rto"
 RATIO_SHELL_HOME="$RATIO_HOME/shell"
 RATIO_BIN="$RATIO_SHELL_HOME/bin"
 RATIO_HISTORY="$RATIO_SHELL_HOME/history"
@@ -11,7 +11,9 @@ RATIO_HISTORY="$RATIO_SHELL_HOME/history"
 # Create directories if they don't exist
 mkdir -p "$RATIO_SHELL_HOME"
 mkdir -p "$RATIO_BIN"
-mkdir -p "$RATIO_HISTORY"
+
+# Create history file if it doesn't exist
+touch "$RATIO_HISTORY"
 
 # Add bin directory to PATH
 export PATH="$RATIO_BIN:$PATH"
@@ -179,6 +181,12 @@ initialize_working_directory() {
     fi
 }
 
+cleanup() {
+    echo -e "\n${CYAN}Saving history and exiting Ratio Shell${RESET}"
+    history -w
+    exit 0
+}
+
 # Display help information for the shell
 show_help() {
     echo -e "${BOLD}${CYAN}Ratio Shell Help:${RESET}"
@@ -198,9 +206,13 @@ show_help() {
 }
 
 # Set up command line editing and history
-export HISTFILE="$RATIO_HISTORY/history"
+export HISTFILE=$RATIO_HISTORY
 export HISTSIZE=1000
 export HISTFILESIZE=2000
+
+# Read past history
+history -r
+
 shopt -s histappend
 
 # Welcome and setup with colors
@@ -221,6 +233,9 @@ initialize_working_directory
 # Update working directory and deployment ID
 RATIO_PWD=$(run_ratio print-working-directory 2>/dev/null || echo "/")
 
+
+# Cleanup on exit
+trap cleanup SIGINT
 
 # Main shell loop
 while true; do
@@ -246,8 +261,7 @@ while true; do
     # Process commands with explicit handling for each case
     case "$command" in
         "exit"|"quit")
-            echo -e "${CYAN}Exiting Ratio Shell${RESET}"
-            exit 0
+            cleanup
             ;;
         "help")
             show_help
@@ -259,9 +273,13 @@ while true; do
             # Handle variable references
             eval "echo $command"
             ;;
+        "history"|"echo")
+            "${command}" "${args[@]}"
+            ;;
         "sys")
             # Expand ~ in arguments for system commands
             expanded_args=()
+
             for arg in "${args[@]}"; do
                 # Replace ~ with $HOME
                 expanded_arg="${arg/#\~/$HOME}"
@@ -274,15 +292,18 @@ while true; do
 
             LAST_STATUS=$?
             ;;
+        "rto")
+            run_ratio "${args[@]}"
+            ;;
         *)
-            # Check for custom scripts first
+            # Check for custom scripts
             if is_bin_script "$command"; then
                 "$RATIO_BIN/$command" "${args[@]}"
+
                 LAST_STATUS=$?
 
-            else 
+            else
                 run_ratio "$command" "${args[@]}"
-
             fi
             ;;
     esac

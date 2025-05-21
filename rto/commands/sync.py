@@ -15,6 +15,7 @@ from ratio.client.requests.storage import (
 )
 
 from rto.commands.base import RTOCommand, RTOErrorMessage
+from rto.config import RTOConfig
 
 
 class SyncCommand(RTOCommand):
@@ -70,7 +71,7 @@ class SyncCommand(RTOCommand):
 
         parser.add_argument("--encoding-map-file", help="Path to JSON file mapping file extensions to encoding types", type=str)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 

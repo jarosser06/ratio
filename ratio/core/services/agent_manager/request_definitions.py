@@ -209,6 +209,12 @@ class ExecuteAgentRequest(ObjectBodySchema):
             required=False,
         ),
         SchemaAttribute(
+            name="dependencies",
+            type_name=SchemaAttributeType.STRING_LIST,
+            description="A list of execution ids the agent execution is dependent on. Not required if dependencies are captured with REF references",
+            required=False,
+        ),
+        SchemaAttribute(
             name="execute_as",
             type_name=SchemaAttributeType.STRING,
             description="The entity to execute the agent as. This is the entity that will be used to execute the agent. ONLY SUPPORTED IF THE REQUESTOR IS AN ADMIN",

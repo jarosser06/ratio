@@ -218,6 +218,7 @@ class AgentInstruction:
     definition: AgentDefinition
     execution_id: str
     conditions: List[Dict] = None
+    dependencies: List[str] = None
     response: Dict[str, Any] = None
     provided_arguments: Dict[str, Any] = None
 
@@ -227,6 +228,9 @@ class AgentInstruction:
         """
         if self.conditions is None:
             self.conditions = []
+
+        if self.dependencies is None:
+            self.dependencies = []
 
         if self.response is None:
             self.response = {}
@@ -290,7 +294,7 @@ class AgentInstruction:
         Returns:
             List of execution IDs this instruction depends on
         """
-        dependencies = []
+        dependencies = self.dependencies.copy()
 
         def find_refs(value):
             if isinstance(value, str) and value.startswith("REF:"):
@@ -312,6 +316,12 @@ class AgentInstruction:
         # Process all provided arguments
         for arg_value in self.provided_arguments.values():
             find_refs(arg_value)
+
+        # Check for conditions
+        if self.conditions:
+            for condition in self.conditions:
+                for condition_value in condition.values():
+                    find_refs(condition_value)
 
         return list(set(dependencies))
 

@@ -70,7 +70,14 @@ class ReferenceValueNumber(ReferenceValueBase):
         if attribute_name is not None:
             raise ValueError("Number reference values do not support attributes.")
 
-        return float(self.original_value)
+        if not self.original_value:
+            return None
+
+        if "." in str(self.original_value):
+            return float(self.original_value)
+
+        else:
+            return int(self.original_value)
 
 
 class ReferenceValueBoolean(ReferenceValueBase):
@@ -86,6 +93,9 @@ class ReferenceValueBoolean(ReferenceValueBase):
         """
         if attribute_name is not None:
             raise ValueError("Boolean reference values do not support attributes.")
+
+        if not self.original_value:
+            return None
 
         return bool(self.original_value)
 

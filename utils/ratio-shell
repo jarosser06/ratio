@@ -244,7 +244,7 @@ while true; do
 
     # Read command
     read -e cmd
-    
+
     if [ -z "$cmd" ]; then
         continue
     fi
@@ -252,11 +252,10 @@ while true; do
     # Add to history
     history -s "$cmd"
 
-    # Break the command line into words
-    read -ra CMDARR <<< "$cmd"
-    command="${CMDARR[0]}"
-
-    args=("${CMDARR[@]:1}")
+    eval "set -- $cmd"
+    command="$1"
+    shift
+    args=("$@")
 
     # Process commands with explicit handling for each case
     case "$command" in
@@ -286,7 +285,7 @@ while true; do
 
                 expanded_args+=("$expanded_arg")
             done
-            
+
             # Execute with expanded arguments and pass through all output
             "${expanded_args[@]}"
 

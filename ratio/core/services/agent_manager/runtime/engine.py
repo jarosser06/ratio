@@ -248,6 +248,7 @@ class ExecutionEngine:
             # Create the agent instruction object
             loaded_instructions[instruction["execution_id"]] = AgentInstruction(
                 conditions=conditions,
+                dependencies=instruction.get("dependencies", []),
                 execution_id=instruction["execution_id"],
                 definition=agent_definition,
                 provided_arguments=instruction.get("arguments"),

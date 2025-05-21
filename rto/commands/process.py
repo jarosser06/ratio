@@ -36,7 +36,7 @@ class DescribeProcessCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 
@@ -146,7 +146,7 @@ class ExecuteAgentCommand(RTOCommand):
 
         parser.add_argument("--wait", help="Wait for the agent execution to complete", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
         
@@ -156,11 +156,8 @@ class ExecuteAgentCommand(RTOCommand):
         """
         agent_definition_path = args.agent_definition_path
 
-        if agent_definition_path:
-            config = RTOConfig(config_dir=args.config_path)
-
-            # Resolve the file path
-            agent_definition_path = config.resolve_path(args.agent_definition_path)
+        # Resolve the file path
+        agent_definition_path = config.resolve_path(args.agent_definition_path)
 
         # Create the request - passing the path directly to the API
         request = ExecuteAgentRequest(
@@ -272,7 +269,7 @@ class ListProcessesCommand(RTOCommand):
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
         parser.add_argument("--detailed", "-d", help="Show detailed information for each process", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
         

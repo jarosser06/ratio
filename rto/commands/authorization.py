@@ -18,6 +18,7 @@ from ratio.client.requests.auth import (
 )
 
 from rto.commands.base import RTOCommand, RTOErrorMessage
+from rto.config import RTOConfig
 from rto.keys import generate_rsa_key_pair
 
 
@@ -55,12 +56,13 @@ class CreateEntityCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
         """
         # Get or generate key pair
         public_key_value = None
+
         private_key_value = None
 
         if args.public_key:
@@ -160,7 +162,7 @@ class CreateGroupCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
         """
@@ -218,7 +220,7 @@ class AddEntityToGroupCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
         """
@@ -286,7 +288,7 @@ class RemoveEntityFromGroupCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
         """
@@ -360,7 +362,7 @@ class DeleteGroupCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
         """
@@ -433,7 +435,7 @@ class DeleteEntityCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
         """
@@ -500,7 +502,7 @@ class DescribeGroupCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
         """
@@ -582,7 +584,7 @@ class DescribeEntityCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
         """
@@ -674,7 +676,7 @@ class ListEntitiesCommand(RTOCommand):
 
         parser.add_argument("--detailed", "-d", help="Show detailed entity information", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
         """
@@ -792,7 +794,7 @@ class ListGroupsCommand(RTOCommand):
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
         parser.add_argument("--detailed", "-d", help="Show detailed group information", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
         """
@@ -888,7 +890,7 @@ class RotateEntityKeyCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
         """

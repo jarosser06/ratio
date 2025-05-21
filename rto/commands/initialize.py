@@ -7,6 +7,7 @@ from ratio.client.client import Ratio
 from ratio.client.requests.auth import InitializeRequest
 
 from rto.commands.base import RTOCommand
+from rto.config import RTOConfig
 from rto.keys import generate_rsa_key_pair
 
 
@@ -25,7 +26,7 @@ class InitializeCommand(RTOCommand):
         """
         parser.add_argument("--public-key", help="Path to the public key file", type=str, required=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
         """

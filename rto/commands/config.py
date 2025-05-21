@@ -32,7 +32,7 @@ class ConfigureCommand(RTOCommand):
 
         parser.add_argument("--non-interactive", help="Don't prompt for missing values", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 
@@ -40,8 +40,6 @@ class ConfigureCommand(RTOCommand):
         client -- Ratio client instance
         args -- the parsed arguments
         """
-        config = RTOConfig()
-
         # Use the distinct argument name
         profile_name = args.name
 
@@ -136,12 +134,10 @@ class GetCurrentProfileCommand(RTOCommand):
         """
         parser.add_argument("--json", help="Output as JSON", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
         """
-        config = RTOConfig(config_dir=args.config_path)
-
         # Get profile info
         profile_name = args.profile or config.get_default_profile()
 

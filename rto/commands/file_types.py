@@ -11,6 +11,7 @@ from ratio.client.requests.storage import (
 )
 
 from rto.commands.base import RTOCommand, RTOErrorMessage
+from rto.config import RTOConfig
 
 
 class DeleteFileTypeCommand(RTOCommand):
@@ -34,7 +35,7 @@ class DeleteFileTypeCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 
@@ -99,7 +100,7 @@ class DescribeFileTypeCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 
@@ -198,7 +199,7 @@ class ListFileTypesCommand(RTOCommand):
 
         parser.add_argument("--filter", help="Filter file types by substring (case-insensitive)", type=str)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
         
@@ -331,7 +332,7 @@ class PutFileTypeCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 

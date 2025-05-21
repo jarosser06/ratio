@@ -24,10 +24,8 @@ class ChangeDirectoryCommand(RTOCommand):
                            help="Directory to change to (use absolute path or relative to current working directory)",
                            nargs="?", default="/")  # Default to root if no directory specified
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """Execute the command."""
-        config = RTOConfig(args.profile)
-
         current_dir = config.get_working_directory()
 
         # Remove trailing slash from current directory (unless it's root)
@@ -120,12 +118,10 @@ class ListFilesCommand(RTOCommand):
         parser.add_argument("directory", help="Directory to list (defaults to current working directory)", 
                             nargs="?", default=None, type=str)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
         """
-        config = RTOConfig(config_dir=args.config_path)
-
         target_dir = config.resolve_path(path=args.directory)
 
         # Remove trailing slashes (except for root)
@@ -292,10 +288,8 @@ class PrintWorkingDirectoryCommand(RTOCommand):
         # No additional arguments needed
         pass
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """Execute the command."""
-        config = RTOConfig(config_dir=args.config_path)
-
         working_dir = config.get_working_directory()
 
         print(working_dir)

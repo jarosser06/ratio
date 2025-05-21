@@ -56,7 +56,7 @@ class CreateSubscriptionCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 
@@ -64,8 +64,6 @@ class CreateSubscriptionCommand(RTOCommand):
         client -- The Ratio client
         args -- The command line arguments
         """
-        config = RTOConfig(config_dir=args.config_path)
-
         # Resolve paths
         agent_definition_path = config.resolve_path(args.agent_definition)
 
@@ -172,7 +170,7 @@ class DeleteSubscriptionCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 
@@ -243,7 +241,7 @@ class DescribeSubscriptionCommand(RTOCommand):
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 
@@ -361,7 +359,7 @@ class ListSubscriptionsCommand(RTOCommand):
         parser.add_argument("--detailed", "-d", help="Show detailed information for each subscription", 
                            action="store_true", default=False)
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
 

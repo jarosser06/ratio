@@ -2,6 +2,8 @@ from argparse import ArgumentParser
 
 from ratio.client.client import Ratio
 
+from rto.config import RTOConfig
+
 
 class RTOErrorMessage(Exception):
     """
@@ -20,7 +22,7 @@ class RTOCommand:
     def configure_parser(cls, parser: ArgumentParser):
         return
 
-    def execute(self, client: Ratio, args):
+    def execute(self, client: Ratio, config: RTOConfig, args):
         raise NotImplementedError
 
     def ratio_client(self, args):

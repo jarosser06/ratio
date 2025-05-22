@@ -26,6 +26,48 @@ class SyncCommand(RTOCommand):
     description = "Sync files between local filesystem and Ratio"
     requires_authentication = True
 
+
+    DEFAULT_ENCODING_MAP = {
+        # Text files - use text encoding
+        "txt": "text",
+        "text": "text",
+        "md": "text",
+        "json": "text",
+        "xml": "text",
+        "html": "text",
+        "css": "text",
+        "js": "text",
+        "py": "text",
+
+        # Binary files - use binary encoding
+        "pdf": "binary",
+        "gif": "binary",
+        "jpg": "binary",
+        "jpeg": "binary",
+        "png": "binary",
+        "webp": "binary",
+        "pdf": "binary",
+        "mp4": "binary",
+        "mp3": "binary",
+        "zip": "binary",
+    }
+
+    DEFAULT_TYPE_MAP = {
+        # Text files
+        "txt": "ratio::text",
+        "text": "ratio::text",
+
+        # Image files
+        "gif": "ratio::gif",
+        "jpg": "ratio::jpeg",
+        "jpeg": "ratio::jpeg",
+        "png": "ratio::png",
+        "webp": "ratio::webp",
+
+        # Document files
+        "pdf": "ratio::pdf",
+    }
+
     @classmethod
     def configure_parser(cls, parser: ArgumentParser):
         """
@@ -103,9 +145,9 @@ class SyncCommand(RTOCommand):
             dest_path = os.path.abspath(os.path.expanduser(dest_path))
 
         # Load extension to file type mapping and encoding mapping if provided
-        type_map = self._load_mapping(args.type_map, args.type_map_file, "type map")
+        type_map = self._load_mapping(args.type_map, args.type_map_file, "type map", self.DEFAULT_TYPE_MAP)
 
-        encoding_map = self._load_mapping(args.encoding_map, args.encoding_map_file, "encoding map")
+        encoding_map = self._load_mapping(args.encoding_map, args.encoding_map_file, "encoding map", self.DEFAULT_ENCODING_MAP)
 
         # Validate encoding values
         self._validate_encodings(encoding_map)
@@ -201,7 +243,7 @@ class SyncCommand(RTOCommand):
 
         print(f"Sync complete: {total_files_synced} files synced, {total_dirs_created} directories created")
 
-    def _load_mapping(self, json_str, file_path, map_name):
+    def _load_mapping(self, json_str, file_path, map_name, default_map=None):
         """
         Load a mapping from JSON string or file
 
@@ -235,6 +277,10 @@ class SyncCommand(RTOCommand):
 
             except Exception as e:
                 raise RTOErrorMessage(f"Error reading {map_name} file: {str(e)}")
+
+        # If no mapping provided, use default mapping
+        if not mapping and default_map:
+            return default_map
 
         # Normalize extensions by stripping leading dots
         normalized_map = {}
@@ -683,13 +729,11 @@ class SyncCommand(RTOCommand):
         """
         try:
             if encoding == 'binary':
-                # Binary mode
+                # Binary mode - read as binary and base64 encode for JSON serialization
                 mode = 'rb'
-
             elif encoding == 'base64':
                 # Read as binary, then base64 encode
                 mode = 'rb'
-
             else:
                 # Text mode (default)
                 mode = 'r'
@@ -699,10 +743,15 @@ class SyncCommand(RTOCommand):
                 content = f.read()
 
             # Handle encoding transformations
-            if encoding == 'base64':
+            if encoding == 'binary':
+                # For binary encoding, we need to base64 encode the bytes for JSON serialization
                 if isinstance(content, bytes):
                     content = base64.b64encode(content).decode('utf-8')
-
+                else:
+                    content = base64.b64encode(content.encode('utf-8')).decode('utf-8')
+            elif encoding == 'base64':
+                if isinstance(content, bytes):
+                    content = base64.b64encode(content).decode('utf-8')
                 else:
                     content = base64.b64encode(content.encode('utf-8')).decode('utf-8')
 

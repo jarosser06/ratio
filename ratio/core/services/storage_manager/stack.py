@@ -166,6 +166,46 @@ class StorageManagerStack(Stack):
             content_type="application/octet-stream"
         )
 
+        RegisteredFileType(
+            scope=self,
+            type_name="ratio::text",
+            description="FS Text File",
+            is_directory_type=False,
+            content_type="text/plain"
+        )
+
+        RegisteredFileType(
+            scope=self,
+            type_name="ratio::gif",
+            description="FS GIF Image File",
+            is_directory_type=False,
+            content_type="image/gif"
+        )
+
+        RegisteredFileType(
+            scope=self,
+            type_name="ratio::jpeg",
+            description="FS JPEG Image File",
+            is_directory_type=False,
+            content_type="image/jpeg"
+        )
+
+        RegisteredFileType(
+            scope=self,
+            type_name="ratio::png",
+            description="FS PNG Image File",
+            is_directory_type=False,
+            content_type="image/png"
+        )
+
+        RegisteredFileType(
+            scope=self,
+            type_name="ratio::webp",
+            description="FS WEBP Image File",
+            is_directory_type=False,
+            content_type="image/webp"
+        )
+
         RegisteredFile(
             scope=self,
             file_path="/home",

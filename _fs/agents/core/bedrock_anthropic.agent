@@ -36,29 +36,17 @@
       "default_value": 0.9
     },
     {
-      "name": "attachment_path",
-      "type_name": "string",
-      "description": "Path to an optional attachment file to include with the prompt",
-      "required": false,
-      "required_conditions": [
-        {
-          "operator": "exists",
-          "param": "attachment_type_name"
-        }
-      ]
+      "name": "attachment_paths",
+      "type_name": "list",
+      "description": "Paths to an optional attachment image files to include with the prompt",
+      "required": false
     },
     {
-      "name": "attachment_type_name",
+      "name": "attachment_content_type",
       "type_name": "string",
       "description": "type_name of the attachment file",
       "required": false,
-      "enum": ["image/jpeg", "image/png", "image/gif", "application/pdf"],
-      "required_conditions": [
-        {
-          "operator": "exists",
-          "param": "attachment_path"
-        }
-      ]
+      "enum": ["image/jpeg", "image/png", "image/gif", "image/webp"]
     },
     {
       "name": "result_file_path",

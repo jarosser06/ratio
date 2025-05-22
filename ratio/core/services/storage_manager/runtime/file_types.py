@@ -120,9 +120,7 @@ class FileTypesAPI(ChildAPI):
 
         return self.respond(
             status_code=200,
-            body={
-                "file_type": f_type.to_dict(json_compatible=True),
-            },
+            body=f_type.to_dict(json_compatible=True),
         )
 
     def list_file_types(self, request_body: ObjectBody, request_context: Dict):

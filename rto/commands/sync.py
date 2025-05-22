@@ -34,9 +34,9 @@ class SyncCommand(RTOCommand):
         Keyword arguments:
         parser -- The argument parser to configure
         """
-        parser.add_argument("source", help="Source path (use ratio:/path for Ratio paths)", type=str)
-
-        parser.add_argument("destination", help="Destination path (use ratio:/path for Ratio paths)", type=str)
+        # Accept multiple paths - last one is destination, all others are sources
+        parser.add_argument("paths", nargs='+', 
+                          help="Source paths followed by destination path (use ratio:/path for Ratio paths)")
 
         parser.add_argument("--recursive", "-r", help="Sync directories recursively", action="store_true", default=False)
 
@@ -79,13 +79,28 @@ class SyncCommand(RTOCommand):
         client -- The Ratio client
         args -- The command line arguments
         """
-        # Parse source and destination paths
-        source_is_ratio, source_path = self._parse_path(args.source)
+        # Split paths into sources and destination
+        if len(args.paths) < 2:
+            raise RTOErrorMessage("At least one source and one destination path required")
 
-        dest_is_ratio, dest_path = self._parse_path(args.destination)
+        sources = args.paths[:-1]
 
-        if source_is_ratio and dest_is_ratio:
-            raise RTOErrorMessage("Cannot sync from Ratio to Ratio - both paths are Ratio paths")
+        destination = args.paths[-1]
+
+        if args.verbose:
+            print(f"Sources: {sources}")
+
+            print(f"Destination: {destination}")
+
+        # Parse destination path
+        dest_is_ratio, dest_path = self._parse_path(destination)
+
+        # Resolve destination path using config
+        if dest_is_ratio:
+            dest_path = config.resolve_path(dest_path)
+
+        else:
+            dest_path = os.path.abspath(os.path.expanduser(dest_path))
 
         # Load extension to file type mapping and encoding mapping if provided
         type_map = self._load_mapping(args.type_map, args.type_map_file, "type map")
@@ -95,15 +110,15 @@ class SyncCommand(RTOCommand):
         # Validate encoding values
         self._validate_encodings(encoding_map)
 
-        # Check if source exists and determine if it's a directory
-        source_exists, source_is_directory = self._check_path_exists(client, source_path, source_is_ratio)
+        # Check if destination is a directory
+        dest_exists, dest_is_directory = self._check_path_exists(client, dest_path, dest_is_ratio)
 
-        if not source_exists:
-            raise RTOErrorMessage(f"Source path {args.source} not found")
+        # If destination doesn't exist and we have multiple sources, assume it should be a directory
+        if not dest_exists and len(sources) > 1:
+            dest_is_directory = True
 
-        # Check if destination is a directory and adjust path if needed
-        dest_path = self._adjust_destination_path(client, source_path, dest_path, 
-                                                  source_is_directory, dest_is_ratio, args.verbose)
+            if args.verbose:
+                print(f"Destination doesn't exist and multiple sources provided - treating as directory")
 
         # Handle dry run flag
         if args.dry_run:
@@ -124,24 +139,67 @@ class SyncCommand(RTOCommand):
                     print(f"  .{ext} -> {encoding}")
 
         # Initialize counters
-        files_synced = 0
+        total_files_synced = 0
 
-        dirs_created = 0
+        total_dirs_created = 0
 
-        # Do the sync based on direction
-        if source_is_ratio:
-            files_synced, dirs_created = self._sync_ratio_to_local(
-                client, source_path, dest_path, args, encoding_map, 
-                files_synced, dirs_created
-            )
+        # Process each source
+        for source in sources:
+            # Parse source path
+            source_is_ratio, source_path = self._parse_path(source)
 
-        else:
-            files_synced, dirs_created = self._sync_local_to_ratio(
-                client, source_path, dest_path, args, type_map, encoding_map,
-                files_synced, dirs_created
-            )
+            # Resolve source path
+            if source_is_ratio:
+                source_path = config.resolve_path(source_path)
 
-        print(f"Sync complete: {files_synced} files synced, {dirs_created} directories created")
+            else:
+                source_path = os.path.abspath(os.path.expanduser(source_path))
+
+            # Check if source exists
+            source_exists, _ = self._check_path_exists(client, source_path, source_is_ratio)
+
+            if not source_exists:
+                print(f"Warning: Source path {source} not found, skipping")
+                continue
+
+            # Determine final destination path for this source
+            if dest_is_directory or len(sources) > 1:
+                # If destination is directory or we have multiple sources, 
+                # append source filename to destination
+                source_name = os.path.basename(source_path)
+
+                if dest_is_ratio:
+                    final_dest_path = f"{dest_path.rstrip('/')}/{source_name}"
+
+                else:
+                    final_dest_path = os.path.join(dest_path, source_name)
+
+            else:
+                final_dest_path = dest_path
+
+            if args.verbose:
+                print(f"Syncing: {source} -> {final_dest_path}")
+
+            # Check for ratio-to-ratio sync
+            if source_is_ratio and dest_is_ratio:
+                raise RTOErrorMessage("Cannot sync from Ratio to Ratio - both paths are Ratio paths")
+
+            # Do the sync based on direction
+            if source_is_ratio:
+                files_synced, dirs_created = self._sync_ratio_to_local(
+                    client, source_path, final_dest_path, args, encoding_map, 0, 0
+                )
+
+            else:
+                files_synced, dirs_created = self._sync_local_to_ratio(
+                    client, source_path, final_dest_path, args, type_map, encoding_map, 0, 0
+                )
+
+            total_files_synced += files_synced
+
+            total_dirs_created += dirs_created
+
+        print(f"Sync complete: {total_files_synced} files synced, {total_dirs_created} directories created")
 
     def _load_mapping(self, json_str, file_path, map_name):
         """
@@ -428,15 +486,22 @@ class SyncCommand(RTOCommand):
             if args.verbose:
                 print(f"Syncing directory: {local_path} -> {ratio_path}")
 
+            # Check if Ratio directory already exists
+            dir_exists, _ = self._check_path_exists(client, ratio_path, True)
+
             # Create Ratio directory if needed
-            if not args.dry_run:
-                # Create directory in Ratio
-                self._create_ratio_directory(client, ratio_path, args.dir_type, args.dir_permissions)
+            if not dir_exists:
+                if not args.dry_run:
+                    # Create directory in Ratio
+                    self._create_ratio_directory(client, ratio_path, args.dir_type, args.dir_permissions)
 
-                dirs_created += 1
+                    dirs_created += 1
 
-            if args.verbose:
-                print(f"Created Ratio directory: {ratio_path}")
+                if args.verbose:
+                    print(f"Created Ratio directory: {ratio_path}")
+
+            elif args.verbose:
+                print(f"Ratio directory already exists: {ratio_path}")
 
             # If recursive and within max depth, process each file in the directory
             if args.recursive and (args.max_depth == 0 or current_depth < args.max_depth):

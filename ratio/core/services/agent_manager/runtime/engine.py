@@ -314,6 +314,8 @@ class ExecutionEngine:
             # Add the resolved mapping to the dictionary
             resolved_mapping[response_key] = response_value
 
+        logging.debug(f"Resolved mapping: {resolved_mapping}")
+
         # Create the response schema class
         response_schema_klass = ObjectBodySchema.from_dict(
             object_name=f"execution_engine_response_schema",

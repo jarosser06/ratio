@@ -470,7 +470,19 @@ def process_complete_handler(event: Dict, context: Dict):
     if not execution_ids and len(execution_engine.in_progress) == 0:
         logging.debug(f"No more executions for composite agent process: {parent_proc.process_id}")
 
-        response_path = execution_engine.close()
+        try:
+            response_path = execution_engine.close()
+
+        except Exception as e:
+            logging.debug(f"Error closing execution engine: {e}")
+
+            _close_out_process(
+                process=parent_proc,
+                failure_reason=f"error closing execution engine {e}",
+                token=event_body["token"],
+            )
+
+            raise e
 
         _close_out_process(
             process=parent_proc,

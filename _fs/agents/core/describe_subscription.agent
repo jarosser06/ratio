@@ -1,0 +1,254 @@
+{
+  "arguments": [
+    {
+      "name": "subscription_id",
+      "type_name": "string",
+      "description": "The ID of the subscription to describe",
+      "required": true
+    }
+  ],
+  "description": "A T1 agent that describes a subscription by calling the scheduler's describe subscription API and returns structured subscription information",
+  "instructions": [
+    {
+      "agent_definition": {
+        "arguments": [
+          {
+            "name": "path",
+            "type_name": "string",
+            "description": "The API path for the request",
+            "required": true
+          },
+          {
+            "name": "fail_on_error",
+            "type_name": "bool",
+            "description": "Whether the agent run should fail in the case of an error",
+            "default_value": true,
+            "required": false
+          },
+          {
+            "name": "request",
+            "type_name": "object",
+            "description": "The API request object",
+            "required": true
+          },
+          {
+            "name": "target_service",
+            "type_name": "string",
+            "enum": ["PROCESS", "SCHEDULER", "STORAGE"],
+            "description": "The internal service to send the request to",
+            "required": true
+          }
+        ],
+        "responses": [
+          {
+            "name": "status_code",
+            "type_name": "number",
+            "description": "The responding status code from the API call",
+            "required": true
+          },
+          {
+            "name": "response_body",
+            "type_name": "object",
+            "description": "The response body from the API call",
+            "required": false
+          }
+        ],
+        "system_event_endpoint": "ratio::agent::internal_api::execution"
+      },
+      "arguments": {
+        "path": "/describe_subscription",
+        "target_service": "SCHEDULER",
+        "request": {
+          "subscription_id": "REF:arguments.subscription_id"
+        }
+      },
+      "execution_id": "describe_subscription_request"
+    },
+    {
+      "agent_definition": {
+        "arguments": [
+          {
+            "name": "original_object",
+            "type_name": "object",
+            "description": "The source object to be mapped",
+            "required": true
+          },
+          {
+            "name": "object_map",
+            "type_name": "object",
+            "description": "Mapping configuration that defines how to transform the original object",
+            "required": true
+          }
+        ],
+        "description": "Object mapper for describe subscription response",
+        "responses": [
+          {
+            "name": "subscription_id",
+            "type_name": "string",
+            "description": "The ID of the subscription",
+            "required": true
+          },
+          {
+            "name": "agent_definition",
+            "type_name": "string",
+            "description": "The path to the agent that will be executed",
+            "required": true
+          },
+          {
+            "name": "file_path",
+            "type_name": "string",
+            "description": "The full path to the file or directory being monitored",
+            "required": true
+          },
+          {
+            "name": "file_event_type",
+            "type_name": "string",
+            "description": "The type of file system event being monitored",
+            "required": true
+          },
+          {
+            "name": "execution_working_directory",
+            "type_name": "string",
+            "description": "The working directory for agent execution",
+            "required": false
+          },
+          {
+            "name": "expiration",
+            "type_name": "string",
+            "description": "The datetime the subscription expires",
+            "required": false
+          },
+          {
+            "name": "file_type",
+            "type_name": "string",
+            "description": "The type of file being monitored",
+            "required": false
+          },
+          {
+            "name": "owner",
+            "type_name": "string",
+            "description": "The owner of the subscription",
+            "required": true
+          },
+          {
+            "name": "single_use",
+            "type_name": "boolean",
+            "description": "Whether the subscription is single use",
+            "required": true
+          },
+          {
+            "name": "created_on",
+            "type_name": "string",
+            "description": "When the subscription was created",
+            "required": false
+          },
+          {
+            "name": "status",
+            "type_name": "string",
+            "description": "The current status of the subscription",
+            "required": false
+          }
+        ],
+        "system_event_endpoint": "ratio::agent::object_mapper::execution"
+      },
+      "arguments": {
+        "original_object": "REF:describe_subscription_request.response_body",
+        "object_map": {
+          "subscription_id": "subscription_id",
+          "agent_definition": "agent_definition",
+          "file_path": "file_path",
+          "file_event_type": "file_event_type",
+          "execution_working_directory": "execution_working_directory",
+          "expiration": "expiration",
+          "file_type": "file_type",
+          "owner": "owner",
+          "single_use": "single_use",
+          "created_on": "created_on",
+          "status": "status"
+        }
+      },
+      "execution_id": "map_response"
+    }
+  ],
+  "response_reference_map": {
+    "subscription_id": "REF:map_response.subscription_id",
+    "agent_definition": "REF:map_response.agent_definition",
+    "file_path": "REF:map_response.file_path",
+    "file_event_type": "REF:map_response.file_event_type",
+    "execution_working_directory": "REF:map_response.execution_working_directory",
+    "expiration": "REF:map_response.expiration",
+    "file_type": "REF:map_response.file_type",
+    "owner": "REF:map_response.owner",
+    "single_use": "REF:map_response.single_use",
+    "created_on": "REF:map_response.created_on",
+    "status": "REF:map_response.status"
+  },
+  "responses": [
+    {
+      "name": "subscription_id",
+      "type_name": "string",
+      "description": "The ID of the subscription",
+      "required": true
+    },
+    {
+      "name": "agent_definition",
+      "type_name": "string",
+      "description": "The path to the agent that will be executed",
+      "required": true
+    },
+    {
+      "name": "file_path",
+      "type_name": "string",
+      "description": "The full path to the file or directory being monitored",
+      "required": true
+    },
+    {
+      "name": "file_event_type",
+      "type_name": "string",
+      "description": "The type of file system event being monitored",
+      "required": true
+    },
+    {
+      "name": "execution_working_directory",
+      "type_name": "string",
+      "description": "The working directory for agent execution",
+      "required": false
+    },
+    {
+      "name": "expiration",
+      "type_name": "string",
+      "description": "The datetime the subscription expires",
+      "required": false
+    },
+    {
+      "name": "file_type",
+      "type_name": "string",
+      "description": "The type of file being monitored",
+      "required": false
+    },
+    {
+      "name": "owner",
+      "type_name": "string",
+      "description": "The owner of the subscription",
+      "required": true
+    },
+    {
+      "name": "single_use",
+      "type_name": "boolean",
+      "description": "Whether the subscription is single use",
+      "required": true
+    },
+    {
+      "name": "created_on",
+      "type_name": "string",
+      "description": "When the subscription was created",
+      "required": false
+    },
+    {
+      "name": "status",
+      "type_name": "string",
+      "description": "The current status of the subscription",
+      "required": false
+    }
+  ]
+}

@@ -145,21 +145,18 @@ class DescribeFileTypeCommand(RTOCommand):
         Keyword arguments:
         type_data -- The file type data to format
         """
-        print(f"File Type: {type_data.get('file_type', 'Unknown')}")
+        print(f"File Type: {type_data["type_name"]}")
 
-        print(f"Description: {type_data.get('description', 'None')}")
+        print(f"Description: {type_data.get("description", "None")}")
 
-        if 'is_container_type' in type_data:
-            print(f"Is Container Type: {type_data.get('is_container_type')}")
+        if "is_container_type" in type_data:
+            print(f"Is Container Type: {type_data.get("is_container_type")}")
 
-        if 'content_search_instructions_path' in type_data:
-            print(f"Content Search Instructions: {type_data.get('content_search_instructions_path')}")
-
-        if 'name_restrictions' in type_data:
-            print(f"Name Restrictions: {type_data.get('name_restrictions')}")
+        if "name_restrictions" in type_data:
+            print(f"Name Restrictions: {type_data.get("name_restrictions")}")
 
         # Print metadata if present
-        metadata = type_data.get('metadata', {})
+        metadata = type_data.get("metadata", {})
 
         if metadata:
             print("\nMetadata:")
@@ -171,8 +168,8 @@ class DescribeFileTypeCommand(RTOCommand):
         print("\nAdditional Properties:")
 
         for key, value in type_data.items():
-            if key not in ['file_type', 'description', 'is_container_type', 
-                          'content_search_instructions_path', 'name_restrictions', 'metadata']:
+            if key not in ["file_type", "description", "is_container_type", 
+                           "name_restrictions", "metadata"]:
                 print(f"  {key}: {value}")
 
 
@@ -229,10 +226,11 @@ class ListFileTypesCommand(RTOCommand):
             # Apply filter if specified
             if args.filter:
                 filter_term = args.filter.lower()
-                file_types_dicts = [ft for ft in file_types_dicts if filter_term in ft['type_name'].lower()]
+
+                file_types_dicts = [ft for ft in file_types_dicts if filter_term in ft["type_name"].lower()]
 
             # Extract just the names for simple view
-            file_type_names = [ft['type_name'] for ft in file_types_dicts]
+            file_type_names = [ft["type_name"] for ft in file_types_dicts]
 
             if args.json:
                 # Output raw JSON
@@ -248,8 +246,7 @@ class ListFileTypesCommand(RTOCommand):
                 self._show_detailed_file_types(file_types_dicts)
 
             else:
-                # Simple list output with formatting
-                self._show_simple_file_types(file_type_names)
+                print("\n".join(file_type_names))
 
         except json.JSONDecodeError:
             raise RTOErrorMessage(f"Could not parse response as JSON: {resp.response_body}")
@@ -276,30 +273,31 @@ class ListFileTypesCommand(RTOCommand):
             if i > 0:
                 print("\n" + "-" * 40)
 
-            print(f"File Type: {type_data.get('type_name', 'Unknown')}")
+            print(f"File Type: {type_data.get("type_name", "Unknown")}")
 
             # Display key information
-            print(f"  Description: {type_data.get('description', 'None')}")
+            print(f"  Description: {type_data.get("description", "None")}")
 
-            if 'is_directory_type' in type_data:
-                print(f"  Is Directory Type: {type_data.get('is_directory_type')}")
+            if "is_directory_type" in type_data:
+                print(f"  Is Directory Type: {type_data.get("is_directory_type")}")
 
-            if 'content_type' in type_data:
-                content_type = type_data.get('content_type')
+            if "content_type" in type_data:
+                content_type = type_data.get("content_type")
+
                 if content_type:
                     print(f"  Content Type: {content_type}")
 
-            if 'name_restrictions' in type_data:
-                print(f"  Name Restrictions: {type_data.get('name_restrictions')}")
+            if "name_restrictions" in type_data:
+                print(f"  Name Restrictions: {type_data.get("name_restrictions")}")
 
-            if 'files_cannot_be_deleted' in type_data:
-                print(f"  Files Cannot Be Deleted: {type_data.get('files_cannot_be_deleted')}")
+            if "files_cannot_be_deleted" in type_data:
+                print(f"  Files Cannot Be Deleted: {type_data.get("files_cannot_be_deleted")}")
 
-            if 'added_on' in type_data:
-                print(f"  Added On: {type_data.get('added_on')}")
+            if "added_on" in type_data:
+                print(f"  Added On: {type_data.get("added_on")}")
 
-            if 'last_updated_on' in type_data:
-                print(f"  Last Updated On: {type_data.get('last_updated_on')}")
+            if "last_updated_on" in type_data:
+                print(f"  Last Updated On: {type_data.get("last_updated_on")}")
 
         print(f"\nTotal: {len(file_types_dicts)} file types")
 

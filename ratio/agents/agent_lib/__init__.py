@@ -4,6 +4,7 @@ Defines the Agent runtime Library.
 This should always have 0 dependencies to the core system libraries, it would be
 absurd for every agent to have a complete dependency of the entire core system.
 """
+import base64
 import json
 import logging
 
@@ -413,6 +414,39 @@ class RatioSystem:
 
         return resp.response_body
 
+    def get_file_details(self, file_path: str) -> Dict[str, Any]:
+        """
+        Return the details about a file, includes some information about the file type
+
+        Keyword arguments:
+        file_path -- The path to the file
+        """
+        logging.debug(f"Getting file details {file_path}")
+
+        file_resp = self.describe_file(file_path=file_path)
+
+        file_type_name = file_resp["file_type"]
+
+        # Get file type details
+        resp = self._storage_request(
+            path="/describe_file_type",
+            request={
+                "file_type": file_type_name,
+            },
+        )
+
+        if resp.status_code != 200:
+            raise ValueError(message=f"Failed to describe file type: {resp.status_code} - {resp.response_body}")
+
+        logging.debug(f"File type details: {resp.response_body}")
+
+        full_response = {
+            "content_type": resp.response_body["content_type"],
+            **file_resp,
+        }
+
+        return full_response
+
     def get_file_version(self, file_path: str, version_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Get a file version from the system.
@@ -438,6 +472,83 @@ class RatioSystem:
             )
 
         return resp.response_body
+
+    def get_binary_file_version(self, file_path: str, version_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Get a binary file (like an image) and ensure it's returned as base64 encoded data.
+        Handles both cases: files already stored as base64 strings, and raw binary data.
+
+        Keyword arguments:
+        file_path -- The path to the file
+        version_id -- The version ID of the file (optional)
+
+        Returns:
+        Dict containing:
+            - 'data': base64 encoded string ready for use
+            - 'content_type': the MIME type of the file
+            - 'encoding': 'base64' (always)
+            - 'original_format': 'base64' if already encoded, 'binary' or 'string' if converted
+        """
+        logging.debug(f"Getting binary file as base64: {file_path}")
+
+        # Get file content
+        file_response = self.get_file_version(file_path, version_id)
+
+        file_data = file_response.get("data")
+
+        if not file_data:
+            raise FileLoadError(
+                message="No data found in file",
+                file_path=file_path
+            )
+
+        # Get file details for content type
+        file_details = self.get_file_details(file_path)
+
+        content_type = file_details.get("content_type", "application/octet-stream")
+
+        # Determine format and convert if needed
+        if isinstance(file_data, str):
+            # Check if it's already base64 encoded
+            try:
+                base64.b64decode(file_data, validate=True)
+                # Already base64
+                base64_data = file_data
+
+                original_format = "base64"
+
+                logging.debug("File data is already base64 encoded")
+
+            except Exception:
+                # Not base64, treat as raw string and encode
+                file_data_bytes = file_data.encode('latin-1')
+
+                base64_data = base64.b64encode(file_data_bytes).decode("utf-8")
+
+                original_format = "string"
+
+                logging.debug("Converted string data to base64")
+
+        elif isinstance(file_data, bytes):
+            # Raw bytes, encode to base64
+            base64_data = base64.b64encode(file_data).decode("utf-8")
+
+            original_format = "binary"
+
+            logging.debug("Converted bytes data to base64")
+
+        else:
+            raise FileLoadError(
+                message=f"Unexpected file data type: {type(file_data)}",
+                file_path=file_path
+            )
+
+        return {
+            "data": base64_data,
+            "content_type": content_type,
+            "encoding": "base64",
+            "original_format": original_format
+        }
 
     def internal_api_request(self, api_target: str, path: str, request: Union[Dict, ObjectBody], auth_header: str = AUTH_HEADER,
                              raise_on_failure: bool = True) -> RESTClientResponse:

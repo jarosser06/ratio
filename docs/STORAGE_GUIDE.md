@@ -316,16 +316,18 @@ File events automatically trigger subscribed agents through the Scheduler servic
 ├── home/
 │   ├── entity1/
 │   │   ├── data/
-│   │   ├── configs/
-│   │   └── outputs/
+│   │   ├── agents/
 │   └── entity2/
-│       └── projects/
+│       └── data/
+|       └── agents/
 ├── shared/
 │   ├── templates/
 │   └── resources/
-└── agents/
-    ├── definitions/
-    └── libraries/
+├── agents/
+│   ├── core/
+│   └── purpose/
+└── run/
+    └─── agent-execute....
 ```
 
 ### Security Guidelines

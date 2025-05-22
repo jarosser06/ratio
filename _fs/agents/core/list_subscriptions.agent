@@ -1,0 +1,121 @@
+{
+  "arguments": [
+    {
+      "name": "file_path",
+      "type_name": "string",
+      "description": "The full path to filter subscriptions by (optional)",
+      "required": false
+    },
+    {
+      "name": "owner",
+      "type_name": "string",
+      "description": "The owner to filter subscriptions by (optional)",
+      "required": false
+    }
+  ],
+  "description": "A T1 agent that lists subscriptions by calling the scheduler's list subscriptions API and returns structured subscription information",
+  "instructions": [
+    {
+      "agent_definition": {
+        "arguments": [
+          {
+            "name": "path",
+            "type_name": "string",
+            "description": "The API path for the request",
+            "required": true
+          },
+          {
+            "name": "fail_on_error",
+            "type_name": "bool",
+            "description": "Whether the agent run should fail in the case of an error",
+            "default_value": true,
+            "required": false
+          },
+          {
+            "name": "request",
+            "type_name": "object",
+            "description": "The API request object",
+            "required": true
+          },
+          {
+            "name": "target_service",
+            "type_name": "string",
+            "enum": ["PROCESS", "SCHEDULER", "STORAGE"],
+            "description": "The internal service to send the request to",
+            "required": true
+          }
+        ],
+        "responses": [
+          {
+            "name": "status_code",
+            "type_name": "number",
+            "description": "The responding status code from the API call",
+            "required": true
+          },
+          {
+            "name": "response_body",
+            "type_name": "object",
+            "description": "The response body from the API call",
+            "required": false
+          }
+        ],
+        "system_event_endpoint": "ratio::agent::internal_api::execution"
+      },
+      "arguments": {
+        "path": "/list_subscriptions",
+        "target_service": "SCHEDULER",
+        "request": {
+          "file_path": "REF:arguments.file_path",
+          "owner": "REF:arguments.owner"
+        }
+      },
+      "execution_id": "list_subscriptions_request"
+    },
+    {
+      "agent_definition": {
+        "arguments": [
+          {
+            "name": "original_object",
+            "type_name": "object",
+            "description": "The source object to be mapped",
+            "required": true
+          },
+          {
+            "name": "object_map",
+            "type_name": "object",
+            "description": "Mapping configuration that defines how to transform the original object",
+            "required": true
+          }
+        ],
+        "description": "Object mapper for list subscriptions response",
+        "responses": [
+          {
+            "name": "subscriptions",
+            "type_name": "list",
+            "description": "List of subscription objects",
+            "required": true
+          }
+        ],
+        "system_event_endpoint": "ratio::agent::object_mapper::execution"
+      },
+      "arguments": {
+        "original_object": "REF:list_subscriptions_request.response_body",
+        "object_map": {
+          "subscriptions": "subscriptions"
+        }
+      },
+      "execution_id": "map_response"
+    }
+  ],
+  "response_reference_map": {
+    "subscriptions": "REF:map_response.subscriptions"
+  },
+  "responses": [
+    {
+      "name": "subscriptions",
+      "type_name": "list",
+      "description": "List of subscription objects",
+      "required": true
+    }
+  ]
+}

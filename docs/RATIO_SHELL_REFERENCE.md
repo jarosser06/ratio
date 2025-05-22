@@ -19,7 +19,7 @@ while maintaining access to all standard Ratio CLI functionality.
 
 ## Installation
 
-Place the [`ratio-shell`](../utils/ratio-shell) script in your PATH and make it executable:
+Place the [`ratio-shell`](../ratio_shell/execute) script in your PATH and make it executable:
 
 ```bash
 chmod +x ratio-shell

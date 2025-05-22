@@ -94,7 +94,7 @@ class ReferenceValueBoolean(ReferenceValueBase):
         if attribute_name is not None:
             raise ValueError("Boolean reference values do not support attributes.")
 
-        if not self.original_value:
+        if self.original_value is None:
             return None
 
         return bool(self.original_value)
@@ -135,7 +135,7 @@ class ReferenceValueList(ReferenceValueBase):
 
         if attribute_name == "length":
             return len(self.original_value)
-        
+
         elif attribute_name == "first":
             return self.original_value[0] if self.original_value else None
 

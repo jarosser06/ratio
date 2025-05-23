@@ -30,7 +30,7 @@ from ratio.core.services.storage_manager.request_definitions import (
 
 class StorageAPI(ChildAPI):
     """
-    Storage API Proxy for managing file storage and retrieval.
+    Storage API Proxy for managing file storage and retrieval
     """
     routes = [
         Route(

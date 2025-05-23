@@ -10,6 +10,7 @@ from da_vinci.core.immutable_object import ObjectBody, InvalidObjectSchemaError
 
 from da_vinci.event_bus.client import EventPublisher
 from da_vinci.event_bus.event import Event as EventBusEvent
+from da_vinci.core.global_settings import setting_value
 
 from ratio.core.core_lib.client import RatioInternalClient
 from ratio.core.core_lib.factories.api import ChildAPI, Route
@@ -144,11 +145,23 @@ class ExecuteAPI(ChildAPI):
 
         claims = JWTClaims.from_claims(claims=request_context["request_claims"])
 
+        global_default_working_dir = setting_value(
+            namespace="ratio::agent_manager",
+            setting_key="default_global_working_dir",
+        )
+
+        default_working_dir = claims.home
+
+        if global_default_working_dir and global_default_working_dir != "NOT_SET":
+            logging.debug(f"Using global default working directory as default: {global_default_working_dir}")
+
+            default_working_dir = global_default_working_dir
+
         # Validate write access to the working directory
-        working_directory = request_body.get("working_directory", default_return=claims.home)
+        working_directory = request_body.get("working_directory", default_return=default_working_dir)
 
         if not working_directory:
-            logging.debug(f"No working directory provided and no home directory found in {claims.entity} claims: {claims.to_dict()}")
+            logging.debug(f"No working directory provided, no global working dir set, and no home directory found in {claims.entity} claims: {claims.to_dict()}")
 
             return self.respond(
                 body={"message": "must provide valid working directory"},

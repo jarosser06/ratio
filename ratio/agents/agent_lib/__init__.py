@@ -473,21 +473,22 @@ class RatioSystem:
 
         return resp.response_body
 
-    def get_binary_file_version(self, file_path: str, version_id: Optional[str] = None) -> Dict[str, Any]:
+    def get_binary_file_version(self, file_path: str, decode: Optional[bool] = True,
+                                version_id: Optional[str] = None) -> Dict[str, Any]:
         """
-        Get a binary file (like an image) and ensure it's returned as base64 encoded data.
+        Get a binary file (like an image) and decode the data to base64.
         Handles both cases: files already stored as base64 strings, and raw binary data.
 
         Keyword arguments:
         file_path -- The path to the file
+        decode -- Whether to decode the data to base64 (default: True)
         version_id -- The version ID of the file (optional)
 
         Returns:
         Dict containing:
-            - 'data': base64 encoded string ready for use
+            - 'data': raw data ready for use
             - 'content_type': the MIME type of the file
-            - 'encoding': 'base64' (always)
-            - 'original_format': 'base64' if already encoded, 'binary' or 'string' if converted
+            - 'encoding': 'base64' or 'binary'
         """
         logging.debug(f"Getting binary file as base64: {file_path}")
 
@@ -507,47 +508,22 @@ class RatioSystem:
 
         content_type = file_details.get("content_type", "application/octet-stream")
 
-        # Determine format and convert if needed
-        if isinstance(file_data, str):
-            # Check if it's already base64 encoded
-            try:
-                base64.b64decode(file_data, validate=True)
-                # Already base64
-                base64_data = file_data
+        base_64_encoded = file_response["details"].get("base_64_encoded", False)
 
-                original_format = "base64"
+        if base_64_encoded and decode:
+            # File is already base64 encoded
+            logging.debug("File data is base64 encoded .. decoding")
 
-                logging.debug("File data is already base64 encoded")
+            file_data = base64.b64decode(file_data)
 
-            except Exception:
-                # Not base64, treat as raw string and encode
-                file_data_bytes = file_data.encode('latin-1')
-
-                base64_data = base64.b64encode(file_data_bytes).decode("utf-8")
-
-                original_format = "string"
-
-                logging.debug("Converted string data to base64")
-
-        elif isinstance(file_data, bytes):
-            # Raw bytes, encode to base64
-            base64_data = base64.b64encode(file_data).decode("utf-8")
-
-            original_format = "binary"
-
-            logging.debug("Converted bytes data to base64")
-
-        else:
-            raise FileLoadError(
-                message=f"Unexpected file data type: {type(file_data)}",
-                file_path=file_path
-            )
+        encoding = "base64" if base_64_encoded else "binary"
 
         return {
-            "data": base64_data,
+            "data": file_data,
             "content_type": content_type,
-            "encoding": "base64",
-            "original_format": original_format
+            "encoding": encoding,
+            "file_path": file_path,
+            "version_id": file_response["details"]["version_id"],
         }
 
     def internal_api_request(self, api_target: str, path: str, request: Union[Dict, ObjectBody], auth_header: str = AUTH_HEADER,
@@ -582,8 +558,8 @@ class RatioSystem:
 
         return response
 
-    def put_file(self, file_path: str, file_type: str, data: Optional[Union[str, bytes]] = None, metadata: Optional[Dict] = None,
-                 permissions: Optional[str] = "644"):
+    def put_file(self, file_path: str, file_type: str, data: Optional[Union[str, bytes]] = None, encode_data: bool = False,
+                 metadata: Optional[Dict] = None, permissions: Optional[str] = "644"):
         """
         Puts a file into the system.
 
@@ -609,6 +585,13 @@ class RatioSystem:
 
         if data:
             logging.debug(f"Putting data into file {file_path}")
+
+            if encode_data:
+                # Encode the data to base64 if needed
+                if isinstance(data, str):
+                    data = data.encode('utf-8')
+
+                data = base64.b64encode(data).decode("utf-8")
 
             self._storage_request(
                 path="/put_file_version",

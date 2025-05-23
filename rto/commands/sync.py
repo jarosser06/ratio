@@ -3,6 +3,8 @@ import fnmatch
 import json
 import os
 
+from typing import Tuple
+
 from argparse import ArgumentParser
 
 from ratio.client.client import Ratio
@@ -53,6 +55,9 @@ class SyncCommand(RTOCommand):
     }
 
     DEFAULT_TYPE_MAP = {
+        # Agent files
+        "agent": "ratio::agent",
+
         # Text files
         "txt": "ratio::text",
         "text": "ratio::text",
@@ -202,6 +207,7 @@ class SyncCommand(RTOCommand):
 
             if not source_exists:
                 print(f"Warning: Source path {source} not found, skipping")
+
                 continue
 
             # Determine final destination path for this source
@@ -295,7 +301,7 @@ class SyncCommand(RTOCommand):
         """
         Validate encoding values
         """
-        valid_encodings = ['text', 'binary', 'base64']
+        valid_encodings = ['text', 'binary']
 
         for ext, encoding in encoding_map.items():
             if encoding not in valid_encodings:
@@ -396,7 +402,7 @@ class SyncCommand(RTOCommand):
         Determine the appropriate encoding based on file extension and encoding map
 
         Returns:
-        str -- The encoding to use ('text', 'binary', or 'base64')
+        str -- The encoding to use ('text' or 'binary')
         """
         if default_is_binary:
             default_encoding = 'binary'
@@ -496,17 +502,11 @@ class SyncCommand(RTOCommand):
                 return files_synced, dirs_created
 
             # Get file content
-            content = self._get_file_content(client, ratio_path)
-
-            # Determine encoding based on file extension and encoding map
-            encoding = self._get_encoding_for_path(local_path, encoding_map, args.binary)
-
-            if args.verbose:
-                print(f"Using encoding: {encoding}")
+            content, base_64_encoded = self._get_file_content(client, ratio_path)
 
             # Write to local file with appropriate encoding
             if not args.dry_run:
-                self._write_local_file(local_path, content, encoding)
+                self._write_local_file(local_path, content, base_64_encoded)
 
                 files_synced += 1
 
@@ -637,7 +637,7 @@ class SyncCommand(RTOCommand):
         # Look up in type map
         return type_map.get(ext, default_type)
 
-    def _get_file_content(self, client, file_path):
+    def _get_file_content(self, client, file_path) -> Tuple[str, bool]:
         """
         Get file content from Ratio
 
@@ -653,9 +653,13 @@ class SyncCommand(RTOCommand):
 
         response_data = json.loads(get_resp.response_body) if isinstance(get_resp.response_body, str) else get_resp.response_body
 
-        return response_data.get("data", "")
+        content = response_data.get("data", "")
 
-    def _write_local_file(self, file_path, content, encoding):
+        base_64_encoded = response_data.get("base_64_encoded", True)
+
+        return content, base_64_encoded
+
+    def _write_local_file(self, file_path, content, base_64_encoded):
         """
         Write content to a local file with appropriate encoding
         """
@@ -663,25 +667,15 @@ class SyncCommand(RTOCommand):
             # Ensure parent directory exists
             os.makedirs(os.path.dirname(os.path.abspath(file_path)), exist_ok=True)
 
-            if encoding == 'binary':
-                # Binary mode
-                mode = 'wb'
-
-                if isinstance(content, str):
-                    content = content.encode('utf-8')
-
-            elif encoding == 'base64':
-                # Base64 decode and write as binary
+            if base_64_encoded:
+                # Server sent base64 encoded binary data
                 mode = 'wb'
 
                 if isinstance(content, str):
                     content = base64.b64decode(content)
 
-                else:
-                    content = base64.b64decode(content.decode('utf-8'))
-
             else:
-                # Text mode (default)
+                # Server sent text data
                 mode = 'w'
 
                 if not isinstance(content, str):
@@ -731,9 +725,7 @@ class SyncCommand(RTOCommand):
             if encoding == 'binary':
                 # Binary mode - read as binary and base64 encode for JSON serialization
                 mode = 'rb'
-            elif encoding == 'base64':
-                # Read as binary, then base64 encode
-                mode = 'rb'
+
             else:
                 # Text mode (default)
                 mode = 'r'
@@ -742,22 +734,23 @@ class SyncCommand(RTOCommand):
             with open(local_path, mode) as f:
                 content = f.read()
 
+            base_64_encoded = False
+
             # Handle encoding transformations
             if encoding == 'binary':
+                base_64_encoded = True
+
                 # For binary encoding, we need to base64 encode the bytes for JSON serialization
                 if isinstance(content, bytes):
                     content = base64.b64encode(content).decode('utf-8')
-                else:
-                    content = base64.b64encode(content.encode('utf-8')).decode('utf-8')
-            elif encoding == 'base64':
-                if isinstance(content, bytes):
-                    content = base64.b64encode(content).decode('utf-8')
+
                 else:
                     content = base64.b64encode(content.encode('utf-8')).decode('utf-8')
 
             # Add content to the file
             content_request = PutFileVersionRequest(
                 file_path=ratio_path,
+                base_64_encoded=base_64_encoded,
                 data=content
             )
 

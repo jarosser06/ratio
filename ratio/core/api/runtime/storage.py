@@ -24,6 +24,8 @@ from ratio.core.services.storage_manager.request_definitions import (
     PutFileRequest,
     PutFileTypeRequest,
     PutFileVersionRequest,
+    PutDirectFileVersionCompleteRequest,
+    PutDirectFileVersionStartRequest,
     ValidateFileAccessRequest,
 )
 
@@ -107,6 +109,16 @@ class StorageAPI(ChildAPI):
             path="/storage/put_file_version",
             method_name="storage_request",
             request_body_schema=PutFileVersionRequest,
+        ),
+        Route(
+            path="/storage/put_direct_file_version_complete",
+            method_name="storage_request",
+            request_body_schema=PutDirectFileVersionCompleteRequest,
+        ),
+        Route(
+            path="/storage/put_direct_file_version_start",
+            method_name="storage_request",
+            request_body_schema=PutDirectFileVersionStartRequest,
         ),
         Route(
             path="/storage/validate_file_access",

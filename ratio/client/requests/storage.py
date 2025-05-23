@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from ratio.client.client import (
     RequestAttributeType,
@@ -638,6 +638,78 @@ class PutFileVersionRequest(RequestBody):
             metadata=metadata,
             source_file_ids=source_file_ids,
         )
+
+
+class PutDirectFileVersionCompleteRequest(RequestBody):
+    """
+    Put direct file version complete request body schema.
+    """
+    path = "/storage/put_direct_file_version_complete"
+
+    requires_auth = True
+
+    attribute_definitions = [
+        RequestBodyAttribute(
+            name="file_path",
+            attribute_type=RequestAttributeType.STRING,
+            optional=False,
+        ),
+        RequestBodyAttribute(
+            name="metadata",
+            attribute_type=RequestAttributeType.OBJECT,
+            optional=True,
+        ),
+        RequestBodyAttribute(
+            name="origin",
+            attribute_type=RequestAttributeType.STRING,
+            immutable_default="external",
+            optional=True,
+        ),
+        RequestBodyAttribute(
+            name="source_file_ids",
+            attribute_type=RequestAttributeType.LIST,
+            optional=True,
+        )
+    ]
+
+    def __init__(self, file_path: str, metadata: Optional[Dict] = None, source_file_ids: List = None):
+        """
+        Initialize the PutDirectFileVersionComplete request body.
+
+        Keyword arguments:
+        file_path -- The path to the file.
+        version_id -- The version of the file.
+        """
+        super().__init__(file_path=file_path, metadata=metadata, source_file_ids=source_file_ids)
+
+
+class PutDirectFileVersionStartRequest(RequestBody):
+    """
+    Put direct file version start request body schema.
+    """
+    path = "/storage/put_direct_file_version_start"
+
+    requires_auth = True
+
+    attribute_definitions = [
+        RequestBodyAttribute(
+            name="file_path",
+            attribute_type=RequestAttributeType.STRING,
+            optional=False,
+        ),
+    ]
+
+    def __init__(self, file_path: str):
+        """
+        Initialize the PutDirectFileVersionStart request body.
+
+        Keyword arguments:
+        file_path -- The path to the file.
+        chunk_size -- The chunk size of the file.
+        metadata -- The metadata of the file.
+        source_file_ids -- The source file IDs.
+        """
+        super().__init__(file_path=file_path)
 
 
 class ValidateFileAccessRequest(RequestBody):

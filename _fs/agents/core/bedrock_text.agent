@@ -57,6 +57,12 @@
   ],
   "responses": [
     {
+      "name": "model_id",
+      "type_name": "string",
+      "description": "The model ID that was executed to generate the request",
+      "required": true
+    },
+    {
       "name": "response_file_path",
       "type_name": "file",
       "description": "Path to the file containing the model's response",
@@ -75,5 +81,5 @@
       "required": true
     }
   ],
-  "system_event_endpoint": "ratio::agent::bedrock_anthropic::execution"
+  "system_event_endpoint": "ratio::agent::bedrock::text::execution"
 }

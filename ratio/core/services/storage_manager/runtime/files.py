@@ -1,6 +1,7 @@
 """
 Primary File API for the Storage Manager.
 """
+import base64
 import logging
 import os
 import re
@@ -682,6 +683,11 @@ class FileAPI(ChildAPI):
             body={"message": "not implemented"},
         )
 
+    def get_file_version_location(self, request_body: ObjectBody, request_context: Dict):
+        """
+        Returns the location of the file version S3 object.
+        """
+
     def get_file_version(self, request_body: ObjectBody, request_context: Dict):
         """
         Gets the file version data from the system.
@@ -745,11 +751,26 @@ class FileAPI(ChildAPI):
                 body={"message": "not found"},
             )
 
+        base_64_encoded = False
+
+        try:
+            # Try to decode as UTF-8 text
+            text_data = data.decode('utf-8')
+
+            response_data = text_data
+
+        except UnicodeDecodeError:
+            # If it fails, it's binary - base64 encode it
+            response_data = base64.b64encode(data).decode('utf-8')
+
+            base_64_encoded = True
+
         return self.respond(
             status_code=200,
             body={
-                "data": data,
+                "data": response_data,
                 "details": {
+                    "base_64_encoded": base_64_encoded,
                     "path": file.file_path,
                     "file_name": file.file_name,
                     "version_id": version_id,
@@ -1080,6 +1101,8 @@ class FileAPI(ChildAPI):
         request_body -- The request body containing the file version to put.
         request_context -- The request context.
         """
+        logging.debug(f"Put file version request body: {request_body.to_dict()}")
+
         file_path, file_name = normalize_path(request_body["file_path"])
 
         file_name_hash = File.generate_hash(file_name)
@@ -1119,8 +1142,26 @@ class FileAPI(ChildAPI):
                 body={"message": f"data must be bytes or string, not {type(request_body['data'])}"},
             )
 
+        base_64_encoded = request_body.get("base_64_encoded", default_return=False)
+
+        logging.debug(f"Base 64 encoded attribute value: {base_64_encoded}")
+
+        data = request_body["data"]
+
+        if base_64_encoded:
+            logging.debug("Base 64 encoded data ... decoding")
+
+            if isinstance(request_body["data"], str):
+                data = base64.b64decode(request_body["data"])
+
+            else:
+                return self.respond(
+                    status_code=400,
+                    body={"message": "base_64_encoded is true but data is not a string"},
+                )
+
         version_id = put_version(
-            data=request_body["data"],
+            data=data,
             bucket_name=self.raw_bucket_name,
             file_name=file.full_path_hash,
         )

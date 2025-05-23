@@ -587,6 +587,12 @@ class PutFileVersionRequest(RequestBody):
 
     attribute_definitions = [
         RequestBodyAttribute(
+            name="base_64_encoded",
+            attribute_type=RequestAttributeType.BOOLEAN,
+            default=False,
+            optional=True,
+        ),
+        RequestBodyAttribute(
             name="data",
             attribute_type=RequestAttributeType.ANY,
             optional=False,
@@ -614,7 +620,8 @@ class PutFileVersionRequest(RequestBody):
         ),
     ]
 
-    def __init__(self, data: str, file_path: str, metadata: Optional[Dict] = None, source_file_ids: list = None):
+    def __init__(self, data: str, file_path: str, base_64_encoded: Optional[bool] = False, metadata: Optional[Dict] = None,
+                 source_file_ids: list = None):
         """
         Initialize the PutFileVersion request body.
 
@@ -625,6 +632,7 @@ class PutFileVersionRequest(RequestBody):
         source_file_ids -- The source file IDs.
         """
         super().__init__(
+            base_64_encoded=base_64_encoded,
             data=data,
             file_path=file_path,
             metadata=metadata,

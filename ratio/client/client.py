@@ -173,7 +173,6 @@ class RequestBody:
 
                         break
 
-
             if attr.immutable_default:
                 if attr_val:
                     raise RequestAttributeError(attribute_name=attr.name, error="unable to write over immutable value")

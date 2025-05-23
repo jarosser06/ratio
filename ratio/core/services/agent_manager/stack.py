@@ -11,6 +11,7 @@ from da_vinci_cdk.stack import Stack
 from da_vinci_cdk.constructs.access_management import ResourceAccessRequest
 from da_vinci_cdk.constructs.base import resource_namer
 from da_vinci_cdk.constructs.event_bus import EventBusSubscriptionFunction
+from da_vinci_cdk.constructs.global_setting import GlobalSetting
 from da_vinci_cdk.constructs.service import SimpleRESTService
 
 from ratio.core.stack import RatioCoreStack
@@ -55,6 +56,14 @@ class AgentManagerStack(Stack):
         base_dir = self.absolute_dir(__file__)
 
         self.runtime_path = path.join(base_dir, 'runtime')
+
+        GlobalSetting(
+            scope=self,
+            namespace="ratio::agent_manager",
+            setting_key="default_global_working_dir",
+            description="Default global working directory for the agent manager, this is used when no working directory is specified and this is not None",
+            setting_value="NOT_SET",
+        )
 
         self.agent_manager = SimpleRESTService(
             base_image=self.app_base_image,

@@ -427,6 +427,12 @@ class PutFileTypeRequest(ObjectBodySchema):
 class PutFileVersionRequest(ObjectBodySchema):
     attributes = [
         SchemaAttribute(
+            name="base64_encoded",
+            type_name=SchemaAttributeType.BOOLEAN,
+            default_value=False,
+            required=False,
+        ),
+        SchemaAttribute(
             name="data",
             type_name=SchemaAttributeType.ANY,
             required=True,

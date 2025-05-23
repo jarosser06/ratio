@@ -1184,6 +1184,7 @@ class FileAPI(ChildAPI):
             origin=request_body["origin"],
             originator_id=claims.entity,
             previous_version_id=file.latest_version_id,
+            size=len(data),
         )
 
         previous_version_id = file.latest_version_id

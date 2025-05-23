@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from ratio.client.client import (
     RequestAttributeType,
@@ -352,6 +352,38 @@ class GetFileVersionRequest(RequestBody):
         super().__init__(file_path=file_path, version_id=version_id)
 
 
+class GetDirectFileVersionRequest(RequestBody):
+    """
+    Get direct file version request body schema.
+    """
+    path = "/storage/get_direct_file_version"
+
+    requires_auth = True
+
+    attribute_definitions = [
+        RequestBodyAttribute(
+            name="file_path",
+            attribute_type=RequestAttributeType.STRING,
+            optional=False,
+        ),
+        RequestBodyAttribute(
+            name="version_id",
+            attribute_type=RequestAttributeType.STRING,
+            optional=True,
+        ),
+    ]
+
+    def __init__(self, file_path: str, version_id: str = None):
+        """
+        Initialize the GetDirectFileVersion request body.
+
+        Keyword arguments:
+        file_path -- The path to the file.
+        version_id -- The version of the file. If not provided, the latest version will be used.
+        """
+        super().__init__(file_path=file_path, version_id=version_id)
+
+
 class ListFilesRequest(RequestBody):
     """
     List files request body schema.
@@ -638,6 +670,78 @@ class PutFileVersionRequest(RequestBody):
             metadata=metadata,
             source_file_ids=source_file_ids,
         )
+
+
+class PutDirectFileVersionCompleteRequest(RequestBody):
+    """
+    Put direct file version complete request body schema.
+    """
+    path = "/storage/put_direct_file_version_complete"
+
+    requires_auth = True
+
+    attribute_definitions = [
+        RequestBodyAttribute(
+            name="file_path",
+            attribute_type=RequestAttributeType.STRING,
+            optional=False,
+        ),
+        RequestBodyAttribute(
+            name="metadata",
+            attribute_type=RequestAttributeType.OBJECT,
+            optional=True,
+        ),
+        RequestBodyAttribute(
+            name="origin",
+            attribute_type=RequestAttributeType.STRING,
+            immutable_default="external",
+            optional=True,
+        ),
+        RequestBodyAttribute(
+            name="source_file_ids",
+            attribute_type=RequestAttributeType.LIST,
+            optional=True,
+        )
+    ]
+
+    def __init__(self, file_path: str, metadata: Optional[Dict] = None, source_file_ids: List = None):
+        """
+        Initialize the PutDirectFileVersionComplete request body.
+
+        Keyword arguments:
+        file_path -- The path to the file.
+        version_id -- The version of the file.
+        """
+        super().__init__(file_path=file_path, metadata=metadata, source_file_ids=source_file_ids)
+
+
+class PutDirectFileVersionStartRequest(RequestBody):
+    """
+    Put direct file version start request body schema.
+    """
+    path = "/storage/put_direct_file_version_start"
+
+    requires_auth = True
+
+    attribute_definitions = [
+        RequestBodyAttribute(
+            name="file_path",
+            attribute_type=RequestAttributeType.STRING,
+            optional=False,
+        ),
+    ]
+
+    def __init__(self, file_path: str):
+        """
+        Initialize the PutDirectFileVersionStart request body.
+
+        Keyword arguments:
+        file_path -- The path to the file.
+        chunk_size -- The chunk size of the file.
+        metadata -- The metadata of the file.
+        source_file_ids -- The source file IDs.
+        """
+        super().__init__(file_path=file_path)
 
 
 class ValidateFileAccessRequest(RequestBody):

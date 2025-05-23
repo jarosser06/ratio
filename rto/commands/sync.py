@@ -3,15 +3,21 @@ import fnmatch
 import json
 import os
 
-from typing import Tuple
 
 from argparse import ArgumentParser
+from typing import Tuple
+
+import requests
 
 from ratio.client.client import Ratio
 from ratio.client.requests.storage import (
     DescribeFileRequest,
+    DescribeFileVersionRequest,
+    GetDirectFileVersionRequest,
     GetFileVersionRequest,
     ListFilesRequest,
+    PutDirectFileVersionCompleteRequest,
+    PutDirectFileVersionStartRequest,
     PutFileRequest,
     PutFileVersionRequest,
 )
@@ -108,6 +114,8 @@ class SyncCommand(RTOCommand):
         parser.add_argument("--exclude", help="Exclude files matching pattern", type=str, action="append")
 
         parser.add_argument("--binary", "-b", help="Treat all files as binary data", action="store_true", default=False)
+
+        parser.add_argument("--direct-threshold", help="Use direct file operations for files larger than this size (MB)", type=float, default=2.0)
 
         # Type and encoding mapping arguments
         parser.add_argument("--type-map", help="JSON string mapping file extensions to Ratio file types (e.g. '{\"pdf\":\"ratio::pdf\",\"docx\":\"ratio::document\"}')", type=str)
@@ -637,12 +645,39 @@ class SyncCommand(RTOCommand):
         # Look up in type map
         return type_map.get(ext, default_type)
 
-    def _get_file_content(self, client, file_path) -> Tuple[str, bool]:
+    def _get_file_content(self, client, file_path, threshold_mb=2.0) -> Tuple[str, bool]:
         """
-        Get file content from Ratio
+        Get file content from Ratio, using direct get for large files
 
         Returns:
-        str -- The file content
+        tuple -- (content, base_64_encoded)
+        """
+        # First get file info to check size
+        describe_request = DescribeFileVersionRequest(file_path=file_path)
+
+        describe_resp = client.request(describe_request, raise_for_status=False)
+
+        if describe_resp.status_code != 200:
+            raise RTOErrorMessage(f"Error getting file info for {file_path}")
+
+        file_info = json.loads(describe_resp.response_body) if isinstance(describe_resp.response_body, str) else describe_resp.response_body
+
+        file_size = file_info.get("size", 0)
+
+        threshold_bytes = threshold_mb * 1024 * 1024
+
+        if file_size > threshold_bytes:
+            # Use direct get for large files
+
+            return self._get_file_content_direct(client, file_path)
+
+        else:
+            # Use regular get for small files
+            return self._get_file_content_regular(client, file_path)
+
+    def _get_file_content_regular(self, client, file_path) -> Tuple[str, bool]:
+        """
+        Get file content using regular JSON API
         """
         get_request = GetFileVersionRequest(file_path=file_path)
 
@@ -659,6 +694,27 @@ class SyncCommand(RTOCommand):
 
         return content, base_64_encoded
 
+    def _get_file_content_direct(self, client, file_path) -> Tuple[bytes, bool]:
+        """
+        Get file content using direct download
+        """
+        get_request = GetDirectFileVersionRequest(file_path=file_path)
+
+        get_resp = client.request(get_request, raise_for_status=False)
+
+        if get_resp.status_code != 200:
+            raise RTOErrorMessage(f"Error getting direct content of {file_path}")
+
+        # Direct get returns raw binary data, not JSON
+        if isinstance(get_resp.response_body, str):
+            content = get_resp.response_body.encode('utf-8')
+
+        else:
+            content = get_resp.response_body
+
+        # Direct downloads are always binary data, not base64 encoded
+        return content, False
+
     def _write_local_file(self, file_path, content, base_64_encoded):
         """
         Write content to a local file with appropriate encoding
@@ -670,14 +726,14 @@ class SyncCommand(RTOCommand):
             if base_64_encoded:
                 # Server sent base64 encoded binary data
                 mode = 'wb'
-
                 if isinstance(content, str):
                     content = base64.b64decode(content)
-
+            elif isinstance(content, bytes):
+                # Direct download - raw binary data
+                mode = 'wb'
             else:
                 # Server sent text data
                 mode = 'w'
-
                 if not isinstance(content, str):
                     content = content.decode('utf-8')
 
@@ -717,50 +773,101 @@ class SyncCommand(RTOCommand):
         if file_resp.status_code not in [200, 201]:
             raise RTOErrorMessage(f"Error creating file {file_path} in Ratio")
 
-    def _upload_file_content(self, client, local_path, ratio_path, encoding):
+    def _upload_file_content(self, client, local_path, ratio_path, encoding, threshold_mb=2.0):
         """
-        Upload content from a local file to Ratio with appropriate encoding
+        Upload content from a local file to Ratio with appropriate encoding,
+        using direct upload for large files
         """
         try:
-            if encoding == 'binary':
-                # Binary mode - read as binary and base64 encode for JSON serialization
-                mode = 'rb'
+            # Check file size
+            file_size = os.path.getsize(local_path)
+
+            threshold_bytes = threshold_mb * 1024 * 1024
+
+            if file_size > threshold_bytes:
+                # Use direct upload for large files
+                self._upload_file_content_direct(client, local_path, ratio_path)
 
             else:
-                # Text mode (default)
-                mode = 'r'
-
-            # Read local file content
-            with open(local_path, mode) as f:
-                content = f.read()
-
-            base_64_encoded = False
-
-            # Handle encoding transformations
-            if encoding == 'binary':
-                base_64_encoded = True
-
-                # For binary encoding, we need to base64 encode the bytes for JSON serialization
-                if isinstance(content, bytes):
-                    content = base64.b64encode(content).decode('utf-8')
-
-                else:
-                    content = base64.b64encode(content.encode('utf-8')).decode('utf-8')
-
-            # Add content to the file
-            content_request = PutFileVersionRequest(
-                file_path=ratio_path,
-                base_64_encoded=base_64_encoded,
-                data=content
-            )
-
-            content_resp = client.request(content_request, raise_for_status=False)
-
-            if content_resp.status_code not in [200, 201]:
-                raise RTOErrorMessage(f"Error adding content to {ratio_path} in Ratio")
+                # Use regular upload for small files
+                self._upload_file_content_regular(client, local_path, ratio_path, encoding)
 
         except Exception as e:
             raise RTOErrorMessage(f"Error uploading content: {str(e)}")
+
+    def _upload_file_content_regular(self, client, local_path, ratio_path, encoding):
+        """
+        Upload file content using regular JSON API
+        """
+        if encoding == 'binary':
+            mode = "rb"
+
+        else:
+            mode = "r"
+
+        # Read local file content
+        with open(local_path, mode) as f:
+            content = f.read()
+
+        base_64_encoded = False
+
+        # Handle encoding transformations
+        if encoding == "binary":
+            base_64_encoded = True
+
+            # For binary encoding, we need to base64 encode the bytes for JSON serialization
+            if isinstance(content, bytes):
+                content = base64.b64encode(content).decode("utf-8")
+
+            else:
+                content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+
+        # Add content to the file
+        content_request = PutFileVersionRequest(
+            file_path=ratio_path,
+            base_64_encoded=base_64_encoded,
+            data=content
+        )
+
+        content_resp = client.request(content_request, raise_for_status=False)
+
+        if content_resp.status_code not in [200, 201]:
+            raise RTOErrorMessage(f"Error adding content to {ratio_path} in Ratio")
+
+    def _upload_file_content_direct(self, client, local_path, ratio_path):
+        """
+        Upload file content using direct upload (3-step process)
+        """
+        start_request = PutDirectFileVersionStartRequest(file_path=ratio_path)
+
+        start_resp = client.request(start_request, raise_for_status=False)
+
+        if start_resp.status_code not in [200, 201]:
+            raise RTOErrorMessage(f"Error starting direct upload for {ratio_path}")
+
+        start_data = json.loads(start_resp.response_body) if isinstance(start_resp.response_body, str) else start_resp.response_body
+
+        upload_url = start_data.get("upload_url")
+
+        if not upload_url:
+            raise RTOErrorMessage(f"No upload URL returned for direct upload of {ratio_path}")
+
+        try:
+            with open(local_path, "rb") as f:
+                upload_resp = requests.put(upload_url, data=f)
+
+            if upload_resp.status_code not in [200, 201]:
+                raise RTOErrorMessage(f"Error uploading file data to presigned URL: {upload_resp.status_code}")
+
+        except requests.RequestException as e:
+            raise RTOErrorMessage(f"Network error during direct upload: {str(e)}")
+
+        complete_request = PutDirectFileVersionCompleteRequest(file_path=ratio_path)
+
+        complete_resp = client.request(complete_request, raise_for_status=False)
+
+        if complete_resp.status_code not in [200, 201]:
+            raise RTOErrorMessage(f"Error completing direct upload for {ratio_path}")
 
     def _should_skip_file(self, filename, include_patterns, exclude_patterns):
         """

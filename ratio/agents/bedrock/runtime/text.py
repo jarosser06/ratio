@@ -114,6 +114,8 @@ def handler(event: Dict, context: Dict):
                         if image_format == "jpg":
                             image_format = "jpeg"
 
+                        system.add_source_file(source_file_path=attachment_path, source_file_version=file_response["version_id"])
+
                         # Add image to content blocks (Converse API format)
                         content_blocks.append({
                             "image": {

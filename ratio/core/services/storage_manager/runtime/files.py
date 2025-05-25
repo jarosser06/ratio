@@ -6,7 +6,7 @@ import logging
 import os
 import re
 
-from datetime import datetime, UTC as utc_tz
+from datetime import datetime, timedelta, UTC as utc_tz
 from typing import Dict, Tuple
 
 import boto3
@@ -54,6 +54,8 @@ from ratio.core.services.storage_manager.request_definitions import (
     ListFileVersionsRequest,
     PutFileRequest,
     PutFileVersionRequest,
+    PutDirectFileVersionCompleteRequest,
+    PutDirectFileVersionStartRequest,
     ValidateFileAccessRequest,
 )
 
@@ -117,6 +119,11 @@ class FileAPI(ChildAPI):
             request_body_schema=GetFileVersionRequest,
         ),
         Route(
+            path="/get_direct_file_version",
+            method_name="get_direct_file_version",
+            request_body_schema=GetFileVersionRequest,
+        ),
+        Route(
             path="/list_files",
             method_name="list_files",
             request_body_schema=ListFilesRequest,
@@ -135,6 +142,16 @@ class FileAPI(ChildAPI):
             path="/put_file_version",
             method_name="put_file_version",
             request_body_schema=PutFileVersionRequest,
+        ),
+        Route(
+            path="/put_direct_file_version_complete",
+            method_name="put_direct_file_version_complete",
+            request_body_schema=PutDirectFileVersionCompleteRequest,
+        ),
+        Route(
+            path="/put_direct_file_version_start",
+            method_name="put_direct_file_version_start",
+            request_body_schema=PutDirectFileVersionStartRequest,
         ),
         Route(
             path="/validate_file_access",
@@ -778,6 +795,82 @@ class FileAPI(ChildAPI):
             },
         )
 
+    def get_direct_file_version(self, request_body: ObjectBody, request_context: Dict):
+        """
+        Returns a pre-signed URL for the specific file version.
+        """
+        f_path, f_name = normalize_path(request_body["file_path"])
+
+        file_name_hash = File.generate_hash(f_name)
+
+        file_path_hash = File.generate_hash(f_path)
+
+        files_client = FilesTableClient()
+
+        file = files_client.get(path_hash=file_path_hash, name_hash=file_name_hash)
+
+        logging.debug(f"Looking up file {f_name} at path {f_path}")
+
+        if not file:
+            logging.error(f"Unable to locate file {file_name_hash} at path {file_path_hash}")
+
+            return self.respond(
+                status_code=404,
+                body={"message": "not found"},
+            )
+
+        if not entity_has_access(file=file, request_context=request_context, requested_permission_names=["read"]):
+            logging.error(f"Requestor does not have read access to file {file_name_hash} at path {file_path_hash}")
+
+            return self.respond(
+                status_code=403,
+                body={"message": "insufficient permissions"},
+            )
+
+        # Update file last_accessed_on
+        files_client.set_last_accessed(
+            name_hash=file.name_hash,
+            path_hash=file.path_hash,
+            last_accessed_on=datetime.now(tz=utc_tz),
+        )
+
+        version_id = request_body.get("version_id", default_return=file.latest_version_id)
+
+        if not version_id:
+            return self.respond(
+                status_code=400,
+                body={"message": "no available version to get"},
+            )
+
+        expires_in_seconds = 3600
+
+        expires_at  = datetime.now(tz=utc_tz) + timedelta(seconds=expires_in_seconds)
+
+        try:
+            presigned_url = self.s3.generate_presigned_url(
+                'get_object',
+                Params={
+                    'Bucket': self.raw_bucket_name,
+                    'Key': file.full_path_hash,
+                    'VersionId': version_id
+                },
+                ExpiresIn=expires_in_seconds,  # 1 hour
+                HttpMethod='GET'
+            )
+
+        except Exception as e:
+            return self.respond(status_code=500, body={"message": f"Error generating download URL: {str(e)}"})
+
+        return self.respond(
+            status_code=200,
+            body={
+                "download_url": presigned_url,
+                "expires_at": expires_at.isoformat(),
+                "file_path": file.file_path,
+                "version_id": version_id,
+            }
+        )
+
     def list_files(self, request_body: ObjectBody, request_context: Dict):
         """
         List files in the system.
@@ -1184,6 +1277,7 @@ class FileAPI(ChildAPI):
             origin=request_body["origin"],
             originator_id=claims.entity,
             previous_version_id=file.latest_version_id,
+            size=len(data),
         )
 
         previous_version_id = file.latest_version_id
@@ -1302,7 +1396,196 @@ class FileAPI(ChildAPI):
 
         return self.respond(
             body=file_version.to_dict(json_compatible=True),
+            status_code=201,
+        )
+
+    def put_direct_file_version_start(self, request_body: ObjectBody, request_context: Dict):
+        """
+        Starts a direct file version upload.
+        """
+        logging.debug(f"Put direct file version start request body: {request_body.to_dict()}")
+
+        file_path, file_name = normalize_path(request_body["file_path"])
+
+        file_name_hash = File.generate_hash(file_name)
+
+        file_path_hash = File.generate_hash(file_path)
+
+        files_client = FilesTableClient()
+
+        file = files_client.get(path_hash=file_path_hash, name_hash=file_name_hash)
+
+        if not file:
+            return self.respond(
+                status_code=404,
+                body={"message": "not found"},
+            )
+
+        if not entity_has_access(file=file, request_context=request_context, requested_permission_names=["read", "write"]):
+            logging.error(f"Requestor does not have write access to file {file_name_hash} at path {file_path_hash}")
+
+            return self.respond(
+                status_code=403,
+                body={"message": "insufficient permissions"},
+            )
+
+        if file.is_directory:
+            return self.respond(
+                status_code=400,
+                body={"message": "cannot store data as a directory file"},
+            )
+
+        expires_in_seconds = 3600
+
+        expires_at = datetime.now(tz=utc_tz) + timedelta(seconds=expires_in_seconds)
+
+        try:
+            presigned_url = self.s3.generate_presigned_url(
+                'put_object',
+                Params={
+                    'Bucket': self.raw_bucket_name,
+                    'Key': file.full_path_hash,  # S3 will generate version_id
+                },
+                ExpiresIn=expires_in_seconds,
+                HttpMethod='PUT'
+            )
+
+        except Exception as e:
+            return self.respond(status_code=500, body={"message": f"Error generating upload URL: {str(e)}"})
+
+        return self.respond(
             status_code=200,
+            body={
+                "upload_url": presigned_url,
+                "expires_at": expires_at.isoformat(),
+                "file_path": request_body["file_path"]
+            }
+        )
+
+    def put_direct_file_version_complete(self, request_body: ObjectBody, request_context: Dict):
+        """
+        Completion signal that lets the system know the direct file version upload has been completed.
+        """
+        logging.debug(f"Put direct file version completion request body: {request_body.to_dict()}")
+
+        file_path, file_name = normalize_path(request_body["file_path"])
+
+        file_name_hash = File.generate_hash(file_name)
+
+        file_path_hash = File.generate_hash(file_path)
+
+        files_client = FilesTableClient()
+
+        file = files_client.get(path_hash=file_path_hash, name_hash=file_name_hash)
+
+        if not file:
+            return self.respond(
+                status_code=404,
+                body={"message": "not found"},
+            )
+
+        if not entity_has_access(file=file, request_context=request_context, requested_permission_names=["read", "write"]):
+            logging.error(f"Requestor does not have write access to file {file_name_hash} at path {file_path_hash}")
+
+            return self.respond(
+                status_code=403,
+                body={"message": "insufficient permissions"},
+            )
+
+        try:
+            s3_versions_resp = self.s3.list_object_versions(
+                Bucket=self.raw_bucket_name,
+                Prefix=file.full_path_hash,
+                MaxKeys=1000
+            )
+
+            s3_versions = [v['VersionId'] for v in s3_versions_resp.get('Versions', []) 
+                        if v['Key'] == file.full_path_hash]
+
+        except Exception as e:
+            return self.respond(status_code=500, body={"message": f"Error checking S3 versions: {str(e)}"})
+
+        versions_client = FileVersionsTableClient()
+
+        existing_versions = versions_client.get_by_full_path_hash(full_path_hash=file.full_path_hash)
+
+        existing_version_ids = {v.version_id for v in existing_versions} if existing_versions else set()
+
+        missing_versions = list(set(s3_versions) - set(existing_version_ids))
+
+        if not missing_versions:
+            return self.respond(status_code=400, body={"message": "no new versions found"})
+
+        if len(missing_versions) > 1:
+            raise Exception(f"More than one unrecorded version found for file {file_name} at path {file_path}")
+
+        newest_version_id = missing_versions[0]
+
+        try:
+            head_resp = self.s3.head_object(
+                Bucket=self.raw_bucket_name,
+                Key=file.full_path_hash,
+                VersionId=newest_version_id
+            )
+
+            file_size = head_resp['ContentLength']
+
+        except Exception as e:
+            return self.respond(status_code=500, body={"message": f"Error getting file info: {str(e)}"})
+
+        claims = JWTClaims.from_claims(request_context["request_claims"])
+
+        metadata = request_body.get("metadata", default_return={})
+
+        if isinstance(metadata, ObjectBody):
+            logging.debug("Converting metadata from object body to dict")
+
+            metadata = metadata.to_dict()
+
+        file_version = FileVersion(
+            version_id=newest_version_id,
+            full_path_hash=file.full_path_hash,
+            file_name=file.file_name,
+            file_path=file.file_path,
+            size=file_size,  # Add this field to track size
+            metadata=metadata,
+            originator_id=claims.entity,
+            origin=request_body.get("origin", default_return="internal"),
+            previous_version_id=file.latest_version_id,
+        )
+
+        versions_client.put(file_version=file_version)
+
+        # Update previous version linkage
+        if file.latest_version_id:
+            previous_version = versions_client.get(
+                full_path_hash=file.full_path_hash,
+                version_id=file.latest_version_id,
+            )
+
+            if previous_version:
+                previous_version.next_version_id = newest_version_id
+
+                versions_client.put(file_version=previous_version)
+
+        # Update file with new latest version
+        file.latest_version_id = newest_version_id
+
+        file.last_updated_on = datetime.now(tz=utc_tz)
+
+        files_client.put(file=file)
+
+        # Publish events
+        publish_file_update_event(
+            file=file,
+            file_event_type=FileEventType.VERSION_CREATED,
+            requestor=claims.entity,
+            details={"version_id": newest_version_id},
+        )
+        
+        return self.respond(
+            status_code=201,
+            body=file_version.to_dict(json_compatible=True),
         )
 
     def validate_file_access(self, request_body: ObjectBody, request_context: Dict):

@@ -301,7 +301,39 @@ class FindFileRequest(ObjectBodySchema):
     ]
 
 
+class GetJumboFileVersionRequest(ObjectBodySchema):
+    attributes = [
+        SchemaAttribute(
+            name="file_path",
+            type_name=SchemaAttributeType.STRING,
+            regex_pattern=FILE_PATH_REGEX,
+            required=True,
+        ),
+        SchemaAttribute(
+            name="version_id",
+            type_name=SchemaAttributeType.STRING,
+            required=False,
+        ),
+    ]
+
+
 class GetFileVersionRequest(ObjectBodySchema):
+    attributes = [
+        SchemaAttribute(
+            name="file_path",
+            type_name=SchemaAttributeType.STRING,
+            regex_pattern=FILE_PATH_REGEX,
+            required=True,
+        ),
+        SchemaAttribute(
+            name="version_id",
+            type_name=SchemaAttributeType.STRING,
+            required=False,
+        ),
+    ]
+
+
+class GetDirectFileVersionRequest(ObjectBodySchema):
     attributes = [
         SchemaAttribute(
             name="file_path",
@@ -421,6 +453,46 @@ class PutFileTypeRequest(ObjectBodySchema):
             required=False,
             default_value="^[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*$",
         )
+    ]
+
+
+class PutDirectFileVersionStartRequest(ObjectBodySchema):
+    attributes = [
+        SchemaAttribute(
+            name="file_path",
+            type_name=SchemaAttributeType.STRING,
+            regex_pattern=FILE_PATH_REGEX,
+            required=True,
+        ),
+    ]
+
+
+class PutDirectFileVersionCompleteRequest(ObjectBodySchema):
+    attributes = [
+        SchemaAttribute(
+            name="file_path",
+            type_name=SchemaAttributeType.STRING,
+            regex_pattern=FILE_PATH_REGEX,
+            required=True,
+        ),
+        SchemaAttribute(
+            name="metadata",
+            type_name=SchemaAttributeType.OBJECT,
+            required=False,
+        ),
+        SchemaAttribute(
+            name="origin",
+            type_name=SchemaAttributeType.STRING,
+            required=False,
+            default_value="internal",
+            enum=["internal", "external"],
+        ),
+        SchemaAttribute(
+            description="The file path of the source file. This is used to create a lineage between the source and destination files. Expects a list of objects ex: {\"source_file_path\": \"/home/app1/data\", \"version_id\": \"123456\"}",
+            name="source_files",
+            type_name=SchemaAttributeType.OBJECT_LIST,
+            required=False,
+        ),
     ]
 
 

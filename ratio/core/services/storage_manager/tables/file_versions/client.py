@@ -91,6 +91,13 @@ class FileVersion(TableObject):
             description="The id of the previous version of the file.",
             optional=True,
         ),
+
+        TableObjectAttribute(
+            name="size",
+            attribute_type=TableObjectAttributeType.NUMBER,
+            description="The size of the file in bytes.",
+            optional=True,
+        ),
     ]
 
     @property

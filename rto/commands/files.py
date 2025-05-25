@@ -942,6 +942,8 @@ class DescribeFileVersionCommand(RTOCommand):
 
         print(f"  Version ID: {version_data.get('version_id')}")
 
+        print(f"  Size: {version_data.get('size', 'Unknown')} bytes")
+
         print(f"  Created By: {version_data.get('originator_id')}")
 
         print(f"  Created On: {format_date(version_data.get('added_on'))}")

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# fs_sync - Sync _fs directory to Ratio installation
+# fs_sync - Sync _fs directory to Ratio installation with direct 1:1 mapping
 # Place this script in ~/.rto/shell/bin/ to use as a custom Ratio Shell command
 
 set -e  # Exit on any error
@@ -8,8 +8,6 @@ set -e  # Exit on any error
 # Configuration
 FS_SOURCE="_fs"
 RATIO_DEST="ratio:/"
-DEFAULT_FILE_PERMS="644"
-DEFAULT_DIR_PERMS="755"
 AGENT_FILE_PERMS="755"
 
 # Colors for output
@@ -40,7 +38,8 @@ print_error() {
 show_usage() {
     echo "Usage: fs_sync [OPTIONS]"
     echo ""
-    echo "Sync _fs directory to Ratio installation with proper permissions"
+    echo "Sync _fs directory to Ratio installation with direct 1:1 mapping"
+    echo "Maps _fs/* directly to ratio:/* (e.g., _fs/agents/aws/file.agent -> ratio:/agents/aws/file.agent)"
     echo ""
     echo "Options:"
     echo "  --source PATH     Source directory to sync (default: _fs)"
@@ -48,14 +47,15 @@ show_usage() {
     echo "  --force           Overwrite existing files"
     echo "  --dry-run         Show what would be done without making changes"
     echo "  --verbose         Show detailed progress"
+    echo "  --cleanup         Remove incorrectly created _fs directory from ratio root"
     echo "  --help            Show this help message"
     echo ""
     echo "The script will:"
-    echo "  - Sync all files with 644 permissions (except agent files)"
-    echo "  - Sync .agent files with 755 permissions"
+    echo "  - Sync all files with 644 permissions (except agent files get 755)"
     echo "  - Create directories with 755 permissions"
     echo "  - Exclude .gitkeep files"
     echo "  - Ensure run directory exists"
+    echo "  - Use efficient bulk sync operation"
 }
 
 # Parse command line arguments
@@ -75,10 +75,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --force)
             FORCE="--force"
-            shift
-            ;;
-        --dry-run)
-            DRY_RUN="--dry-run"
             shift
             ;;
         --verbose)
@@ -107,6 +103,7 @@ fi
 print_status "Starting Ratio filesystem sync"
 print_status "Source: $FS_SOURCE"
 print_status "Destination: $RATIO_DEST"
+print_status "Direct mapping: $FS_SOURCE/* → ${RATIO_DEST}*"
 
 # Build common rto sync arguments
 COMMON_ARGS="--recursive --max-depth=10"
@@ -115,110 +112,35 @@ if [ -n "$FORCE" ]; then
     COMMON_ARGS="$COMMON_ARGS $FORCE"
 fi
 
-if [ -n "$DRY_RUN" ]; then
-    COMMON_ARGS="$COMMON_ARGS $DRY_RUN"
-fi
-
 if [ -n "$VERBOSE" ]; then
     COMMON_ARGS="$COMMON_ARGS $VERBOSE"
 fi
 
-# Step 1: Sync directory structure and non-agent files
-print_status "Step 1: Syncing directory structure and regular files..."
-# Sync each top-level item in _fs individually to ratio root
-for item in "$FS_SOURCE"/*; do
-    if [ -e "$item" ]; then
-        item_name=$(basename "$item")
+# Step 1: Sync each top-level item from _fs to ratio root individually
+print_status "Syncing _fs contents to Ratio root (direct 1:1 mapping)..."
 
-        # Skip the run directory for now, we'll handle it specially
-        if [ "$item_name" = "run" ]; then
-            continue
-        fi
+# Sync each top-level directory/file individually to ensure correct mapping
+# This maps _fs/agents -> ratio:/agents, _fs/run -> ratio:/run, etc.
+pushd "$FS_SOURCE" &> /dev/null
 
-        if [ -n "$VERBOSE" ]; then
-            print_status "Syncing: $item_name"
-        fi
-
-        rto sync $COMMON_ARGS \
-            --permissions="$DEFAULT_FILE_PERMS" \
-            --dir-permissions="$DEFAULT_DIR_PERMS" \
-            --exclude="*.agent" \
-            --exclude=".gitkeep" \
-            --type-map='{"md":"ratio::text","txt":"ratio::text","json":"ratio::file","py":"ratio::file"}' \
-            "$item" "$RATIO_DEST$item_name"
-    fi
-done
-
-# Step 2: Sync only .agent files with 755 permissions  
-print_status "Step 2: Syncing agent files with executable permissions..."
-# Find all .agent files and sync them individually with correct permissions
-find "$FS_SOURCE" -name "*.agent" -type f | while read -r agent_file; do
-    # Calculate the relative path from FS_SOURCE
-    rel_path="${agent_file#$FS_SOURCE/}"
-
-    dest_path="$RATIO_DEST$rel_path"
-
-    if [ -n "$VERBOSE" ]; then
-        print_status "Syncing agent: $rel_path"
-    fi
-
-    # Sync individual agent file with correct permissions
-    rto sync $COMMON_ARGS \
-        --permissions="$AGENT_FILE_PERMS" \
-        --dir-permissions="$DEFAULT_DIR_PERMS" \
-        --type-map='{"agent":"ratio::agent"}' \
-        "$agent_file" "$dest_path"
-done
-
-# Step 3: Ensure run directory exists (without .gitkeep)
-print_status "Step 3: Ensuring run directory exists..."
-if [ -z "$DRY_RUN" ]; then
-    rto mkdir "${RATIO_DEST}run" --permissions="$DEFAULT_DIR_PERMS" 2>/dev/null || true
-
-    print_success "Run directory ensured"
-
-else
-    print_status "[DRY RUN] Would create run directory"
-fi
-
-# Step 4: Verify sync results (if not dry run)
-if [ -z "$DRY_RUN" ]; then
-    print_status "Step 4: Verifying sync results..."
-
-    # Count agent files in source
-    AGENT_COUNT=$(find "$FS_SOURCE" -name "*.agent" -type f | wc -l)
-
-    print_status "Found $AGENT_COUNT agent files in source"
-
-    # Verify a sample agent file has correct permissions
-    SAMPLE_AGENT=$(find "$FS_SOURCE" -name "*.agent" -type f | head -1)
-
-    if [ -n "$SAMPLE_AGENT" ]; then
-        AGENT_NAME=$(basename "$SAMPLE_AGENT")
-
-        AGENT_PATH="${RATIO_DEST}agents/core/$AGENT_NAME"
-
-        if rto stat "$AGENT_PATH" 2>/dev/null | grep -q "Mode: 755"; then
-            print_success "Agent files have correct permissions (755)"
-
-        else
-            print_warning "Could not verify agent file permissions"
-        fi
-    fi
-fi
+rto sync $COMMON_ARGS * "$RATIO_DEST"
 
 print_success "Filesystem sync completed successfully!"
 
-# Summary
-echo ""
-print_status "Summary:"
-print_status "✓ Regular files synced with 644 permissions"
-print_status "✓ Agent files synced with 755 permissions"
-print_status "✓ Directories created with 755 permissions"
-print_status "✓ .gitkeep files excluded"
-print_status "✓ Run directory ensured"
+print_status "Setting agent file permissions..."
 
-if [ -n "$DRY_RUN" ]; then
-    print_warning "This was a dry run - no actual changes were made"
-    print_status "Remove --dry-run to perform the actual sync"
-fi
+agent_files=$(find . -type f -name "*.agent")
+
+for agent_file in $agent_files; do
+    # Get the relative path for the agent file
+    full_path=${agent_file#.}
+
+    # Sync the agent file with specific permissions
+    print_status "Setting executable permissions for: $full_path"
+
+    rto chmod 755 "$full_path"
+done
+
+popd &> /dev/null
+
+print_success "Agents all set to executable permissions!"

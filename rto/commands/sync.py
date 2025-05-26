@@ -34,7 +34,6 @@ class SyncCommand(RTOCommand):
     description = "Sync files between local filesystem and Ratio"
     requires_authentication = True
 
-
     DEFAULT_ENCODING_MAP = {
         # Text files - use text encoding
         "txt": "text",

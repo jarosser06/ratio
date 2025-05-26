@@ -1,5 +1,5 @@
 """
-Object Mapper Agent
+Math Agent Stack
 """
 from os import path
 
@@ -18,11 +18,11 @@ from da_vinci_cdk.constructs.event_bus import EventBusSubscriptionFunction
 from ratio.core.services.storage_manager.stack import StorageManagerStack
 
 
-class RatioObjectMapperAgent(Stack):
+class RatioMathAgent(Stack):
     def __init__(self, app_name: str, app_base_image: str, architecture: str, deployment_id: str,
                  stack_name: str, scope: Construct):
         """
-        Ratio Object Mapper Agent Stack
+        Ratio Math Agent Stack
 
         Keyword arguments:
         app_name -- Name of the application
@@ -53,13 +53,13 @@ class RatioObjectMapperAgent(Stack):
 
         self.agent_execute = EventBusSubscriptionFunction(
             base_image=self.app_base_image,
-            construct_id="ratio-agent-object-mapper-execution",
-            event_type="ratio::agent::object_mapper::execution",
-            description="Agent execution for Object Mapper agent",
+            construct_id="ratio-agent-math-execution",
+            event_type="ratio::agent::math::execution",
+            description="Agent execution for Math agent",
             entry=self.runtime_path,
             index="run.py",
             handler="handler",
-            function_name=resource_namer("agent-object-mapper", scope=self),
+            function_name=resource_namer("agent-math", scope=self),
             memory_size=256,
             resource_access_requests=[
                 ResourceAccessRequest(

@@ -216,45 +216,91 @@ class ExecutionEngine:
 
         return graph
 
-    def _load_instructions(self, instructions: List[Dict[str, Any]], token: str) -> Dict[str, AgentInstruction]:
+    def _expand_parallel_instruction(self, execution_id: str) -> List[str]:
         """
-        Load the instructions for each task.
+        Expand a parallel instruction into child instructions.
+        Returns list of child execution IDs.
 
         Keyword arguments:
-        instructions -- The instructions to load
-        token -- The token to use for authentication
+        execution_id -- The ID of the execution to expand
         """
+        instruction = self.instructions[execution_id]
+
+        parallel_config = instruction.parallel_execution
+
+        iterate_over_value = parallel_config["iterate_over"]
+
+        # Check if it's a REF that needs resolving, or a direct value
+        if isinstance(iterate_over_value, str) and iterate_over_value.startswith("REF:"):
+            resolved_value = self.reference.resolve(reference_string=iterate_over_value, token=self.token)
+
+        else:
+            # It's a direct value (could be a list, or anything else)
+            resolved_value = iterate_over_value
+
+        # Validate it's a list regardless of source
+        if not isinstance(resolved_value, list):
+            raise InvalidSchemaError(f"parallel_execution iterate_over must be a list, got {type(resolved_value).__name__}")
+
+        child_argument_name = parallel_config["child_argument_name"]
+
+        expanded_children = []
+
+        for i, item in enumerate(resolved_value):
+            child_execution_id = f"{execution_id}[{i}]"
+
+            child_arguments = (instruction.provided_arguments or {}).copy()
+
+            child_arguments[child_argument_name] = item
+
+            child_instruction = AgentInstruction(
+                conditions=instruction.conditions,
+                dependencies=instruction.dependencies,
+                execution_id=child_execution_id,
+                definition=instruction.definition,
+                provided_arguments=child_arguments,
+            )
+
+            self.instructions[child_execution_id] = child_instruction
+
+            self.dependency_graph[child_execution_id] = child_instruction.get_dependencies()
+
+            expanded_children.append(child_execution_id)
+
+        # Remove the original parallel instruction
+        del self.instructions[execution_id]
+
+        del self.dependency_graph[execution_id]
+
+        return expanded_children 
+
+    def _load_instructions(self, instructions: List[Dict[str, Any]], token: str) -> Dict[str, AgentInstruction]:
         loaded_instructions = {}
 
         for instruction in instructions:
-            # Load the agent definition from the file system
-            if instruction["execution_id"] in loaded_instructions:
-                raise InvalidSchemaError(f"Duplicate execution ID found: {instruction["execution_id"]}")
+            execution_id = instruction["execution_id"]
+            
+            if execution_id in loaded_instructions:
+                raise InvalidSchemaError(f"Duplicate execution ID found: {execution_id}")
 
+            # Load agent definition
             if instruction.get("agent_definition_path"):
                 agent_definition = AgentDefinition.load_from_fs(
                     agent_file_location=instruction["agent_definition_path"],
                     token=token,
                 )
-
             else:
-                # If we hit this point, the agent definition must be defined inline or something went horribly wrong
                 agent_definition = AgentDefinition(**instruction["agent_definition"])
 
-            logging.debug(f"Loaded agent definition: {agent_definition}")
-
-            conditions = instruction.get("conditions", [])
-
-            # Create the agent instruction object
-            loaded_instructions[instruction["execution_id"]] = AgentInstruction(
-                conditions=conditions,
+            # Just load the instruction as-is, don't expand parallel yet
+            loaded_instructions[execution_id] = AgentInstruction(
+                conditions=instruction.get("conditions", []),
                 dependencies=instruction.get("dependencies", []),
-                execution_id=instruction["execution_id"],
+                execution_id=execution_id,
                 definition=agent_definition,
                 provided_arguments=instruction.get("arguments"),
+                parallel_execution=instruction.get("parallel_execution"),  # Keep this
             )
-
-            logging.debug(f"Loaded instruction {loaded_instructions[instruction["execution_id"]]} with arguments {instruction.get("arguments")}")
 
         return loaded_instructions
 
@@ -431,8 +477,15 @@ class ExecutionEngine:
             if all(dep in self.completed for dep in self.dependency_graph[exec_id]):
                 # Evaluate conditions
                 if self._meets_conditions(execution_id=exec_id):
-                    # Add to available list
-                    available.append(exec_id)
+                    instruction = self.instructions[exec_id]
+
+                    if instruction.parallel_execution:
+                        expanded_children = self._expand_parallel_instruction(exec_id)
+
+                        available.extend(expanded_children)
+
+                    else:
+                        available.append(exec_id)
 
                 else:
                     logging.debug(f"Execution {exec_id} does not meet conditions .. skipping")

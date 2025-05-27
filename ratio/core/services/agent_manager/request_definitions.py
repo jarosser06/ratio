@@ -50,6 +50,12 @@ class AgentInstructionSchema(ObjectBodySchema):
             required=True,
             regex_pattern="^[a-zA-Z0-9_\\-]+$",
         ),
+        SchemaAttribute(
+            name="parallel_execution",
+            type_name=SchemaAttributeType.OBJECT,
+            description="Configuration for parallel execution",
+            required=False,
+        ),
     ]
 
 

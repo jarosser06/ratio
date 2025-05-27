@@ -220,6 +220,7 @@ class AgentInstruction:
     conditions: List[Dict] = None
     dependencies: List[str] = None
     response: Dict[str, Any] = None
+    parallel_execution: Dict[str, Any] = None
     provided_arguments: Dict[str, Any] = None
 
     def __post_init__(self):

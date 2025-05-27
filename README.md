@@ -1,57 +1,131 @@
 Ratio
 =====
-An AI Operating System built on Cloud Native AWS Technologies.
+An AI Operating System for building and executing complex agent workflows with automatic dependency resolution, parallel processing, and event-driven orchestration.
 
 Ratio is named after the Golden Ratio, representing the ideal balance between AI capabilities and engineering infrastructure.
 The system is designed to enable AI expansion within the confines of thoughtful, robust engineering - ensuring that as AI
 capabilities grow, they do so within a secure, manageable framework.
 
-To get started check out the [Getting Started Guide](GETTING_STARTED.md)
+## Agent Composition Example
 
-For further reading about the system internals, check out the [introduction](docs/INTRODUCTION.md)
+Define complex workflows by composing agents:
 
+```json
+{
+  "description": "Document processing pipeline",
+  "arguments": [
+    {"name": "input_files", "type_name": "list", "required": true}
+  ],
+  "instructions": [
+    {
+      "execution_id": "validate",
+      "agent_definition_path": "/agents/validator.agent",
+      "arguments": {"files": "REF:arguments.input_files"}
+    },
+    {
+      "execution_id": "process_parallel",
+      "agent_definition_path": "/agents/processor.agent", 
+      "parallel_execution": {
+        "iterate_over": "REF:validate.valid_files",
+        "child_argument_name": "file_path"
+      }
+    },
+    {
+      "execution_id": "generate_report",
+      "agent_definition_path": "/agents/reporter.agent",
+      "conditions": [
+        {"param": "REF:process_parallel.response.length", "operator": "greater_than", "value": 0}
+      ],
+      "arguments": {
+        "results": "REF:process_parallel.response",
+        "total_processed": "REF:process_parallel.response.length"
+      }
+    }
+  ]
+}
+```
 
-The Intent
-----------
-When designing and building Ratio, the intent was to build a system while keeping the following aspects into account:
+Execute the workflow:
+```bash
+rto execute --agent-definition-path=/agents/pipeline.agent \
+    --arguments='{"input_files": ["/data/doc1.pdf", "/data/doc2.pdf"]}'
+```
 
-### Authentication & Authorization at Scale
-- Entity-based (not just user-based) authentication system, most interactions with the system are likely not direct
-user interactions
-- Permissions model needed to support both data access as well as compute.
-- Identity verification is important when "agents" working across a more distributed system.
-- Any "entity" representing the system itself should still be held to the same restrictions as all other entities. Only the
-administrative entities should have complete control, and that level of access should not be granted to the system.
+## Core Features
+- **Automatic Dependency Resolution**: `REF:` references create execution dependencies
+- **Parallel Processing**: Execute agents over collections with `parallel_execution`
+- **Conditional Execution**: Run agents based on dynamic conditions
+- **File System**: Versioned storage with lineage tracking and Unix-like permissions
+- **Event-Driven Triggers**: Auto-execute agents on file changes
+- **Nested Composition**: Unlimited depth agent orchestration
 
-### Unified Resource Model
-- Everything is a file and lives in a versioned filesystem
-- Files and agents share the same management interface since agent definitions are files in the system
+## System Components
 
-### Composability & Reusability
-- Agents can be composed from other agents
-- Resources can reference each other through paths
+### File System
+```bash
+rto ls /agents                    # List agent definitions
+rto create-file /data/input.csv   # Create files with automatic versioning
+rto create-subscription /agents/processor.agent /data/input --file-event-type=created
+```
 
-### Cloud-Native Operations
-- Serverless-first design
-- Be lazy and make deployment simple with CDK
+### Agent Types
+- **Simple Agents**: Single function execution with direct I/O
+- **Composite Agents**: Multi-step workflows with dependency management
 
-### Thoughtful Control Plane
-- Administrative oversight capabilities
-- Metadata and lineage tracking built in
-- Permission boundaries
+### REF System
+Dynamic value resolution between agent executions:
+- `REF:arguments.input_file` - Input arguments
+- `REF:validator.results` - Previous agent outputs  
+- `REF:processor.files.length` - Collection attributes
+- `REF:api_call.response.user.email` - Nested object access
 
+## Getting Started
 
-Development
------------
+```bash
+# Initialize system
+rto init
+rto configure
 
-Ratio is built on the Da Vinci framework and follows Da Vinci patterns for deployment, service structure, and resource management.
-Prerequisites
+# Deploy an agent
+rto create-file /agents/my_agent.agent --file-type=ratio::agent < definition.json
 
-- Python 3.12+
-- AWS account with appropriate permissions
-- AWS CDK
-- Poetry for dependency management
+# Execute
+rto execute --agent-definition-path=/agents/my_agent.agent \
+    --arguments='{"input": "value"}' --wait
 
-License
--------
+# Set up automation
+rto create-subscription /agents/my_agent.agent /data/trigger_file.txt
+```
+
+## Architecture
+
+Built on cloud-native AWS services with:
+- **Process Management**: Agent execution and lifecycle tracking
+- **Storage Manager**: Versioned file system with metadata and lineage
+- **Event Bus**: Inter-agent communication and coordination  
+- **Scheduler**: File-based and time-based triggers
+- **Authentication**: RSA key-based entity and group management
+
+Designed for agent development with integrated debugging, exception handling, and process visibility.
+
+## Documentation
+
+- [Getting Started Guide](GETTING_STARTED.md) - Installation and setup
+- [Agent Authoring](docs/AGENT_AUTHORING.md) - Creating agents
+- [CLI Reference](docs/CLI_CHEAT_SHEET.md) - Command reference
+- [Agent Composition](docs/agent_definition_appendix/AGENT_COMPOSITION.md) - Workflow orchestration
+
+## Development
+
+Prerequisites: Python 3.12+, AWS account, AWS CDK, Poetry
+
+```bash
+git clone https://github.com/jarosser06/ratio.git
+cd ratio
+poetry install
+make deploy
+```
+
+## License
+
 Apache 2.0

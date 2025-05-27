@@ -4,9 +4,13 @@ Handlers for the agent manager events.
 import json
 import logging
 import os
+import random
+import re
+import time
 
 from datetime import datetime, UTC as utc_tz
-from typing import Dict, Optional, Union
+from typing import Dict, List, Optional, Union
+from uuid import uuid4
 
 from da_vinci.core.logging import Logger
 from da_vinci.core.immutable_object import ObjectBody, InvalidObjectSchemaError
@@ -27,12 +31,16 @@ from ratio.core.services.agent_manager.tables.processes.client import (
 
 from ratio.core.services.storage_manager.request_definitions import (
     GetFileVersionRequest,
+    PutFileRequest,
+    PutFileVersionRequest,
     ValidateFileAccessRequest,
 )
 
 from ratio.core.services.agent_manager.runtime.agent import (
     AgentDefinition,
     AgentInstruction,
+    AIO_EXT,
+    AGENT_IO_FILE_TYPE,
 )
 
 from ratio.core.services.agent_manager.runtime.engine import (
@@ -52,6 +60,73 @@ from ratio.core.services.agent_manager.runtime.no_op import execute_no_ops
 from ratio.core.services.agent_manager.runtime.reference import (
     InvalidReferenceError,
 )
+
+
+def _aggregate_parallel_responses(all_children: List[Process], original_execution_id: str, parent_proc: Process, execution_engine: ExecutionEngine,
+                                  token: str) -> None:
+    """
+    Aggregate all parallel responses and add to execution engine references as a list.
+
+    Keyword arguments:
+    original_execution_id -- The original execution ID of the parallel group.
+    parent_proc -- The parent process that initiated the parallel group.
+    execution_engine -- The execution engine for the parallel group.
+    token -- The authentication token for the request.
+    """
+    storage_client = RatioInternalClient(service_name="storage_manager", token=token)
+
+    parallel_children = []
+
+    sibling_pattern = re.compile(rf'^{re.escape(original_execution_id)}\[\d+\]$')
+
+    for child in all_children:
+        if child.execution_id and sibling_pattern.match(child.execution_id) \
+           and child.execution_status == ProcessStatus.COMPLETED and child.response_path:
+            parallel_children.append(child)
+
+    regex_pattern = re.compile(r'\[(\d+)\]$')
+
+    # Sort by index to maintain order
+    def get_index(child):
+        match = regex_pattern.search(child.execution_id)
+
+        return int(match.group(1)) if match else 0
+
+    parallel_children.sort(key=get_index)
+
+    # Load each response and collect into list
+    individual_responses = []
+
+    for child in parallel_children:
+        if child.response_path:
+            file_version_request = ObjectBody(
+                schema=GetFileVersionRequest,
+                body={"file_path": child.response_path}
+            )
+
+            resp = storage_client.request(
+                path="/get_file_version",
+                request=file_version_request
+            )
+
+            if resp.status_code == 200:
+                child_response = json.loads(resp.response_body["data"])
+                individual_responses.append(child_response)
+            else:
+                # Handle missing response - append None or empty object
+                individual_responses.append(None)
+
+    logging.debug(f"Aggregated {len(individual_responses)} parallel responses for execution {original_execution_id}")
+
+    # Add the aggregated response as a list to the execution engine's reference system
+    execution_engine.reference.add_response(
+        execution_id=original_execution_id,
+        response_key="response",
+        response_value=individual_responses,
+        response_type="list"
+    )
+
+    logging.debug(f"Added aggregated response list to references: {original_execution_id}.response")
 
 
 def _close_out_process(process: Process, token: str, failure_reason: Optional[str] = None, notify_parent: bool = False,
@@ -148,6 +223,10 @@ def _close_out_process(process: Process, token: str, failure_reason: Optional[st
 def _load_arguments(arguments_path: str, token: str) -> Union[ObjectBody, None]:
     """
     Load the arguments from the given path.
+
+    Keyword arguments:
+    arguments_path -- The path to the arguments file.
+    token -- The authentication token for the request.
     """
     storage_client = RatioInternalClient(
         service_name="storage_manager",
@@ -179,10 +258,121 @@ def _load_arguments(arguments_path: str, token: str) -> Union[ObjectBody, None]:
     return arguments
 
 
+def _all_parallel_siblings_complete(original_execution_id: str, parent_proc: Process, 
+                                   process_client: ProcessTableClient) -> bool:
+    """
+    Check if all parallel siblings are complete.
+
+    Keyword arguments:
+    original_execution_id -- The original execution ID of the parallel group.
+    parent_proc -- The parent process that initiated the parallel group.
+    process_client -- The process client to interact with the process table.
+    """
+    logging.debug(f"Checking if all parallel siblings are complete for {original_execution_id} in parent process {parent_proc.process_id}")
+
+    all_children = process_client.get_by_parent(parent_process_id=parent_proc.process_id)
+
+    sibling_pattern = re.compile(rf'^{re.escape(original_execution_id)}\[\d+\]$')
+
+    for child in all_children:
+        if child.execution_id and sibling_pattern.match(child.execution_id):
+            logging.debug(f"Child process {child.process_id} with execution ID {child.execution_id} and status {child.execution_status} is part of parallel group {original_execution_id}")
+
+            if child.execution_status not in [ProcessStatus.COMPLETED, ProcessStatus.SKIPPED]:
+                logging.debug(f"Child process {child.process_id} is not complete, status: {child.execution_status}")
+
+                return False
+
+    return True
+
+
+def _try_complete_parallel_group(original_execution_id: str, parent_proc: Process, execution_engine: ExecutionEngine,
+                                 process_client: ProcessTableClient, token: str) -> bool:
+    """
+    Try to coordinate completion of a parallel group using lock file.
+    Returns True if this process should handle the final completion.
+
+    Keyword arguments:
+    original_execution_id -- The original execution ID of the parallel group.
+    parent_proc -- The parent process that initiated the parallel group.
+    execution_engine -- The execution engine for the parallel group.
+    process_client -- The process client to interact with the process table.
+    token -- The authentication token for the request.
+    """
+    logging.debug(f"Trying to complete parallel group {original_execution_id} for parent process {parent_proc.process_id}")
+
+    lock_file_path = os.path.join(execution_engine.get_path(), f"parallel_completion_{original_execution_id}.lock")
+
+    storage_client = RatioInternalClient(service_name="storage_manager", token=token)
+
+    # Check if all siblings are complete first
+    if not _all_parallel_siblings_complete(original_execution_id, parent_proc, process_client):
+        logging.debug(f"Not all parallel siblings are complete for {original_execution_id}, cannot complete yet")
+
+        return False
+
+    logging.debug(f"All parallel siblings are complete for {original_execution_id}, proceeding with lock file")
+
+    # Try to write our ID to the lock file
+    put_file_request = ObjectBody(
+        schema=PutFileRequest,
+        body={
+            "file_path": lock_file_path,
+            "file_type": "ratio::file",
+            "permissions": "644"
+        }
+    )
+
+    unique_thread_id = str(uuid4())
+
+    # Create the file (or overwrite if exists)
+    storage_client.request(path="/put_file", request=put_file_request)
+
+    put_file_version_request = ObjectBody(
+        schema=PutFileVersionRequest,
+        body={
+            "file_path": lock_file_path,
+            "data": unique_thread_id,
+        }
+    )
+
+    storage_client.request(path="/put_file_version", request=put_file_version_request)
+
+    # Wait for timing variability
+    time.sleep(random.uniform(0.1, 0.8))
+
+    # Read back the lock file to see who won
+    file_version_request = ObjectBody(
+        schema=GetFileVersionRequest,
+        body={"file_path": lock_file_path}
+    )
+
+    resp = storage_client.request(path="/get_file_version", request=file_version_request)
+
+    logging.debug(f"Lock file read response: {resp}")
+    
+    if resp.status_code == 200:
+        winner_thread_id = resp.response_body["data"]
+
+        logging.debug(f"Lock file winner thread ID: {winner_thread_id}")
+
+        return winner_thread_id == unique_thread_id
+
+    return False
+
+
 def _execute_children(claims: JWTClaims, execution_engine: ExecutionEngine, execution_ids: list,
                       parent_process: Process, process_client: ProcessTableClient, token: str):
     """
     Execute the children of the process.
+
+    Keyword arguments:
+    claims -- The JWT claims of the requestor.
+    execution_engine -- The execution engine for the composite agent.
+    execution_ids -- The list of execution IDs to execute.
+    parent_process -- The parent process that initiated the execution.
+    process_client -- The process client to interact with the process table.
+    token -- The authentication token for the request.
     """
     base_working_dir = execution_engine.working_directory
 
@@ -402,8 +592,14 @@ def process_complete_handler(event: Dict, context: Dict):
 
     logging.debug(f"All children for parent process {parent_proc.process_id}: {all_children}")
 
+    parallel_execution_pattern = re.compile(r'^(.+)\[(\d+)\]$')
+
+    parallel_groups_to_coordinate = set()
+
     for child in all_children:
         logging.debug(f"Checking child process: {child.process_id} with {child.execution_id} is {child.execution_status}")
+
+        parallel_match = parallel_execution_pattern.match(child.execution_id) if child.execution_id else None
 
         if not child.execution_id:
             raise Exception(f"Child process {child.process_id} missing an execution ID")
@@ -411,16 +607,37 @@ def process_complete_handler(event: Dict, context: Dict):
         if child.execution_status == ProcessStatus.RUNNING:
             logging.debug(f"Execution id {child.execution_id} marked as in progress")
 
-            execution_engine.mark_in_progress(execution_id=child.execution_id)
+            if parallel_match:
+                execution_engine.mark_in_progress(execution_id=parallel_match.group(1))
 
-            already_executed.append(child.execution_id)
+            else:
+                execution_engine.mark_in_progress(execution_id=child.execution_id)
+
+                already_executed.append(child.execution_id)
 
         elif child.execution_status == ProcessStatus.COMPLETED or child.execution_status == ProcessStatus.SKIPPED:
             logging.debug(f"Execution id {child.execution_id} is marked as complete")
 
-            execution_engine.mark_completed(execution_id=child.execution_id, response_path=child.response_path)
+            if parallel_match:
+                original_execution_id = parallel_match.group(1)
 
-            already_executed.append(child.execution_id)
+                # Only check groups where this child is completed
+                if child.execution_status == ProcessStatus.COMPLETED:
+                    # Check if all siblings of this group are now complete
+                    if _all_parallel_siblings_complete(original_execution_id, parent_proc, process_client):
+                        parallel_groups_to_coordinate.add(original_execution_id)
+
+                    else:
+                        logging.debug(f"Not all siblings for parallel group {original_execution_id} are complete yet, skipping coordination")
+
+                        continue
+
+            else:
+                logging.debug(f"Child process {child.process_id} is not a parallel execution, marking as completed")
+
+                execution_engine.mark_completed(execution_id=child.execution_id, response_path=child.response_path)
+
+                already_executed.append(child.execution_id)
 
         elif child.execution_status == ProcessStatus.FAILED:
             logging.debug(f"Child process {child.process_id} failed with reason: {child.status_message}")
@@ -431,6 +648,38 @@ def process_complete_handler(event: Dict, context: Dict):
                 failure_reason=child.status_message,
                 token=event_body["token"],
             )
+
+            return
+
+    # Handle parallel groups that need to be coordinated
+    for parallel_group in parallel_groups_to_coordinate:
+        can_complete = _try_complete_parallel_group(
+            original_execution_id=parallel_group,
+            parent_proc=parent_proc,
+            execution_engine=execution_engine,
+            process_client=process_client,
+            token=event_body["token"]
+        )
+
+        if can_complete:
+            logging.debug(f"Process {parent_proc.process_id} is coordinating parallel group {parallel_group}")
+
+            aggregated_response_path = _aggregate_parallel_responses(
+                all_children=all_children,
+                original_execution_id=parallel_group,
+                parent_proc=parent_proc,
+                execution_engine=execution_engine,
+                token=event_body["token"]
+            )
+
+            execution_engine.mark_completed(
+                execution_id=parallel_group,
+                response_path=aggregated_response_path
+            )
+
+        else:
+            # Someone else is handling this group, exit early
+            logging.debug(f"Another process is coordinating parallel group {parallel_group}, exiting")
 
             return
 
@@ -460,13 +709,6 @@ def process_complete_handler(event: Dict, context: Dict):
 
     logging.debug(f"Execution IDs: {execution_ids}")
 
-    total_executions_so_far = len(execution_ids) + len(already_executed)
-
-    if total_executions_so_far > len(execution_engine.instructions):
-        logging.debug(f"More executions than instructions for composite agent process: {parent_proc.process_id} ... assume being handled by another process manager")
-
-        return
-
     if not execution_ids and len(execution_engine.in_progress) == 0:
         logging.debug(f"No more executions for composite agent process: {parent_proc.process_id}")
 
@@ -492,7 +734,6 @@ def process_complete_handler(event: Dict, context: Dict):
         )
 
         return
-
 
     _execute_children(
         claims=claims,

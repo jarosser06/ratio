@@ -119,6 +119,7 @@ class Process(TableObject):
         execution_id -- The execution id of the child process.
         working_directory -- The working directory of the child process.
         execution_status -- The status of the child process. If not provided, the status will be set to RUNNING.
+        parallel_group_id -- The id of the parallel group this process belongs to. Used for parallel execution.
         process_owner -- The owner of the child process.
         process_id -- The id of the child process. If not provided, a new id will be generated.
         """

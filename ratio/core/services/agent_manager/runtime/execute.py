@@ -28,7 +28,11 @@ from ratio.core.services.agent_manager.tables.processes.client import (
     ProcessTableClient,
 )
 
-from ratio.core.services.agent_manager.runtime.agent import AgentDefinition, AgentInstruction
+from ratio.core.services.agent_manager.runtime.agent import (
+    AgentDefinition,
+    AgentInstruction, 
+    MissingDefinitionError,
+)
 from ratio.core.services.agent_manager.runtime.engine import ExecutionEngine, InvalidSchemaError
 from ratio.core.services.agent_manager.runtime.events import (
     ExecuteAgentInternalRequest,
@@ -287,11 +291,16 @@ class ExecuteAPI(ChildAPI):
                 system_event_endpoint=agent_definition.system_event_endpoint,
             )
 
-        except (InvalidSchemaError, InvalidObjectSchemaError) as invalid_err:
+        except (InvalidSchemaError, InvalidObjectSchemaError, MissingDefinitionError) as invalid_err:
             logging.debug(f"Error creating execution engine: {invalid_err}")
 
             # Delete the process as it never started
             process_client.delete(proc)
+
+            return self.respond(
+                status_code=400,
+                body={"message": str(invalid_err)},
+            )
 
         # Create the base directory for the process
         execution_engine.initialize_path()

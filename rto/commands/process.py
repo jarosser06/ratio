@@ -105,6 +105,8 @@ class DescribeProcessCommand(RTOCommand):
 
         print(f"  Status Message: {process.get('status_message', 'None')}")
 
+        print(f"  Arguments Path: {process.get('arguments_path', 'None')}")
+
         print(f"  Response Path: {process.get('response_path', 'None')}")
 
 

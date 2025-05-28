@@ -128,6 +128,7 @@ class AgentManagerStack(Stack):
                 ),
             ],
             scope=self,
+            timeout=Duration.minutes(5),
         )
 
         self.composite_agent_handler = EventBusSubscriptionFunction(
@@ -161,6 +162,7 @@ class AgentManagerStack(Stack):
                 ),
             ],
             scope=self,
+            timeout=Duration.minutes(5),
         )
 
         RegisteredFileType(

@@ -60,8 +60,8 @@ class MissingDefinitionError(Exception):
     Exception raised when the agent definition is missing.
     """
 
-    def __init__(self, file_path: str):
-        super().__init__(f"Missing definition file {file_path}")
+    def __init__(self, file_path: str, message: str = None):
+        super().__init__(f"Unable to load file {file_path}: {message if message else "File not found"}")
 
 
 @dataclass
@@ -117,7 +117,7 @@ class AgentDefinition:
         if agent_definition.status_code != 200:
             logging.debug(f"Error loading agent definition: {agent_definition.status_code} - {agent_definition.response_body}")
 
-            raise MissingDefinitionError(agent_file_location)
+            raise MissingDefinitionError(file_path=agent_file_location, message=agent_definition.response_body)
 
         try:
             # Convert the agent definition to an ObjectBody

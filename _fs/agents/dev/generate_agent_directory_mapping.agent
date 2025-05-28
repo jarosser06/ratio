@@ -1,0 +1,140 @@
+{
+  "description": "Analyzes available agents and generates a structured capability map (test version up to combine step)",
+  "arguments": [
+    {
+      "name": "agents_directory",
+      "type_name": "string",
+      "description": "Directory containing agent definitions to analyze",
+      "default_value": "/agents/dev",
+      "required": false
+    }
+  ],
+  "instructions": [
+    {
+      "execution_id": "list_agent_files",
+      "agent_definition_path": "/agents/core/list_directory.agent",
+      "arguments": {
+        "directory_path": "REF:arguments.agents_directory"
+      }
+    },
+    {
+      "execution_id": "extract_file_paths",
+      "agent_definition": {
+        "arguments": [
+          {
+            "name": "original_object",
+            "type_name": "object",
+            "description": "The source object to be mapped",
+            "required": true
+          },
+          {
+            "name": "object_map",
+            "type_name": "object",
+            "description": "Mapping configuration",
+            "required": true
+          }
+        ],
+        "responses": [
+          {
+            "name": "file_paths",
+            "type_name": "list",
+            "description": "List of file paths",
+            "required": true
+          }
+        ],
+        "system_event_endpoint": "ratio::agent::object_mapper::execution"
+      },
+      "arguments": {
+        "original_object": {
+          "files": "REF:list_agent_files.files"
+        },
+        "object_map": {
+          "file_paths": "map(files, item.file_path)"
+        }
+      }
+    },
+    {
+      "execution_id": "analyze_each_agent",
+      "agent_definition_path": "/agents/dev/file_analyzer.agent",
+      "parallel_execution": {
+        "iterate_over": "REF:extract_file_paths.file_paths",
+        "child_argument_name": "file_to_analyze"
+      },
+      "arguments": {
+        "analysis_prompt": "Analyze the following agent definition and provide a clear explanation of:\n\n1. What this agent does (brief description)\n2. What arguments it accepts (name, type, required/optional, purpose)\n3. What responses it returns (name, type, description)\n4. Key capabilities this agent provides\n\nKeep the response concise and well-structured.\n\nAgent Definition:",
+        "model_id": "anthropic.claude-3-5-haiku-20241022-v1:0",
+        "max_tokens": 1500,
+        "temperature": 0.1
+      }
+    },
+    {
+      "execution_id": "extract_analysis_results",
+      "agent_definition": {
+        "arguments": [
+          {
+            "name": "original_object",
+            "type_name": "object",
+            "description": "The source object to be mapped",
+            "required": true
+          },
+          {
+            "name": "object_map",
+            "type_name": "object",
+            "description": "Mapping configuration",
+            "required": true
+          }
+        ],
+        "responses": [
+          {
+            "name": "analysis_texts",
+            "type_name": "list",
+            "description": "List of analysis result strings",
+            "required": true
+          }
+        ],
+        "system_event_endpoint": "ratio::agent::object_mapper::execution"
+      },
+      "arguments": {
+        "original_object": {
+          "responses": "REF:analyze_each_agent.response"
+        },
+        "object_map": {
+          "analysis_texts": "map(responses, item.analysis_result)"
+        }
+      }
+    },
+    {
+      "execution_id": "combine_all_analyses",
+      "agent_definition_path": "/agents/core/combine_content.agent",
+      "arguments": {
+        "content_list": "REF:extract_analysis_results.analysis_texts",
+        "separator": "\n\n---\n\n"
+      }
+    }
+  ],
+  "responses": [
+    {
+      "name": "combined_analysis",
+      "type_name": "string",
+      "description": "All agent analyses combined into a single string",
+      "required": true
+    },
+    {
+      "name": "agent_count",
+      "type_name": "number",
+      "description": "Number of agents analyzed",
+      "required": true
+    },
+    {
+      "name": "files_processed",
+      "type_name": "number",
+      "description": "Number of analysis files successfully combined",
+      "required": true
+    }
+  ],
+  "response_reference_map": {
+    "combined_analysis": "REF:combine_all_analyses.combined_content",
+    "agent_count": "REF:list_agent_files.files.length",
+    "files_processed": "REF:combine_all_analyses.items_processed"
+  }
+}

@@ -77,9 +77,6 @@ def handler(event: Dict, context: Dict):
     # Initialize the Ratio system from the event
     system = RatioSystem.from_da_vinci_event(event)
 
-    # Raise any errors encountered during execution
-    system.raise_on_failure = True
-
     with system:
         if not system.response_schema:
             raise ValueError("No response schema provided ... nothing to map to")

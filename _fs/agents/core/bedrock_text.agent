@@ -16,7 +16,7 @@
     },
     {
       "name": "temperature",
-      "type_name": "float",
+      "type_name": "number",
       "description": "Controls randomness in output generation (0.0-1.0)",
       "default_value": 0.7,
       "required": false
@@ -30,7 +30,7 @@
     },
     {
       "name": "top_p",
-      "type_name": "float",
+      "type_name": "number",
       "description": "Nucleus sampling parameter (0.0-1.0)",
       "required": false,
       "default_value": 0.9
@@ -63,10 +63,16 @@
       "required": true
     },
     {
+      "name": "response",
+      "type_name": "string",
+      "description": "The direct response from the model",
+      "required": true
+    },
+    {
       "name": "response_file_path",
       "type_name": "file",
       "description": "Path to the file containing the model's response",
-      "required": true
+      "required": false
     },
     {
       "name": "input_tokens",

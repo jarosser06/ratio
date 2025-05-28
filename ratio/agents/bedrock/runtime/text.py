@@ -6,8 +6,6 @@ with optional attachments and saves responses to a file.
 """
 import boto3
 import logging
-import os
-import uuid
 
 from typing import Dict
 
@@ -42,9 +40,6 @@ def handler(event: Dict, context: Dict):
 
     # Initialize the Ratio system from the event
     system = RatioSystem.from_da_vinci_event(event)
-
-    # Raise any errors encountered during execution
-    system.raise_on_failure = True
 
     with system:
         prompt = system.arguments["prompt"]
@@ -177,35 +172,34 @@ def handler(event: Dict, context: Dict):
 
             output_tokens = usage.get("outputTokens", 0)
 
+            response_body={
+                "model_id": model_id,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "response": model_response,
+            }
+
             # Create result file path if not provided
-            if not result_file_path:
-                result_file_path = os.path.join(system.working_directory, f"response_{uuid.uuid4()}.txt")
+            if result_file_path:
+                # Save response to file
+                try:
+                    system.put_file(
+                        file_path=result_file_path,
+                        file_type="ratio::text",
+                        data=model_response,
+                        metadata={
+                            "model_id": model_id,
+                            "input_tokens": input_tokens,
+                            "output_tokens": output_tokens
+                        }
+                    )
 
-            # Save response to file
-            try:
-                system.put_file(
-                    file_path=result_file_path,
-                    file_type="ratio::text",
-                    data=model_response,
-                    metadata={
-                        "model_id": model_id,
-                        "input_tokens": input_tokens,
-                        "output_tokens": output_tokens
-                    }
-                )
+                    response_body["response_file_path"] = result_file_path
 
-            except Exception as put_file_error:
-                raise ResponseSaveError(f"Failed to save response to {result_file_path}: {put_file_error}")
+                except Exception as put_file_error:
+                    raise ResponseSaveError(f"Failed to save response to {result_file_path}: {put_file_error}")
 
-            # Return success with metrics
-            system.success(
-                response_body={
-                    "model_id": model_id,
-                    "input_tokens": input_tokens,
-                    "output_tokens": output_tokens,
-                    "response_file_path": result_file_path,
-                }
-            )
+            system.success(response_body=response_body)
 
         except Exception as invoke_error:
             logging.error(f"Failed to invoke Bedrock model: {invoke_error}")

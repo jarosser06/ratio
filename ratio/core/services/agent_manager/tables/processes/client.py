@@ -54,6 +54,13 @@ class Process(TableObject):
 
     attributes = [
         TableObjectAttribute(
+            name="arguments_path",
+            attribute_type=TableObjectAttributeType.STRING,
+            description="The path to the arguments of the process.",
+            optional=True,
+        ),
+
+        TableObjectAttribute(
             name="ended_on",
             attribute_type=TableObjectAttributeType.DATETIME,
             description="The date and time the process ended.",

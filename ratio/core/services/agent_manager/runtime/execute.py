@@ -6,7 +6,11 @@ import os
 
 from typing import Dict
 
-from da_vinci.core.immutable_object import ObjectBody, InvalidObjectSchemaError
+from da_vinci.core.immutable_object import (
+    ObjectBody,
+    ObjectBodySchema,
+    InvalidObjectSchemaError,
+)
 
 from da_vinci.event_bus.client import EventPublisher
 from da_vinci.event_bus.event import Event as EventBusEvent
@@ -279,9 +283,20 @@ class ExecuteAPI(ChildAPI):
 
         process_client.put(proc)
 
+        arguments = request_body.get("arguments")
+
+        schema_dict = {"attributes": agent_definition.arguments}
+
+        argument_schema = ObjectBodySchema.from_dict("AgentArguments", schema_dict)
+
+        processed_args = ObjectBody(
+            body=arguments,
+            schema=argument_schema
+        )
+
         try:
             execution_engine = ExecutionEngine(
-                arguments=request_body.get("arguments"),
+                arguments=processed_args.to_dict(),
                 process_id=proc.process_id,
                 token=request_context["signed_token"],
                 working_directory=working_directory,

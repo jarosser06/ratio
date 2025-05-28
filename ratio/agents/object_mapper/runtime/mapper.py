@@ -27,23 +27,44 @@ def map_function(array: List, template: Dict) -> List:
     """
     result = []
 
-    for item in array:
-        output = {}
-        for key, path in template.items():
-            # Extract the attribute name from "item.X" format
-            if isinstance(path, str) and path.startswith("item."):
-                attr = path[5:]  # Remove "item."
+    if isinstance(template, str):
+        # Handle simple path case like "item.file_path"
+        if template.startswith("item."):
+            attr = template[5:]  # Remove "item."
 
+            for item in array:
                 if attr in item:
-                    output[key] = item[attr]
+                    result.append(item[attr])
 
                 else:
                     raise MappingError(f"Attribute '{attr}' not found in array item")
 
-            else:
-                output[key] = path  # static value
+        else:
+            raise MappingError("String template must be in format 'item.X'")
 
-        result.append(output)
+    elif isinstance(template, dict):
+        # Handle dictionary template case (original behavior)
+        for item in array:
+            output = {}
+
+            for key, path in template.items():
+                # Extract the attribute name from "item.X" format
+                if isinstance(path, str) and path.startswith("item."):
+                    attr = path[5:]  # Remove "item."
+
+                    if attr in item:
+                        output[key] = item[attr]
+
+                    else:
+                        raise MappingError(f"Attribute '{attr}' not found in array item")
+
+                else:
+                    output[key] = path  # static value
+
+            result.append(output)
+
+    else:
+        raise MappingError(f"Template must be either a dict or string, got {type(template)}")
 
     return result
 

@@ -36,6 +36,7 @@ from ratio.core.services.agent_manager.runtime.agent import (
     AgentDefinition,
     AgentInstruction, 
     MissingDefinitionError,
+    InvalidDefinitionError,
 )
 from ratio.core.services.agent_manager.runtime.engine import ExecutionEngine, InvalidSchemaError
 from ratio.core.services.agent_manager.runtime.events import (
@@ -306,7 +307,7 @@ class ExecuteAPI(ChildAPI):
                 system_event_endpoint=agent_definition.system_event_endpoint,
             )
 
-        except (InvalidSchemaError, InvalidObjectSchemaError, MissingDefinitionError) as invalid_err:
+        except (InvalidSchemaError, InvalidObjectSchemaError, MissingDefinitionError, InvalidDefinitionError) as invalid_err:
             logging.debug(f"Error creating execution engine: {invalid_err}")
 
             # Delete the process as it never started

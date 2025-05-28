@@ -6,10 +6,12 @@ from da_vinci_cdk.stack import Stack
 from ratio.core.api.stack import RatioAPIStack
 
 from ratio.agents.bedrock.stack import RatioBedrockAgents
+from ratio.agents.combine_content.stack import RatioCombineContentAgent
 from ratio.agents.internal_api.stack import RatioAgentInternalAPI
 from ratio.agents.math.stack import RatioMathAgent
 from ratio.agents.object_mapper.stack import RatioObjectMapperAgent
 from ratio.agents.render_template.stack import RatioRenderTemplateAgent
+from ratio.agents.string_concatenation.stack import RatioStringConcatenationAgent
 
 base_dir = Stack.absolute_dir(__file__)
 
@@ -31,10 +33,14 @@ ratio.add_uninitialized_stack(RatioAgentInternalAPI)
 
 ratio.add_uninitialized_stack(RatioBedrockAgents)
 
+ratio.add_uninitialized_stack(RatioCombineContentAgent)
+
 ratio.add_uninitialized_stack(RatioMathAgent)
 
 ratio.add_uninitialized_stack(RatioObjectMapperAgent)
 
 ratio.add_uninitialized_stack(RatioRenderTemplateAgent)
+
+ratio.add_uninitialized_stack(RatioStringConcatenationAgent)
 
 ratio.synth()

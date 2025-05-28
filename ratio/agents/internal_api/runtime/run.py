@@ -27,8 +27,6 @@ def handler(event: Dict, context: Dict):
 
     system = RatioSystem.from_da_vinci_event(event)
 
-    system.raise_on_failure = True
-
     with system:
         path = system.arguments["path"]
 

@@ -30,8 +30,7 @@ def handler(event: Dict, context: Dict):
     logging.debug(f"Received request: {event}")
 
     system = RatioSystem.from_da_vinci_event(event)
-    system.raise_on_failure = True
-    
+
     with system:
         formula = system.arguments["formula"]
 

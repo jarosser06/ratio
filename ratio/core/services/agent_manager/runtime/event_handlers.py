@@ -410,6 +410,10 @@ def _execute_children(claims: JWTClaims, execution_engine: ExecutionEngine, exec
                 working_directory=base_working_dir,
             )
 
+            child_proc.arguments_path = argument_path
+
+            process_client.put(child_proc)
+
         except (InvalidSchemaError, InvalidObjectSchemaError, InvalidReferenceError) as invalid_err:
             logging.debug(f"Error preparing for execution: {invalid_err}")
 
@@ -715,6 +719,17 @@ def process_complete_handler(event: Dict, context: Dict):
         try:
             response_path = execution_engine.close()
 
+        except InvalidSchemaError as invalid_err:
+            logging.debug(f"Error closing execution engine, encountered invalid schema: {invalid_err}")
+
+            _close_out_process(
+                process=parent_proc,
+                failure_reason=f"error closing execution engine, encountered invalid schema: {invalid_err}",
+                token=event_body["token"],
+            )
+
+            return
+
         except Exception as e:
             logging.debug(f"Error closing execution engine: {e}")
 
@@ -867,16 +882,29 @@ def execute_composite_agent_handler(event: Dict, context: Dict):
         token=token,
     )
 
-    execution_engine = ExecutionEngine(
-        arguments=arguments,
-        process_id=proc.process_id,
-        token=token,
-        working_directory=working_directory,
-        instructions=agent_definition.instructions,
-        response_definition=agent_definition.responses,
-        response_reference_map=agent_definition.response_reference_map,
-        system_event_endpoint=agent_definition.system_event_endpoint,
-    )
+    try:
+        execution_engine = ExecutionEngine(
+            arguments=arguments,
+            argument_schema=agent_definition.arguments,
+            process_id=proc.process_id,
+            token=token,
+            working_directory=working_directory,
+            instructions=agent_definition.instructions,
+            response_definition=agent_definition.responses,
+            response_reference_map=agent_definition.response_reference_map,
+            system_event_endpoint=agent_definition.system_event_endpoint,
+        )
+
+    except InvalidSchemaError as invalid_err:
+        logging.debug(f"Error loading engine, encountered invalid schema: {invalid_err}")
+
+        _close_out_process(
+            process=proc,
+            failure_reason=f"error initializing execution engine {invalid_err}",
+            token=token,
+        )
+
+        return
 
     execution_engine.initialize_path()
 
@@ -929,6 +957,10 @@ def execute_composite_agent_handler(event: Dict, context: Dict):
         try:
             # Just executing the agent
             argument_path = execution_engine.prepare_for_execution(agent_instruction=instruction)
+
+            proc.arguments_path = argument_path
+
+            process_client.put(proc)
 
         except InvalidSchemaError as invalid_err:
             logging.debug(f"Error preparing for execution: {invalid_err}")

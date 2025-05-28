@@ -256,10 +256,37 @@ class Reference:
         Keyword arguments:
         arguments: Dictionary of argument values
         responses: Dictionary of execution responses
+
         """
-        self.arguments = arguments or {}
+        self.arguments = {}
 
         self.responses = responses or {}
+
+        # Default load a set of arguments 
+        if arguments:
+            for key, value in arguments.items():
+                inferred_type = self._infer_type_from_value(value)
+
+                self.arguments[key] = self.reference_type_map[inferred_type](original_value=value)
+
+    def _infer_type_from_value(self, value: Any) -> str:
+        """
+        Infer the reference type from a value.
+        """
+        if isinstance(value, bool):
+            return "boolean"
+
+        elif isinstance(value, (int, float)):
+            return "number"
+
+        elif isinstance(value, list):
+            return "list"
+
+        elif isinstance(value, dict):
+            return "object"
+
+        else:
+            return "string"
 
     def add_response(self, execution_id: str, response_key: str, response_value: Any, response_type: str) -> None:
         """
@@ -331,11 +358,18 @@ class Reference:
         if context == "arguments":
             logging.debug(f"Resolving argument: {key} from {self.arguments}")
 
-            if attribute:
-                raise InvalidReferenceError("Attribute access is not supported for arguments.")
+            if key not in self.arguments:
+                return None  # Handle missing arguments gracefully
 
-            # Since default arguments are supported, need to let upstream handle None if that's the case
-            return self.arguments.get(key)
+            reference_obj = self.arguments[key]
+
+            if reference_obj.requires_token:
+                if not token:
+                    raise ValueError(f"Token is required to dereference argument: {key}")
+
+                return reference_obj.referenced_value(token=token, attribute_name=attribute)
+
+            return reference_obj.referenced_value(attribute_name=attribute)
 
         # It's an execution_id
         if context not in self.responses:
@@ -354,3 +388,21 @@ class Reference:
             return reference_obj.referenced_value(token=token, attribute_name=attribute)
 
         return reference_obj.referenced_value(attribute_name=attribute)
+
+    def set_arguments(self, arguments: Dict[str, Any], argument_types: Dict[str, str]):
+        """
+        Set arguments with explicit type information.
+
+        Keyword arguments:
+        arguments -- Dictionary of argument values
+        argument_types -- Dictionary mapping argument names to their explicit types
+        """
+        self.arguments = {}
+
+        for key, value in arguments.items():
+            arg_type = argument_types.get(key, "string")
+
+            if arg_type not in self.reference_type_map:
+                raise ValueError(f"Unknown argument type: {arg_type} for key: {key}")
+
+            self.arguments[key] = self.reference_type_map[arg_type](original_value=value)

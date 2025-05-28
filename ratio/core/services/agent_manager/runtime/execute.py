@@ -298,6 +298,7 @@ class ExecuteAPI(ChildAPI):
         try:
             execution_engine = ExecutionEngine(
                 arguments=processed_args.to_dict(),
+                argument_schema=agent_definition.arguments,
                 process_id=proc.process_id,
                 token=request_context["signed_token"],
                 working_directory=working_directory,
@@ -375,6 +376,10 @@ class ExecuteAPI(ChildAPI):
                         process_id=child_proc.process_id,
                         working_directory=base_working_dir,
                     )
+
+                    child_proc.arguments_path = argument_path
+
+                    process_client.put(child_proc)
 
                 except (InvalidSchemaError, InvalidObjectSchemaError, InvalidReferenceError) as invalid_err:
                     logging.debug(f"Error preparing for execution: {invalid_err}")
@@ -466,6 +471,10 @@ class ExecuteAPI(ChildAPI):
             try:
                 # Just executing the agent
                 argument_path = execution_engine.prepare_for_execution(agent_instruction=instruction)
+
+                proc.arguments_path = argument_path
+
+                process_client.put(proc)
 
             except InvalidSchemaError as invalid_err:
                 logging.debug(f"Error preparing for execution: {invalid_err}")

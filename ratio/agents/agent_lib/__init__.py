@@ -64,7 +64,7 @@ API_TARGETS = {
 class RatioSystem:
     def __init__(self, parent_process_id: str, process_id: str, token: str, working_directory: str,
                  arguments_path: Optional[str] = None, argument_schema: Optional[List[Dict]] = None,
-                 raise_on_failure: Optional[bool] = False, response_schema: Optional[List[Dict]] = None):
+                 response_schema: Optional[List[Dict]] = None):
         """
         Initialize the Ratio client.
 
@@ -75,7 +75,6 @@ class RatioSystem:
         working_directory -- The working directory for the agent
         arguments_path -- The path to the arguments file
         argument_schema -- The list of expected argument attributes
-        raise_on_failure -- Whether to raise an exception on failure
         response_schema -- The list of expected response attributes
         """
         logging.debug(f"Initializing Ratio Agent Runtime Library")
@@ -85,8 +84,6 @@ class RatioSystem:
         self.parent_process_id = parent_process_id
 
         self.process_id = process_id
-
-        self.raise_on_failure = raise_on_failure
 
         self.working_directory = working_directory
 
@@ -253,9 +250,7 @@ class RatioSystem:
             # An exception occurred, report it as a failure
             self.failure(f"Failure occurred during agent execution: {str(exc_val)}")
 
-            return not self.raise_on_failure
-
-        return True
+        return False
 
     def _load_arguments(self, arguments_path: str) -> Union[ObjectBody, None]:
         """

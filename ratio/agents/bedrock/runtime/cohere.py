@@ -42,9 +42,6 @@ def handler(event: Dict, context: Dict):
     # Initialize the Ratio system from the event
     system = RatioSystem.from_da_vinci_event(event)
 
-    # Raise any errors encountered during execution
-    system.raise_on_failure = True
-
     with system:
         texts = system.arguments.get("texts", default_return=[])
 

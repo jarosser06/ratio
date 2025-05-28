@@ -34,7 +34,10 @@ from ratio.core.services.agent_manager.runtime.agent import (
     AGENT_IO_FILE_TYPE,
 )
 from ratio.core.services.agent_manager.runtime.conditions import ConditionEvaluator
-from ratio.core.services.agent_manager.runtime.reference import Reference
+from ratio.core.services.agent_manager.runtime.reference import (
+    InvalidReferenceError,
+    Reference,
+)
 
 
 class InvalidSchemaError(Exception):
@@ -91,13 +94,15 @@ def strip_class_from_error(error_message: str) -> str:
 
 class ExecutionEngine:
     def __init__(self, arguments: Dict[str, Any], process_id: str, token: str, working_directory: str,
-                 instructions: List[Dict[str, Any]] = None, response_definition: Optional[List[Dict]] = None,
+                 argument_schema: Optional[Dict[str, Any]], instructions: List[Dict[str, Any]] = None,
+                 response_definition: Optional[List[Dict]] = None,
                  response_reference_map: Optional[Dict[str, str]] = None, system_event_endpoint: Optional[str] = None):
         """
         Initialize the Engine object.
 
         Keyword arguments:
         arguments -- The arguments to pass to the 
+        argument_schema -- The schema for the arguments
         process_id -- The ID of the process
         token -- The token to use for authentication
         working_directory -- The working directory for the execution
@@ -106,6 +111,8 @@ class ExecutionEngine:
         response_reference_map -- The response reference map 
         """
         self.arguments = arguments
+
+        self.argument_schema = argument_schema
 
         self.token = token
 
@@ -150,7 +157,21 @@ class ExecutionEngine:
 
         logging.debug(f"Initializing references with arguments: {self.arguments}")
 
-        self.reference = Reference(arguments=self.arguments)
+        if self.arguments:
+            if self.argument_schema:
+                # Extract argument types from schema
+                argument_types = {arg['name']: arg['type_name'] for arg in self.argument_schema}
+
+                self.reference = Reference()
+
+                try:
+                    self.reference.set_arguments(self.arguments, argument_types)
+
+                except Exception as arg_set_err:
+                    raise InvalidSchemaError(message=strip_class_from_error(str(arg_set_err)))
+
+            else:
+                self.reference = Reference(arguments=self.arguments)
 
     @classmethod
     def load_from_fs(cls, process_id: str, token: str, working_directory: str) -> "ExecutionEngine":
@@ -196,6 +217,7 @@ class ExecutionEngine:
 
         return cls(
             arguments=data["arguments"],
+            argument_schema=data.get("argument_schema"),
             instructions=data["instructions"],
             process_id=process_id,
             response_definition=data.get("response_definition"),
@@ -351,7 +373,12 @@ class ExecutionEngine:
             # Get the response value from the reference
 
             if isinstance(reference_value, str) and reference_value.startswith("REF:"):
-                response_value = self.reference.resolve(reference_string=reference_value, token=self.token)
+                try:
+                    response_value = self.reference.resolve(reference_string=reference_value, token=self.token)
+                except InvalidReferenceError as ref_err:
+                    logging.debug(f"Failed to resolve reference {reference_value}: {ref_err}")
+
+                    raise InvalidSchemaError(message=strip_class_from_error(str(ref_err)))
 
             else:
                 # If the reference string does not start with REF:, it is a static value
@@ -869,6 +896,7 @@ class ExecutionEngine:
         """
         return {
             "arguments": self.arguments,
+            "argument_schema": self.argument_schema,
             "instructions": self._raw_instructions,
             "response_definition": self.response_definition,
             "response_reference_map": self.response_reference_map,

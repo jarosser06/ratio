@@ -33,6 +33,7 @@ from ratio.core.services.storage_manager.tables.file_versions.client import (
 
 from ratio.core.services.storage_manager.runtime.access import entity_has_access, FilePermission
 from ratio.core.services.storage_manager.runtime.data import (
+    FILE_EXTENSION as DATA_FILE_EXTENSION,
     delete_object_completely,
     delete_version,
     get_version,
@@ -168,7 +169,9 @@ class FileAPI(ChildAPI):
             setting_key="raw_bucket",
         )
 
-        self.s3 = boto3.client('s3')
+        session = boto3.Session()
+
+        self.s3 = session.client('s3')
 
     def _delete_all_file_versions(self, file: File, requestor: str):
         """
@@ -851,7 +854,7 @@ class FileAPI(ChildAPI):
                 'get_object',
                 Params={
                     'Bucket': self.raw_bucket_name,
-                    'Key': file.full_path_hash,
+                    'Key': f"{file.full_path_hash}{DATA_FILE_EXTENSION}",
                     'VersionId': version_id
                 },
                 ExpiresIn=expires_in_seconds,  # 1 hour

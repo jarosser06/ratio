@@ -63,7 +63,7 @@
           },
           {
             "name": "fail_on_error",
-            "type_name": "bool",
+            "type_name": "boolean",
             "description": "Whether the agent run should fail in the case of an error",
             "default_value": true,
             "required": false

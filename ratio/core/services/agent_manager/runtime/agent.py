@@ -324,6 +324,10 @@ class AgentInstruction:
                 for condition_value in condition.values():
                     find_refs(condition_value)
 
+        if self.parallel_execution:
+            for parallel_value in self.parallel_execution.values():
+                find_refs(parallel_value)
+
         return list(set(dependencies))
 
     def load_response(self, response_path: str, token: str, response_file_name: str = f"response{AIO_EXT}"):

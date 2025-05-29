@@ -285,8 +285,8 @@ class ExecutionEngine:
                 execution_id=child_execution_id,
                 definition=instruction.definition,
                 provided_arguments=child_arguments,
-                post_transforms=instruction.post_transforms,
-                pre_transforms=instruction.pre_transforms,
+                transform_responses=instruction.transform_responses,
+                transform_arguments=instruction.transform_arguments,
             )
 
             self.instructions[child_execution_id] = child_instruction
@@ -303,10 +303,22 @@ class ExecutionEngine:
         return expanded_children 
 
     def _load_instructions(self, instructions: List[Dict[str, Any]], token: str) -> Dict[str, AgentInstruction]:
+        """
+        Load the instructions from the provided list of dictionaries.
+
+        Keyword arguments:
+        instructions -- The list of instructions to load
+        token -- The token to use for authentication
+        """
+        PROTECTED_EXECUTION_IDS = {"arguments", "self", "execution"}
+
         loaded_instructions = {}
 
         for instruction in instructions:
             execution_id = instruction["execution_id"]
+
+            if execution_id in PROTECTED_EXECUTION_IDS:
+                raise InvalidSchemaError(f"Execution ID '{execution_id}' is a protected keyword. Cannot use: {', '.join(PROTECTED_EXECUTION_IDS)}")
             
             if execution_id in loaded_instructions:
                 raise InvalidSchemaError(f"Duplicate execution ID found: {execution_id}")
@@ -328,8 +340,8 @@ class ExecutionEngine:
                 definition=agent_definition,
                 provided_arguments=instruction.get("arguments"),
                 parallel_execution=instruction.get("parallel_execution"),  # Keep this
-                post_transforms=instruction.get("post_transforms", {}),
-                pre_transforms=instruction.get("pre_transforms", {}),
+                transform_responses=instruction.get("transform_responses"),
+                transform_arguments=instruction.get("transform_arguments"),
             )
 
         return loaded_instructions
@@ -557,23 +569,55 @@ class ExecutionEngine:
         """
         self.in_progress.append(execution_id)
 
-    def _apply_transforms(self, response: Dict, transforms: Dict) -> Dict:
+    def _apply_transforms(self, response: Dict, transform_config: Dict) -> Dict:
         """
         Apply the specified transforms to the response object.
 
         Keyword arguments:
-        response -- The original response object
-        transforms -- The post-transforms to apply
+        response -- The response object to transform
+        transform_config -- The configuration for the transforms to apply
 
         Returns:
             Dictionary of new/modified response fields
         """
         mapper = ObjectMapper(DEFAULT_MAPPING_FUNCTIONS)
 
-        return mapper.map_object(
-            original_object=response,
-            object_map=transforms,
+        variables_config = transform_config.get("variables", {})
+
+        resolved_variables = {}
+
+        if variables_config:
+            for var_name, var_rule in variables_config.items():
+                resolved_variables[var_name] = self._resolve_references_recursive(var_rule, token=self.token)
+
+        context_object = {**response, **resolved_variables}
+
+        transforms = transform_config["transforms"]
+
+        if isinstance(transforms, ObjectBody):
+            transforms = transforms.to_dict()
+
+        # First dereference any REF strings in the transforms
+        for key, value in transforms.items():
+            if isinstance(value, str) and value.startswith("REF:"):
+                try:
+                    transforms[key] = self.reference.resolve(reference_string=value, token=self.token)
+
+                except InvalidReferenceError as ref_err:
+                    logging.debug(f"Failed to resolve reference {value}: {ref_err}")
+
+                    raise InvalidSchemaError(message=strip_class_from_error(str(ref_err)))
+
+        results = mapper.map_object(
+            resolved_variables=context_object,
+            mapping=transforms,
         )
+
+        new_response = dict(response)
+
+        new_response.update(results)
+
+        return new_response
 
     def mark_completed(self, execution_id: str, response_path: Optional[str] = None):
         """
@@ -606,18 +650,23 @@ class ExecutionEngine:
             token=self.token,
         )
 
-        if instruction.post_transforms:
-            transformed_response = self._apply_transforms(
-                instruction.response, 
-                instruction.post_transforms
-            )
+        if instruction.transform_responses:
+            try:
+                instruction.response = self._apply_transforms(
+                    response=instruction.response, 
+                    transform_config=instruction.transform_responses
+                )
 
-            # Merge transformed results back into original response
-            instruction.response.update(transformed_response)
+            except KeyError as key_err:
+                raise InvalidSchemaError(
+                    message=strip_class_from_error(f"Invalid transforms definition: {key_err}")
+                )
 
         logging.debug(f"Loaded response for {execution_id}: {instruction.response}")
 
         for response_definition in instruction.definition.responses:
+            logging.debug(f"Processing response definition: {response_definition}")
+
             response_type = response_definition["type_name"]
 
             response_key = response_definition["name"]
@@ -629,10 +678,10 @@ class ExecutionEngine:
             # conditions handler.
             default_value = response_definition.get("default_value")
 
-            if required and response_key not in instruction.response:
-                raise InvalidSchemaError(f"Missing required response key: {response_key}")
-
             response_value = instruction.response.get(response_key, default_value)
+
+            if required and not response_value:
+                raise InvalidSchemaError(f"Missing required response key: {response_key}")
 
             logging.debug(f"Response value of type {response_type} for {execution_id}.{response_key}: {response_value}")
 
@@ -821,13 +870,17 @@ class ExecutionEngine:
             rendered_arguments[arg_name] = value
 
             # Apply pre-transforms if present
-        if agent_instruction.pre_transforms:
-            transformed_args = self._apply_transforms(
-                rendered_arguments, 
-                agent_instruction.pre_transforms
-            )
+        if agent_instruction.transform_arguments:
+            try:
+                rendered_arguments = self._apply_transforms(
+                    response=rendered_arguments, 
+                    transform_config=agent_instruction.transform_arguments
+                )
 
-            rendered_arguments.update(transformed_args)
+            except KeyError as key_err:
+                raise InvalidSchemaError(
+                    message=strip_class_from_error(f"Invalid transforms definition: {key_err}")
+                )
 
         logging.debug(f"Rendered arguments: {rendered_arguments}")
 

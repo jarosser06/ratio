@@ -129,18 +129,20 @@
         }
       },
       "execution_id": "describe_subscription_request",
-      "post_transforms": {
-        "subscription_id": "response_body.subscription_id",
-        "agent_definition": "response_body.agent_definition",
-        "file_path": "response_body.file_path",
-        "file_event_type": "response_body.file_event_type",
-        "execution_working_directory": "response_body.execution_working_directory",
-        "expiration": "response_body.expiration",
-        "file_type": "response_body.file_type",
-        "owner": "response_body.owner",
-        "single_use": "response_body.single_use",
-        "created_on": "response_body.created_on",
-        "status": "response_body.status"
+      "transform_responses": {
+        "transforms": {
+          "subscription_id": "response_body.subscription_id",
+          "agent_definition": "response_body.agent_definition",
+          "file_path": "response_body.file_path",
+          "file_event_type": "response_body.file_event_type",
+          "execution_working_directory": "response_body.execution_working_directory",
+          "expiration": "response_body.expiration",
+          "file_type": "response_body.file_type",
+          "owner": "response_body.owner",
+          "single_use": "response_body.single_use",
+          "created_on": "response_body.created_on",
+          "status": "response_body.status"
+        }
       }
     }
   ],

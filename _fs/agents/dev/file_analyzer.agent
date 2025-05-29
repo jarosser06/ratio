@@ -37,19 +37,18 @@
   ],
   "instructions": [
     {
-      "execution_id": "combine_prompt_and_content",
-      "agent_definition_path": "/agents/core/string_concatenation.agent", 
-      "arguments": {
-        "string1": "REF:arguments.analysis_prompt",
-        "string2": "REF:arguments.file_to_analyze",
-        "separator": "\n\n"
-      }
-    },
-    {
       "execution_id": "analyze_with_llm",
       "agent_definition_path": "/agents/core/bedrock_text.agent",
+      "transform_arguments": {
+        "variables": {
+          "prompt_parts": ["REF:arguments.analysis_prompt", "REF:arguments.file_to_analyze"],
+          "separator": "\n\n"
+        },
+        "transforms": {
+          "prompt": "join(prompt_parts, separator)"
+        }
+      },
       "arguments": {
-        "prompt": "REF:combine_prompt_and_content.concatenated_string",
         "model_id": "REF:arguments.model_id", 
         "max_tokens": "REF:arguments.max_tokens",
         "temperature": "REF:arguments.temperature"

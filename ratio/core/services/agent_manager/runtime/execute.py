@@ -295,6 +295,7 @@ class ExecuteAPI(ChildAPI):
                 body=arguments,
                 schema=argument_schema
             )
+
         except InvalidObjectSchemaError as invalid_schema:
             logging.debug(f"Error processing arguments: {invalid_schema}")
 
@@ -356,10 +357,8 @@ class ExecuteAPI(ChildAPI):
                 logging.debug(f"No available executions for agent: {agent_definition}")
 
                 return self.respond(
-                    body={
-                        "message": "no available executions for agent, likely due to invalid agent definition",
-                        "status_code": 400,
-                    }
+                    status_code=400,
+                    body={"message": "no available executions for agent, likely due to invalid agent definition"}
                 )
 
             # Set base working directory for the child processes

@@ -106,7 +106,7 @@ class AgentManagerStack(Stack):
             function_name=resource_namer(name="process-complete-handler", scope=self),
             index="event_handlers.py",
             handler="process_complete_handler",
-            memory_size=256,
+            memory_size=512,
             resource_access_requests=[
                 ResourceAccessRequest(
                     resource_name="event_bus",
@@ -140,7 +140,7 @@ class AgentManagerStack(Stack):
             function_name=resource_namer(name="composite-agent-handler", scope=self),
             index="event_handlers.py",
             handler="execute_composite_agent_handler",
-            memory_size=256,
+            memory_size=512,
             resource_access_requests=[
                 ResourceAccessRequest(
                     resource_name="event_bus",

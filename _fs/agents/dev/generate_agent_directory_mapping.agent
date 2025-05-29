@@ -15,49 +15,16 @@
       "agent_definition_path": "/agents/core/list_directory.agent",
       "arguments": {
         "directory_path": "REF:arguments.agents_directory"
-      }
-    },
-    {
-      "execution_id": "extract_file_paths",
-      "agent_definition": {
-        "arguments": [
-          {
-            "name": "original_object",
-            "type_name": "object",
-            "description": "The source object to be mapped",
-            "required": true
-          },
-          {
-            "name": "object_map",
-            "type_name": "object",
-            "description": "Mapping configuration",
-            "required": true
-          }
-        ],
-        "responses": [
-          {
-            "name": "file_paths",
-            "type_name": "list",
-            "description": "List of file paths",
-            "required": true
-          }
-        ],
-        "system_event_endpoint": "ratio::agent::object_mapper::execution"
       },
-      "arguments": {
-        "original_object": {
-          "files": "REF:list_agent_files.files"
-        },
-        "object_map": {
-          "file_paths": "map(files, item.file_path)"
-        }
+      "post_transforms": {
+        "file_paths": "map(files, item.file_path)"
       }
     },
     {
       "execution_id": "analyze_each_agent",
       "agent_definition_path": "/agents/dev/file_analyzer.agent",
       "parallel_execution": {
-        "iterate_over": "REF:extract_file_paths.file_paths",
+        "iterate_over": "REF:list_agent_files.file_paths",
         "child_argument_name": "file_to_analyze"
       },
       "arguments": {
@@ -68,47 +35,14 @@
       }
     },
     {
-      "execution_id": "extract_analysis_results",
-      "agent_definition": {
-        "arguments": [
-          {
-            "name": "original_object",
-            "type_name": "object",
-            "description": "The source object to be mapped",
-            "required": true
-          },
-          {
-            "name": "object_map",
-            "type_name": "object",
-            "description": "Mapping configuration",
-            "required": true
-          }
-        ],
-        "responses": [
-          {
-            "name": "analysis_texts",
-            "type_name": "list",
-            "description": "List of analysis result strings",
-            "required": true
-          }
-        ],
-        "system_event_endpoint": "ratio::agent::object_mapper::execution"
-      },
-      "arguments": {
-        "original_object": {
-          "responses": "REF:analyze_each_agent.response"
-        },
-        "object_map": {
-          "analysis_texts": "map(responses, item.analysis_result)"
-        }
-      }
-    },
-    {
       "execution_id": "combine_all_analyses",
       "agent_definition_path": "/agents/core/combine_content.agent",
       "arguments": {
-        "content_list": "REF:extract_analysis_results.analysis_texts",
+        "parallel_results": "REF:analyze_each_agent.response",
         "separator": "\n\n---\n\n"
+      },
+      "pre_transforms": {
+        "content_list": "map(parallel_results, item.analysis_result)"
       }
     }
   ],

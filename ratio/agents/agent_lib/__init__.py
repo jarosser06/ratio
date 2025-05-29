@@ -644,10 +644,6 @@ class RatioSystem:
         """
         logging.debug(f"Responding success with {response_body}")
 
-        if self.response_schema:
-            # This will throw an exception if the response body does not match the schema
-            ObjectBody(body=response_body or {}, schema=self.response_schema)
-
         response_body_path = None
 
         if response_body:
@@ -659,22 +655,10 @@ class RatioSystem:
 
             logging.debug(f"Setting response body path to {response_body_path}")
 
-            # validate response body against schema
-            if not self.response_schema:
-                raise ValueError("Unexpected response body, no schema provided")
-
-            obj_body = ObjectBody(
-                body=response_body,
-                schema=self.response_schema,
-            )
-
             self.put_file(
                 file_path=response_body_path,
                 file_type="ratio::agent_io",
-                data=json.dumps(obj_body.to_dict()),
-                metadata={
-                    "schema": self.response_schema.to_dict(),
-                }
+                data=json.dumps(response_body),
             )
 
         event_body = {

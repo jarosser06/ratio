@@ -290,10 +290,21 @@ class ExecuteAPI(ChildAPI):
 
         argument_schema = ObjectBodySchema.from_dict("AgentArguments", schema_dict)
 
-        processed_args = ObjectBody(
-            body=arguments,
-            schema=argument_schema
-        )
+        try:
+            processed_args = ObjectBody(
+                body=arguments,
+                schema=argument_schema
+            )
+        except InvalidObjectSchemaError as invalid_schema:
+            logging.debug(f"Error processing arguments: {invalid_schema}")
+
+            # Delete the process as it never started
+            process_client.delete(proc)
+
+            return self.respond(
+                status_code=400,
+                body={"message": str(invalid_schema)},
+            )
 
         try:
             execution_engine = ExecutionEngine(

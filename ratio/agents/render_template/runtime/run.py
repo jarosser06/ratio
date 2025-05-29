@@ -32,8 +32,6 @@ def handler(event: Dict, context: Dict):
     """
     Execute the Template Renderer agent
     """
-    logging.debug(f"Received request: {event}")
-
     # Initialize the Ratio system from the event
     system = RatioSystem.from_da_vinci_event(event)
 
@@ -60,12 +58,10 @@ def handler(event: Dict, context: Dict):
                 undefined=StrictUndefined if strict_undefined else Undefined
             )
 
-            # Parse the template to find used variables (optional response)
             ast = env.parse(template_str)
 
             used_vars = list(meta.find_undeclared_variables(ast))
 
-            # Compile and render the template
             template = env.from_string(template_str)
 
             rendered_string = template.render(**variables)

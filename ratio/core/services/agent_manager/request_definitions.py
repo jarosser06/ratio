@@ -56,6 +56,18 @@ class AgentInstructionSchema(ObjectBodySchema):
             description="Configuration for parallel execution",
             required=False,
         ),
+        SchemaAttribute(
+            name="post_transforms",
+            type_name=SchemaAttributeType.OBJECT,
+            description="Post execution transforms to apply to the agent response. This is used to transform the response of the agent execution",
+            required=False,
+        ),
+        SchemaAttribute(
+            name="pre_transforms",
+            type_name=SchemaAttributeType.OBJECT,
+            description="Pre execution transforms to apply to the agent arguments. This is used to transform the arguments of the agent execution",
+            required=False,
+        )
     ]
 
 

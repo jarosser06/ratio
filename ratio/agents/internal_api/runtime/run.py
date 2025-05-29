@@ -1,5 +1,7 @@
 """
 Internal API Call Agent
+
+Simply executes an internal API request and returns the response.
 """
 import json
 import logging
@@ -8,9 +10,9 @@ from typing import Dict
 
 from da_vinci.core.logging import Logger
 
-from da_vinci.exception_trap.client import ExceptionReporter
-
 from da_vinci.event_bus.client import fn_event_response
+
+from da_vinci.exception_trap.client import ExceptionReporter
 
 from ratio.agents.agent_lib import RatioSystem
 
@@ -23,8 +25,6 @@ def handler(event: Dict, context: Dict):
     """
     Execute the internal API request.
     """
-    logging.debug(f"Received request: {event}")
-
     system = RatioSystem.from_da_vinci_event(event)
 
     with system:
@@ -50,13 +50,11 @@ def handler(event: Dict, context: Dict):
         response_body = api_resp.response_body or {}
 
         if api_resp.status_code >= 300:
-            # If the response is not 200, log the error
             logging.error(f"API request failed: {api_resp.status_code} {response_body}")
 
             response_body = None
 
             try:
-                # Try to parse the response body as JSON
                 response_body = json.loads(api_resp.response_body)
 
             except json.JSONDecodeError:

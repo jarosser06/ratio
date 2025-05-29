@@ -4,7 +4,6 @@ Math Agent Runtime
 Simple agent that uses the MathProcessor class to evaluate formulas.
 """
 import json
-import logging
 import os
 import uuid
 
@@ -27,8 +26,6 @@ _FN_NAME = "ratio.agents.math"
 @fn_event_response(exception_reporter=ExceptionReporter(), function_name=_FN_NAME, logger=Logger(_FN_NAME))
 def handler(event: Dict, context: Dict):
     """Execute the Math agent"""
-    logging.debug(f"Received request: {event}")
-
     system = RatioSystem.from_da_vinci_event(event)
 
     with system:
@@ -40,7 +37,7 @@ def handler(event: Dict, context: Dict):
 
         result_file_path = system.arguments.get("result_file_path")
 
-        # Do MAHT
+        # Do MAHT :)
         processor = MathProcessor(function_definitions)
 
         result = processor.evaluate(values, formula)

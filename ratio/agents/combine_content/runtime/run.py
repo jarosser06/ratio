@@ -30,7 +30,6 @@ def handler(event: Dict, context: Dict):
 
         output_file_type = system.arguments.get("output_file_type", default_return="ratio::text")
 
-        # Validate that at least one input method is provided
         if not file_paths and not content_list:
             system.failure("No input provided, must provide either file_paths or content_list")
 

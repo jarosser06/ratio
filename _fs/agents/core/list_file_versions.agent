@@ -51,6 +51,12 @@
             "type_name": "object",
             "description": "The response body from the API call",
             "required": false
+          },
+          {
+            "name": "versions",
+            "type_name": "list",
+            "description": "List of file version objects",
+            "required": true
           }
         ],
         "system_event_endpoint": "ratio::agent::internal_api::execution"
@@ -62,46 +68,14 @@
           "file_path": "REF:arguments.file_path"
         }
       },
-      "execution_id": "list_file_versions_request"
-    },
-    {
-      "agent_definition": {
-        "arguments": [
-          {
-            "name": "original_object",
-            "type_name": "object",
-            "description": "The source object to be mapped",
-            "required": true
-          },
-          {
-            "name": "object_map",
-            "type_name": "object",
-            "description": "Mapping configuration that defines how to transform the original object",
-            "required": true
-          }
-        ],
-        "description": "Object mapper for list file versions response",
-        "responses": [
-          {
-            "name": "versions",
-            "type_name": "list",
-            "description": "List of file version objects",
-            "required": true
-          }
-        ],
-        "system_event_endpoint": "ratio::agent::object_mapper::execution"
-      },
-      "arguments": {
-        "original_object": "REF:list_file_versions_request.response_body",
-        "object_map": {
-          "versions": "versions"
-        }
-      },
-      "execution_id": "map_response"
+      "execution_id": "list_file_versions_request",
+      "post_transforms": {
+        "versions": "response_body.versions"
+      }
     }
   ],
   "response_reference_map": {
-    "versions": "REF:map_response.versions"
+    "versions": "REF:list_file_versions_request.versions"
   },
   "responses": [
     {

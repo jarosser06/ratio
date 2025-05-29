@@ -172,62 +172,42 @@ class ObjectMapper:
         # Regex to detect array indexing
         self.array_index_pattern = re.compile(r'(.+)\[(\d+)\]$')
 
-    def map_object(self, original_object: Dict, object_map: Dict, response_definitions: List[Dict]) -> Dict:
+    def map_object(self, original_object: Dict, object_map: Dict) -> Dict:
         """
-        Map the original object to a new structure based on the mapping rules.
+        Transform an object based on mapping rules.
 
         Keyword arguments:
         original_object -- The source object to be transformed
         object_map -- A dictionary defining the mapping rules
-        response_schema -- The schema defining the structure of the response
 
         Returns:
-            The transformed object structure
+            The transformed object
         """
         try:
-            logging.debug(f"Starting object mapping {original_object} to {object_map} with schema: {response_definitions}")
-
-            response_definitions = response_definitions or []
-
-            # Extract response keys from schema
-            response_keys = [attr["name"] for attr in response_definitions]
-
-            logging.debug(f"Response keys from schema: {response_keys}")
-
-            # Initialize result structure based on response keys
             result = {}
 
             # Process each mapping rule
             for output_path, mapping_rule in object_map.items():
                 try:
-                    # Split the output path to determine which response object and path to update
-                    path_parts = output_path.split('.')
-
-                    response_key = path_parts[0]
-
-                    # Validate that the response key is in the schema
-                    if response_key not in response_keys:
-                        raise MappingError(f"Response key '{response_key}' not found in schema", output_path)
-
                     # Extract the value using the mapping rule
                     value = self._evaluate_mapping_rule(original_object, mapping_rule)
 
-                    # Update the result structure
+                    # Split path and set value
+                    path_parts = output_path.split('.')
+
                     if len(path_parts) == 1:
-                        # Direct assignment to response key
-                        result[response_key] = value
+                        # Direct assignment
+                        result[output_path] = value
 
                     else:
-                        # Nested path - need to build the structure
-                        result[response_key] = self._set_nested_value(result[response_key], path_parts[1:], value)
+                        # Use existing _set_nested_value method
+                        self._set_nested_value(result, path_parts, value)
 
                 except Exception as e:
                     if isinstance(e, MappingError):
                         raise
 
                     raise MappingError(str(e), output_path)
-
-            logging.debug(f"Mapping completed successfully: {result}")
 
             return result
 

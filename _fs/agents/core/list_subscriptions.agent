@@ -57,6 +57,12 @@
             "type_name": "object",
             "description": "The response body from the API call",
             "required": false
+          },
+          {
+            "name": "subscriptions",
+            "type_name": "list",
+            "description": "List of subscription objects",
+            "required": true
           }
         ],
         "system_event_endpoint": "ratio::agent::internal_api::execution"
@@ -69,46 +75,14 @@
           "owner": "REF:arguments.owner"
         }
       },
-      "execution_id": "list_subscriptions_request"
-    },
-    {
-      "agent_definition": {
-        "arguments": [
-          {
-            "name": "original_object",
-            "type_name": "object",
-            "description": "The source object to be mapped",
-            "required": true
-          },
-          {
-            "name": "object_map",
-            "type_name": "object",
-            "description": "Mapping configuration that defines how to transform the original object",
-            "required": true
-          }
-        ],
-        "description": "Object mapper for list subscriptions response",
-        "responses": [
-          {
-            "name": "subscriptions",
-            "type_name": "list",
-            "description": "List of subscription objects",
-            "required": true
-          }
-        ],
-        "system_event_endpoint": "ratio::agent::object_mapper::execution"
-      },
-      "arguments": {
-        "original_object": "REF:list_subscriptions_request.response_body",
-        "object_map": {
-          "subscriptions": "subscriptions"
-        }
-      },
-      "execution_id": "map_response"
+      "execution_id": "list_subscriptions_request",
+      "post_transforms": {
+        "subscriptions": "response_body.subscriptions"
+      }
     }
   ],
   "response_reference_map": {
-    "subscriptions": "REF:map_response.subscriptions"
+    "subscriptions": "REF:list_subscriptions_request.subscriptions"
   },
   "responses": [
     {

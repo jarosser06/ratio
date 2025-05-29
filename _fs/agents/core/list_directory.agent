@@ -51,6 +51,12 @@
             "type_name": "object",
             "description": "The response body from the API call",
             "required": false
+          },
+          {
+            "name": "files",
+            "type_name": "list",
+            "description": "List of file objects from the directory",
+            "required": true
           }
         ],
         "system_event_endpoint": "ratio::agent::internal_api::execution"
@@ -62,46 +68,14 @@
           "file_path": "REF:arguments.directory_path"
         }
       },
-      "execution_id": "list_files_request"
-    },
-    {
-      "agent_definition": {
-        "arguments": [
-          {
-            "name": "original_object",
-            "type_name": "object",
-            "description": "The source object to be mapped",
-            "required": true
-          },
-          {
-            "name": "object_map",
-            "type_name": "object",
-            "description": "Mapping configuration that defines how to transform the original object",
-            "required": true
-          }
-        ],
-        "description": "Object mapper for list files response",
-        "responses": [
-          {
-            "name": "files",
-            "type_name": "list",
-            "description": "List of file objects from the directory",
-            "required": true
-          }
-        ],
-        "system_event_endpoint": "ratio::agent::object_mapper::execution"
-      },
-      "arguments": {
-        "original_object": "REF:list_files_request.response_body",
-        "object_map": {
-          "files": "files"
-        }
-      },
-      "execution_id": "map_response"
+      "execution_id": "list_files_request",
+      "post_transforms": {
+        "files": "response_body.files"
+      }
     }
   ],
   "response_reference_map": {
-    "files": "REF:map_response.files"
+    "files": "REF:list_files_request.files"
   },
   "responses": [
     {

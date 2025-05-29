@@ -66,7 +66,6 @@ deploy_agents:
 
 	$(call cdk_deploy, -e ratio-dev-ratiobedrockagents)
 	$(call cdk_deploy, -e ratio-dev-ratiocombinecontentagent)
-	$(call cdk_deploy, -e ratio-dev-ratioobjectmapperagent)
 	$(call cdk_deploy, -e ratio-dev-ratiomathagent)
 	$(call cdk_deploy, -e ratio-dev-ratiorendertemplateagent)
 	$(call cdk_deploy, -e ratio-dev-ratioagentinternalapi)

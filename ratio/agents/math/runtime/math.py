@@ -1,3 +1,7 @@
+"""
+MathProcessor: A class for evaluating mathematical formulas with custom functions and element-wise operations.
+"""
+
 import math
 import statistics
 

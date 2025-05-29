@@ -4,10 +4,11 @@ Amazon Bedrock Text Agent
 This agent invokes text generation models through Amazon Bedrock Converse API. It processes text prompts 
 with optional attachments and saves responses to a file.
 """
-import boto3
 import logging
 
 from typing import Dict
+
+import boto3
 
 from da_vinci.core.logging import Logger
 
@@ -36,8 +37,6 @@ def handler(event: Dict, context: Dict):
     """
     Execute the Bedrock Text agent
     """
-    logging.debug(f"Received request: {event}")
-
     # Initialize the Ratio system from the event
     system = RatioSystem.from_da_vinci_event(event)
 

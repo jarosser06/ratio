@@ -20,7 +20,7 @@
       "default_value": false
     }
   ],
-  "description": "A T2 agent that describes a specific version of a file by calling the storage manager's describe file version API",
+  "description": "An agent that describes a specific version of a file by calling the storage manager's describe file version API",
   "instructions": [
     {
       "agent_definition": {
@@ -64,39 +64,7 @@
             "type_name": "object",
             "description": "The response body from the API call",
             "required": false
-          }
-        ],
-        "system_event_endpoint": "ratio::agent::internal_api::execution"
-      },
-      "arguments": {
-        "path": "/describe_file_version",
-        "target_service": "STORAGE",
-        "request": {
-          "file_path": "REF:arguments.file_path",
-          "version_id": "REF:arguments.version_id",
-          "include_lineage": "REF:arguments.include_lineage"
-        }
-      },
-      "execution_id": "describe_file_version_request"
-    },
-    {
-      "agent_definition": {
-        "arguments": [
-          {
-            "name": "original_object",
-            "type_name": "object",
-            "description": "The source object to be mapped",
-            "required": true
           },
-          {
-            "name": "object_map",
-            "type_name": "object",
-            "description": "Mapping configuration that defines how to transform the original object",
-            "required": true
-          }
-        ],
-        "description": "Object mapper for describe file version response",
-        "responses": [
           {
             "name": "file_path",
             "type_name": "string",
@@ -152,35 +120,41 @@
             "required": false
           }
         ],
-        "system_event_endpoint": "ratio::agent::object_mapper::execution"
+        "system_event_endpoint": "ratio::agent::internal_api::execution"
       },
       "arguments": {
-        "original_object": "REF:describe_file_version_request.response_body",
-        "object_map": {
-          "file_path": "file_path",
-          "file_name": "file_name",
-          "version_id": "version_id",
-          "metadata": "metadata",
-          "originator_id": "originator_id",
-          "origin": "origin",
-          "added_on": "added_on",
-          "previous_version_id": "previous_version_id",
-          "next_version_id": "next_version_id"
+        "path": "/describe_file_version",
+        "target_service": "STORAGE",
+        "request": {
+          "file_path": "REF:arguments.file_path",
+          "version_id": "REF:arguments.version_id",
+          "include_lineage": "REF:arguments.include_lineage"
         }
       },
-      "execution_id": "map_response"
+      "execution_id": "describe_file_version_request",
+      "post_transforms": {
+        "file_path": "response_body.file_path",
+        "file_name": "response_body.file_name",
+        "version_id": "response_body.version_id",
+        "metadata": "response_body.metadata",
+        "originator_id": "response_body.originator_id",
+        "origin": "response_body.origin",
+        "added_on": "response_body.added_on",
+        "previous_version_id": "response_body.previous_version_id",
+        "next_version_id": "response_body.next_version_id"
+      }
     }
   ],
   "response_reference_map": {
-    "file_path": "REF:map_response.file_path",
-    "file_name": "REF:map_response.file_name",
-    "version_id": "REF:map_response.version_id",
-    "metadata": "REF:map_response.metadata",
-    "originator_id": "REF:map_response.originator_id",
-    "origin": "REF:map_response.origin",
-    "added_on": "REF:map_response.added_on",
-    "previous_version_id": "REF:map_response.previous_version_id",
-    "next_version_id": "REF:map_response.next_version_id"
+    "file_path": "REF:describe_file_version_request.file_path",
+    "file_name": "REF:describe_file_version_request.file_name",
+    "version_id": "REF:describe_file_version_request.version_id",
+    "metadata": "REF:describe_file_version_request.metadata",
+    "originator_id": "REF:describe_file_version_request.originator_id",
+    "origin": "REF:describe_file_version_request.origin",
+    "added_on": "REF:describe_file_version_request.added_on",
+    "previous_version_id": "REF:describe_file_version_request.previous_version_id",
+    "next_version_id": "REF:describe_file_version_request.next_version_id"
   },
   "responses": [
     {

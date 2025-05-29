@@ -34,6 +34,10 @@ from ratio.core.services.agent_manager.runtime.agent import (
     AGENT_IO_FILE_TYPE,
 )
 from ratio.core.services.agent_manager.runtime.conditions import ConditionEvaluator
+from ratio.core.services.agent_manager.runtime.mapper import (
+    DEFAULT_MAPPING_FUNCTIONS,
+    ObjectMapper,
+)
 from ratio.core.services.agent_manager.runtime.reference import (
     InvalidReferenceError,
     Reference,
@@ -281,6 +285,8 @@ class ExecutionEngine:
                 execution_id=child_execution_id,
                 definition=instruction.definition,
                 provided_arguments=child_arguments,
+                post_transforms=instruction.post_transforms,
+                pre_transforms=instruction.pre_transforms,
             )
 
             self.instructions[child_execution_id] = child_instruction
@@ -322,6 +328,8 @@ class ExecutionEngine:
                 definition=agent_definition,
                 provided_arguments=instruction.get("arguments"),
                 parallel_execution=instruction.get("parallel_execution"),  # Keep this
+                post_transforms=instruction.get("post_transforms", {}),
+                pre_transforms=instruction.get("pre_transforms", {}),
             )
 
         return loaded_instructions
@@ -549,11 +557,30 @@ class ExecutionEngine:
         """
         self.in_progress.append(execution_id)
 
+    def _apply_transforms(self, response: Dict, transforms: Dict) -> Dict:
+        """
+        Apply the specified transforms to the response object.
+
+        Keyword arguments:
+        response -- The original response object
+        transforms -- The post-transforms to apply
+
+        Returns:
+            Dictionary of new/modified response fields
+        """
+        mapper = ObjectMapper(DEFAULT_MAPPING_FUNCTIONS)
+
+        return mapper.map_object(
+            original_object=response,
+            object_map=transforms,
+        )
+
     def mark_completed(self, execution_id: str, response_path: Optional[str] = None):
         """
         Mark the execution as completed.
         Keyword arguments:
         execution_id -- The ID of the execution to mark as completed
+        response_path -- The path to the response file, if applicable
         """
         if execution_id in self.completed:
             logging.debug(f"Execution {execution_id} already completed .. skipping")
@@ -578,6 +605,17 @@ class ExecutionEngine:
             response_path=response_path,
             token=self.token,
         )
+
+        if instruction.post_transforms:
+            transformed_response = self._apply_transforms(
+                instruction.response, 
+                instruction.post_transforms
+            )
+
+            # Merge transformed results back into original response
+            instruction.response.update(transformed_response)
+
+        logging.debug(f"Loaded response for {execution_id}: {instruction.response}")
 
         for response_definition in instruction.definition.responses:
             response_type = response_definition["type_name"]
@@ -781,6 +819,15 @@ class ExecutionEngine:
             value = self._resolve_references_recursive(arg_value, token=self.token)
 
             rendered_arguments[arg_name] = value
+
+            # Apply pre-transforms if present
+        if agent_instruction.pre_transforms:
+            transformed_args = self._apply_transforms(
+                rendered_arguments, 
+                agent_instruction.pre_transforms
+            )
+
+            rendered_arguments.update(transformed_args)
 
         logging.debug(f"Rendered arguments: {rendered_arguments}")
 

@@ -69,7 +69,6 @@ deploy_agents:
 	$(call cdk_deploy, -e ratio-dev-ratiomathagent)
 	$(call cdk_deploy, -e ratio-dev-ratiorendertemplateagent)
 	$(call cdk_deploy, -e ratio-dev-ratioagentinternalapi)
-	$(call cdk_deploy, -e ratio-dev-ratiostringconcatenationagent)
 
 
 deploy_compute: deploy_api, deploy_storage, deploy_agents, deploy_process, deploy_scheduler

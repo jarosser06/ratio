@@ -10,7 +10,6 @@ from ratio.agents.combine_content.stack import RatioCombineContentAgent
 from ratio.agents.internal_api.stack import RatioAgentInternalAPI
 from ratio.agents.math.stack import RatioMathAgent
 from ratio.agents.render_template.stack import RatioRenderTemplateAgent
-from ratio.agents.string_concatenation.stack import RatioStringConcatenationAgent
 
 base_dir = Stack.absolute_dir(__file__)
 
@@ -37,7 +36,5 @@ ratio.add_uninitialized_stack(RatioCombineContentAgent)
 ratio.add_uninitialized_stack(RatioMathAgent)
 
 ratio.add_uninitialized_stack(RatioRenderTemplateAgent)
-
-ratio.add_uninitialized_stack(RatioStringConcatenationAgent)
 
 ratio.synth()

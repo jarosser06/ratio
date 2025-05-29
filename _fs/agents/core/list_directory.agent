@@ -69,8 +69,10 @@
         }
       },
       "execution_id": "list_files_request",
-      "post_transforms": {
-        "files": "response_body.files"
+      "transform_responses": {
+        "transforms": {
+          "files": "response_body.files"
+        }
       }
     }
   ],

@@ -172,7 +172,7 @@ class ObjectMapper:
         # Regex to detect array indexing
         self.array_index_pattern = re.compile(r'(.+)\[(\d+)\]$')
 
-    def map_object(self, original_object: Dict, object_map: Dict) -> Dict:
+    def map_object(self, resolved_variables: Dict, mapping: Dict[str, Any]) -> Dict:
         """
         Transform an object based on mapping rules.
 
@@ -187,10 +187,10 @@ class ObjectMapper:
             result = {}
 
             # Process each mapping rule
-            for output_path, mapping_rule in object_map.items():
+            for output_path, mapping_rule in mapping.items():
                 try:
                     # Extract the value using the mapping rule
-                    value = self._evaluate_mapping_rule(original_object, mapping_rule)
+                    value = self._evaluate_mapping_rule(resolved_variables, mapping_rule)
 
                     # Split path and set value
                     path_parts = output_path.split('.')

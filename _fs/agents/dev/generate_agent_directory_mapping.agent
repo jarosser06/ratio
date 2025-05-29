@@ -16,8 +16,10 @@
       "arguments": {
         "directory_path": "REF:arguments.agents_directory"
       },
-      "post_transforms": {
-        "file_paths": "map(files, item.file_path)"
+      "transform_responses": {
+        "transforms": {
+          "file_paths": "map(files, item.file_path)"
+        }
       }
     },
     {
@@ -41,8 +43,10 @@
         "parallel_results": "REF:analyze_each_agent.response",
         "separator": "\n\n---\n\n"
       },
-      "pre_transforms": {
-        "content_list": "map(parallel_results, item.analysis_result)"
+      "transform_arguments": {
+        "transforms": {
+          "content_list": "map(parallel_results, item.analysis_result)"
+        }
       }
     }
   ],

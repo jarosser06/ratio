@@ -221,8 +221,8 @@ class AgentInstruction:
     dependencies: List[str] = None
     response: Dict[str, Any] = None
     parallel_execution: Dict[str, Any] = None
-    post_transforms: Dict = None
-    pre_transforms: Dict = None
+    transform_arguments: Dict = None
+    transform_responses: Dict = None
     provided_arguments: Dict[str, Any] = None
 
     def __post_init__(self):
@@ -305,7 +305,7 @@ class AgentInstruction:
 
                 base_context = parts[0]
                 # Only add as dependency if it's another execution ID (not arguments or execution)
-                if base_context not in ["arguments", "execution"]:
+                if base_context not in ["arguments", "execution"] and base_context != "self":
                     dependencies.append(base_context)
 
             elif isinstance(value, dict):

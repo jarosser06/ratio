@@ -305,6 +305,19 @@ class Reference:
             original_value=response_value
         )
 
+    def add_inferred_response(self, execution_id: str, response_key: str, response_value: Any) -> None:
+        """
+        Add a response with inferred type to the reference.
+
+        Keyword arguments:
+        execution_id -- The ID of the execution
+        response_key -- The key of the response
+        response_value -- The value of the response
+        """
+        inferred_type = self._infer_type_from_value(response_value)
+
+        self.add_response(execution_id, response_key, response_value, inferred_type)
+
     def parse_ref(self, ref_string: str) -> Tuple[str, str, Optional[str]]:
         """
         Parse a REF string into context, key, and optional attribute.

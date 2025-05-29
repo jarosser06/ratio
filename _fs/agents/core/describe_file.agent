@@ -147,39 +147,41 @@
         }
       },
       "execution_id": "describe_file_request",
-      "post_transforms": {
-        "file_path": "response_body.file_path",
-        "file_name": "response_body.file_name",
-        "file_type": "response_body.file_type",
-        "is_directory": "response_body.is_directory",
-        "description": "response_body.description",
-        "owner": "response_body.owner",
-        "group": "response_body.group",
-        "permissions": "response_body.permissions",
-        "metadata": "response_body.metadata",
-        "added_on": "response_body.added_on",
-        "last_updated_on": "response_body.last_updated_on",
-        "last_accessed_on": "response_body.last_accessed_on",
-        "last_read_on": "response_body.last_read_on",
-        "latest_version_id": "response_body.latest_version_id"
+      "transform_responses": {
+        "transforms": {
+          "file_path": "response_body.file_path",
+          "file_name": "response_body.file_name",
+          "file_type": "response_body.file_type",
+          "is_directory": "response_body.is_directory",
+          "description": "response_body.description",
+          "owner": "response_body.owner",
+          "group": "response_body.group",
+          "permissions": "response_body.permissions",
+          "metadata": "response_body.metadata",
+          "added_on": "response_body.added_on",
+          "last_updated_on": "response_body.last_updated_on",
+          "last_accessed_on": "response_body.last_accessed_on",
+          "last_read_on": "response_body.last_read_on",
+          "latest_version_id": "response_body.latest_version_id"
+        }
       }
     }
   ],
   "response_reference_map": {
-    "file_path": "REF:describe_file_request.file_path",
-    "file_name": "REF:describe_file_request.file_name",
-    "file_type": "REF:describe_file_request.file_type",
-    "is_directory": "REF:describe_file_request.is_directory",
-    "description": "REF:describe_file_request.description",
-    "owner": "REF:describe_file_request.owner",
-    "group": "REF:describe_file_request.group",
-    "permissions": "REF:describe_file_request.permissions",
-    "metadata": "REF:describe_file_request.metadata",
-    "added_on": "REF:describe_file_request.added_on",
-    "last_updated_on": "REF:describe_file_request.last_updated_on",
-    "last_accessed_on": "REF:describe_file_request.last_accessed_on",
-    "last_read_on": "REF:describe_file_request.last_read_on",
-    "latest_version_id": "REF:describe_file_request.latest_version_id"
+    "file_path": "REF:transforms.file_path",
+    "file_name": "REF:transforms.file_name",
+    "file_type": "REF:transforms.file_type",
+    "is_directory": "REF:transforms.is_directory",
+    "description": "REF:transforms.description",
+    "owner": "REF:transforms.owner",
+    "group": "REF:transforms.group",
+    "permissions": "REF:transforms.permissions",
+    "metadata": "REF:transforms.metadata",
+    "added_on": "REF:transforms.added_on",
+    "last_updated_on": "REF:transforms.last_updated_on",
+    "last_accessed_on": "REF:transforms.last_accessed_on",
+    "last_read_on": "REF:transforms.last_read_on",
+    "latest_version_id": "REF:transforms.latest_version_id"
   },
   "responses": [
     {

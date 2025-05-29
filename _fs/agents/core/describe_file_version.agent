@@ -132,16 +132,18 @@
         }
       },
       "execution_id": "describe_file_version_request",
-      "post_transforms": {
-        "file_path": "response_body.file_path",
-        "file_name": "response_body.file_name",
-        "version_id": "response_body.version_id",
-        "metadata": "response_body.metadata",
-        "originator_id": "response_body.originator_id",
-        "origin": "response_body.origin",
-        "added_on": "response_body.added_on",
-        "previous_version_id": "response_body.previous_version_id",
-        "next_version_id": "response_body.next_version_id"
+      "transform_responses": {
+        "transforms": {
+          "file_path": "response_body.file_path",
+          "file_name": "response_body.file_name",
+          "version_id": "response_body.version_id",
+          "metadata": "response_body.metadata",
+          "originator_id": "response_body.originator_id",
+          "origin": "response_body.origin",
+          "added_on": "response_body.added_on",
+          "previous_version_id": "response_body.previous_version_id",
+          "next_version_id": "response_body.next_version_id"
+        }
       }
     }
   ],

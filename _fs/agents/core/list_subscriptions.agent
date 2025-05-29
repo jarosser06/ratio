@@ -76,8 +76,10 @@
         }
       },
       "execution_id": "list_subscriptions_request",
-      "post_transforms": {
-        "subscriptions": "response_body.subscriptions"
+      "transform_responses": {
+        "transforms"{
+          "subscriptions": "response_body.subscriptions"
+        }
       }
     }
   ],

@@ -639,7 +639,19 @@ def process_complete_handler(event: Dict, context: Dict):
             else:
                 logging.debug(f"Child process {child.process_id} is not a parallel execution, marking as completed")
 
-                execution_engine.mark_completed(execution_id=child.execution_id, response_path=child.response_path)
+                try:
+                    execution_engine.mark_completed(execution_id=child.execution_id, response_path=child.response_path)
+
+                except InvalidSchemaError as invalid_err:
+                    logging.debug(f"Error marking execution {child.execution_id} as completed: {invalid_err}")
+
+                    _close_out_process(
+                        process=parent_proc,
+                        failure_reason=f"error marking execution {child.execution_id} as completed: {invalid_err}",
+                        token=event_body["token"],
+                    )
+
+                    return
 
                 already_executed.append(child.execution_id)
 

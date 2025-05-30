@@ -122,14 +122,14 @@ class RTO:
         parser.add_argument(
             "--app-name", 
             help="The Da Vinci application name. Defaults to 'ratio'",
-            default=os.getenv("DA_VINCI_APP_NAME"), 
+            default=os.getenv("DA_VINCI_APP_NAME", "ratio"),
             dest="app_name",
         )
 
         parser.add_argument(
             "--deployment-id", 
             help="The Da Vinci deployment ID. Defaults to 'dev'",
-            default=os.getenv("DA_VINCI_DEPLOYMENT_ID"),
+            default=os.getenv("DA_VINCI_DEPLOYMENT_ID", "dev"),
             dest="deployment_id",
         )
 

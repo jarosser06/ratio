@@ -680,7 +680,7 @@ class ExecutionEngine:
 
             response_value = instruction.response.get(response_key, default_value)
 
-            if required and not response_value:
+            if required and response_value is None:
                 raise InvalidSchemaError(f"Missing required response key: {response_key}")
 
             logging.debug(f"Response value of type {response_type} for {execution_id}.{response_key}: {response_value}")

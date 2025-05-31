@@ -808,6 +808,9 @@ class SyncCommand(RTOCommand):
         with open(local_path, mode) as f:
             content = f.read()
 
+        if not content:
+            raise RTOErrorMessage(f"File {local_path} is empty or could not be read")
+
         base_64_encoded = False
 
         # Handle encoding transformations
@@ -831,7 +834,7 @@ class SyncCommand(RTOCommand):
         content_resp = client.request(content_request, raise_for_status=False)
 
         if content_resp.status_code not in [200, 201]:
-            raise RTOErrorMessage(f"Error adding content to {ratio_path} in Ratio")
+            raise RTOErrorMessage(f"Error adding content to {ratio_path} in Ratio: {content_resp.response_body}")
 
     def _upload_file_content_direct(self, client, local_path, ratio_path):
         """

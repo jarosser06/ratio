@@ -1,0 +1,167 @@
+{
+  "description": "Analyzes agent development requests for feasibility and generates the agent if feasible. Uses pessimistic analysis to ensure requests are achievable with available capabilities in 5-7 steps.",
+  "arguments": [
+    {
+      "name": "request",
+      "type_name": "string",
+      "description": "The agent development request to analyze",
+      "required": true
+    },
+    {
+      "name": "agent_directory_mapping",
+      "type_name": "string",
+      "description": "The agent capability mapping from generate_agent_directory_mapping",
+      "required": true
+    },
+    {
+      "name": "agent_name",
+      "type_name": "string", 
+      "description": "Name for the new agent (without .agent extension)",
+      "required": true
+    },
+    {
+      "name": "output_directory",
+      "type_name": "string",
+      "description": "Directory where the agent should be saved",
+      "required": true
+    },
+    {
+      "name": "authoring_manual",
+      "type_name": "file",
+      "description": "The agent authoring manual with best practices",
+      "required": true
+    }
+  ],
+  "instructions": [
+    {
+      "execution_id": "feasibility_analysis",
+      "agent_definition_path": "/agents/core/bedrock_text.agent",
+      "transform_arguments": {
+        "variables": {
+          "user_request": "REF:arguments.request",
+          "capability_map": "REF:arguments.agent_directory_mapping",
+          "manual": "REF:arguments.authoring_manual",
+          "header": "AGENT FEASIBILITY ANALYSIS",
+          "request_label": "User Request:",
+          "capabilities_label": "Available Agent Capabilities:",
+          "manual_label": "Authoring Manual:",
+          "instructions": "Analyze this request pessimistically. Only mark as feasible if you can see a clear 5-7 step implementation path using existing agents. Missing capabilities or overly complex workflows should be marked not feasible.\n\nRespond with exactly this format:\nFEASIBILITY: [FEASIBLE or NOT_FEASIBLE]\nREASONING: [Your analysis]\nSUGGESTED_APPROACH: [Implementation steps if feasible, or missing capabilities if not]",
+          "separator": "\n"
+        },
+        "transforms": {
+          "prompt": "join([header, separator, separator, request_label, user_request, separator, separator, capabilities_label, capability_map, separator, separator, manual_label, manual, separator, separator, instructions], separator)"
+        }
+      },
+      "arguments": {
+        "model_id": "anthropic.claude-sonnet-4-20250514-v1:0",
+        "max_tokens": 2000,
+        "temperature": 0.1
+      }
+    },
+    {
+      "execution_id": "generate_creation_prompt",
+      "agent_definition_path": "/agents/core/bedrock_text.agent",
+      "conditions": [
+        {"param": "REF:feasibility_analysis.response", "operator": "contains", "value": "FEASIBILITY: FEASIBLE"}
+      ],
+      "transform_arguments": {
+        "variables": {
+          "user_request": "REF:arguments.request",
+          "capability_map": "REF:arguments.agent_directory_mapping",
+          "manual": "REF:arguments.authoring_manual",
+          "feasibility_result": "REF:feasibility_analysis.response",
+          "header": "AGENT DEFINITION GENERATION",
+          "request_label": "Original Request:",
+          "agents_label": "Available Agents:",
+          "manual_label": "Authoring Manual:",
+          "feasibility_label": "Feasibility Analysis:",
+          "instructions": "Generate a complete JSON agent definition that fulfills the request. Follow the patterns in the authoring manual exactly. Use proper REF strings, dependencies, and conditional logic as needed. Output only valid JSON.",
+          "separator": "\n"
+        },
+        "transforms": {
+          "prompt": "join([header, separator, separator, request_label, user_request, separator, separator, agents_label, capability_map, separator, separator, manual_label, manual, separator, separator, feasibility_label, feasibility_result, separator, separator, instructions], separator)"
+        }
+      },
+      "arguments": {
+        "model_id": "anthropic.claude-sonnet-4-20250514-v1:0",
+        "max_tokens": 4000,
+        "temperature": 0.1
+      }
+    },
+    {
+      "execution_id": "validate_generated_agent",
+      "agent_definition_path": "/agents/core/bedrock_text.agent", 
+      "conditions": [
+        {"param": "REF:feasibility_analysis.response", "operator": "contains", "value": "FEASIBILITY: FEASIBLE"}
+      ],
+      "transform_arguments": {
+        "variables": {
+          "generated_agent": "REF:generate_creation_prompt.response",
+          "manual": "REF:arguments.authoring_manual",
+          "header": "AGENT DEFINITION VALIDATION",
+          "agent_label": "Generated Agent Definition:",
+          "manual_label": "Authoring Manual:",
+          "instructions": "Validate this agent definition against the authoring manual. Check for:\n- Proper JSON structure\n- Correct REF usage\n- Appropriate dependencies\n- Following composition patterns\n- Schema compliance\n\nRespond with exactly:\nVALIDATION: [PASS or FAIL]\nISSUES: [List any problems found]\nFINAL_AGENT: [The corrected agent definition if needed, otherwise repeat the original]",
+          "separator": "\n"
+        },
+        "transforms": {
+          "prompt": "join([header, separator, separator, agent_label, generated_agent, separator, separator, manual_label, manual, separator, separator, instructions], separator)"
+        }
+      },
+      "arguments": {
+        "model_id": "anthropic.claude-3-5-sonnet-20241022-v1:0",
+        "max_tokens": 4000,
+        "temperature": 0.1
+      }
+    },
+    {
+      "execution_id": "save_agent_file",
+      "agent_definition_path": "/agents/core/put_file.agent",
+      "conditions": [
+        {"param": "REF:feasibility_analysis.response", "operator": "contains", "value": "FEASIBILITY: FEASIBLE"},
+        {"param": "REF:validate_generated_agent.response", "operator": "contains", "value": "VALIDATION: PASS"}
+      ],
+      "transform_arguments": {
+        "variables": {
+          "agent_name": "REF:arguments.agent_name",
+          "output_dir": "REF:arguments.output_directory",
+          "separator": "/",
+          "extension": ".agent",
+          "empty_string": ""
+        },
+        "transforms": {
+          "file_path": "join([output_dir, separator, agent_name, extension], empty_string)"
+        }
+      },
+      "arguments": {
+        "file_type": "ratio::agent_definition",
+        "data": "REF:generate_creation_prompt.response"
+      }
+    }
+  ],
+  "responses": [
+    {
+      "name": "feasibility_result",
+      "type_name": "string",
+      "description": "The feasibility analysis result",
+      "required": true
+    },
+    {
+      "name": "agent_file_path",
+      "type_name": "string",
+      "description": "Path to the created agent file (null if not created)",
+      "required": false
+    },
+    {
+      "name": "validation_result",
+      "type_name": "string",
+      "description": "Validation result for the generated agent (null if not feasible)",
+      "required": false
+    }
+  ],
+  "response_reference_map": {
+    "feasibility_result": "REF:feasibility_analysis.response",
+    "agent_file_path": "REF:save_agent_file.file_path",
+    "validation_result": "REF:validate_generated_agent.response"
+  }
+}

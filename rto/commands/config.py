@@ -64,14 +64,6 @@ class ConfigureCommand(RTOCommand):
 
             entity_id = input(f"Entity ID [{default}]: ") or default
 
-        # Get app name
-        app_name = args.config_app
-
-        if not app_name and not args.non_interactive:
-            default = profile_values.get("app_name", os.getenv("DA_VINCI_APP_NAME", "ratio"))
-
-            app_name = input(f"App name [{default}]: ") or default
-
         # Get deployment ID
         deployment_id = args.config_deployment
 
@@ -84,28 +76,14 @@ class ConfigureCommand(RTOCommand):
         private_key_path = args.config_key
 
         if not private_key_path and not args.non_interactive:
-            default = profile_values.get("private_key_path", os.path.expanduser("~/private_key.pem"))
+            default = profile_values.get("private_key_path", os.path.expanduser("~/.rto/private_key.pem"))
 
             private_key_path = input(f"Private key path [{default}]: ") or default
-
-        # Validate the private key exists
-        if private_key_path and not os.path.exists(os.path.expanduser(private_key_path)):
-            if args.non_interactive:
-                raise RTOErrorMessage(f"Private key file not found: {private_key_path}")
-
-            else:
-                print(f"Warning: Private key file not found: {private_key_path}")
-
-                create_new = input("Do you want to continue anyway? (y/n): ").lower() == 'y'
-
-                if not create_new:
-                    return
 
         # Save the profile
         config.add_profile(
             profile_name=profile_name,
             entity_id=entity_id,
-            app_name=app_name,
             deployment_id=deployment_id,
             private_key_path=private_key_path,
             set_default=args.set_default

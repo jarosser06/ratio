@@ -120,13 +120,6 @@ class RTO:
         )
 
         parser.add_argument(
-            "--app-name", 
-            help="The Da Vinci application name. Defaults to 'ratio'",
-            default=os.getenv("DA_VINCI_APP_NAME", "ratio"),
-            dest="app_name",
-        )
-
-        parser.add_argument(
             "--deployment-id", 
             help="The Da Vinci deployment ID. Defaults to 'dev'",
             default=os.getenv("DA_VINCI_DEPLOYMENT_ID", "dev"),
@@ -191,8 +184,6 @@ class RTO:
             default_profile = self._config.get_profile(default_profile_name)
 
             if default_profile:
-                args.app_name = default_profile.get("app_name")
-
                 args.deployment_id = default_profile.get("deployment_id")
 
                 args.entity = default_profile.get("entity_id")
@@ -202,7 +193,6 @@ class RTO:
                 profile_name = default_profile_name
 
         if cmd_klass.requires_authentication:
-
             # Try to use a cached token if we have a config and a profile is specified
             if profile_name:
                 cached_token = self._config.get_token(profile_name)
@@ -211,7 +201,7 @@ class RTO:
                     token, expires_at = cached_token
 
                     ratio = Ratio(
-                        app_name=args.app_name,
+                        app_name="ratio",
                         deployment_id=args.deployment_id,
                         token=token,
                         token_expires=expires_at
@@ -236,7 +226,7 @@ class RTO:
                 raise ValueError(f"private key file {args.private_key} does not exist")
 
             ratio = Ratio(
-                app_name=args.app_name,
+                app_name="ratio",
                 deployment_id=args.deployment_id,
             )
 
@@ -261,16 +251,13 @@ class RTO:
 
             # Saving the execution details for exception handling usage
             self._execution_details = {
-                "app_name": args.app_name,
+                "app_name": "ratio",
                 "deployment_id": args.deployment_id,
                 "entity": args.entity,
             }
 
         else:
-            ratio = Ratio(
-                app_name=args.app_name,
-                deployment_id=args.deployment_id,
-            )
+            ratio = None
 
         cmd = cmd_klass()
 

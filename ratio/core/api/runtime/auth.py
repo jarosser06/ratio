@@ -1293,7 +1293,7 @@ class AuthAPI(ChildAPI):
         """
         # Decode the challenge
         jwt_manager = InternalJWTManager(
-            expiry_hours=setting_value(namespace="ratio::core", setting_key="token_active_hours"),
+            expiry_minutes=setting_value(namespace="ratio::core", setting_key="token_active_minutes"),
             kms_key_id=setting_value(namespace="ratio::core", setting_key="internal_signing_kms_key_id"),
         )
 

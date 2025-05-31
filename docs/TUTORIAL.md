@@ -15,6 +15,9 @@ cd ratio-tutorial
 **Goal**: Execute a single agent and get text back.
 
 ```bash
+# Set up output directory
+rto mkdir /output
+
 # Just generate some text
 rto execute \
   --agent-definition-path=/agents/core/bedrock_text.agent \
@@ -26,10 +29,8 @@ rto execute \
   }' \
   --wait
 
-# Download and see the result
-rto sync -f ratio:/output/hello.txt ./
-
-cat hello.txt
+# View the result
+rto cat ratio:/output/hello.txt
 ```
 
 That's it. One agent, text in, text out.
@@ -48,6 +49,8 @@ Customers: 150
 Growth Rate: 25%
 Main Issue: Customer complaints about slow loading times
 EOF
+
+rto mkdir /data
 
 # Upload it
 rto sync -f sample-data.txt ratio:/data/
@@ -85,10 +88,11 @@ cat > file-analyzer.agent << 'EOF'
       "transform_arguments": {
         "variables": {
           "question": "REF:arguments.question",
-          "file_content": "REF:arguments.file_to_analyze"
+          "file_content": "REF:arguments.file_to_analyze",
+          "separator": ""
         },
         "transforms": {
-          "prompt": "join(array=[question, \"\\n\\nFile content:\\n\", file_content], separator=\"\")"
+          "prompt": "join(array=[question, \"\\n\\nFile content:\\n\", file_content], separator=separator)"
         }
       }
     }
@@ -107,8 +111,12 @@ cat > file-analyzer.agent << 'EOF'
 }
 EOF
 
+rto mkdir /agents/custom
+
 # Upload and run it
 rto sync -f file-analyzer.agent ratio:/agents/custom/
+
+rto chmod 755 /agents/custom/file-analyzer.agent
 
 rto execute \
   --agent-definition-path=/agents/custom/file-analyzer.agent \
@@ -119,7 +127,12 @@ rto execute \
   --wait
 ```
 
-Now you're combining files with prompts and using basic transforms.
+Once the process completes, run `rto cat` with the reported response.aio to show what the agent's response values look like.
+
+Example:
+```bash
+rto cat /run/agent_exec-3db8410e-2ee6-4ae5-9f47-daf566526231/response.aio
+```
 
 ## Example 3: Multi-File Report
 
@@ -180,7 +193,7 @@ cat > report-generator.agent << 'EOF'
       "execution_id": "create_report",
       "agent_definition_path": "/agents/core/bedrock_text.agent",
       "arguments": {
-        "model_id": "anthropic.claude-3-5-sonnet-20241022-v1:0",
+        "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0",
         "max_tokens": 1000,
         "temperature": 0.2
       },
@@ -209,7 +222,7 @@ cat > report-generator.agent << 'EOF'
       }
     },
     {
-      "execution_id": "save_report", 
+      "execution_id": "save_report",
       "agent_definition_path": "/agents/core/put_file.agent",
       "arguments": {
         "file_path": "/output/summary-report.md",
@@ -242,6 +255,8 @@ EOF
 # Upload and run
 rto sync -f report-generator.agent ratio:/agents/custom/
 
+rto chmod 755 /agents/custom/report-generator.agent
+
 rto execute \
   --agent-definition-path=/agents/custom/report-generator.agent \
   --arguments='{
@@ -249,7 +264,6 @@ rto execute \
   }' \
   --wait
 
-# Download the result
-rto sync -f ratio:/output/summary-report.md ./
-cat summary-report.md
+# Check the result
+rto cat /output/summary-report.md
 ```

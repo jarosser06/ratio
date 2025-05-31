@@ -57,6 +57,33 @@ class ExecuteAgentInternalRequest(ObjectBodySchema):
     ]
 
 
+class ParallelCompletionReconciliationRequest(ObjectBodySchema):
+    """
+    Event body for parallel completion reconciliation requests.
+    Triggered when parallel execution nears completion.
+    """
+    attributes = [
+        SchemaAttribute(
+            name="parent_process_id",
+            type_name=SchemaAttributeType.STRING,
+            description="The ID of the parent process of the parallel group",
+            required=True,
+        ),
+        SchemaAttribute(
+            name="original_execution_id", 
+            type_name=SchemaAttributeType.STRING,
+            description="The original execution ID of the parallel group (before [index])",
+            required=True,
+        ),
+        SchemaAttribute(
+            name="token",
+            type_name=SchemaAttributeType.STRING,
+            description="JWT token for authentication",
+            required=True,
+        ),
+    ]
+
+
 class SystemExecuteAgentRequest(ObjectBodySchema):
     """
     Object body schema describing what all agents expect to recieve

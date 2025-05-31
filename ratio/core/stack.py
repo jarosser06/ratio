@@ -113,8 +113,8 @@ class RatioCoreStack(Stack):
         GlobalSetting(
             scope=self,
             namespace="ratio::core",
-            setting_key="token_active_hours",
+            setting_key="token_active_minutes",
             setting_type=GlobalSettingType.INTEGER,
-            setting_value=2,
-            description="The number of hours the token is active for. MODIFY WITH CAUTION",
+            setting_value=60, # Default to 60 minutes
+            description="The number of minutes the token is active for. MODIFY WITH CAUTION",
         )

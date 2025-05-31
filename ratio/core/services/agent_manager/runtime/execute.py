@@ -43,8 +43,13 @@ from ratio.core.services.agent_manager.runtime.events import (
     ExecuteAgentInternalRequest,
     SystemExecuteAgentRequest,
 )
+from ratio.core.services.agent_manager.runtime.mapper import MappingError
 from ratio.core.services.agent_manager.runtime.no_op import execute_no_ops
 from ratio.core.services.agent_manager.runtime.reference import InvalidReferenceError
+
+from ratio.core.services.agent_manager.runtime.token import (
+    create_execution_token,
+)
 
 from ratio.core.services.agent_manager.runtime.validator import RefValidator
 
@@ -146,10 +151,14 @@ class ExecuteAPI(ChildAPI):
         """
         logging.debug(f"Executing agent with request body: {request_body.to_dict()}")
 
+        token = create_execution_token(
+            original_token=request_context["signed_token"],
+        )
+
         # If agent definition path was passed, need to validate the requestor has access
         storage_client = RatioInternalClient(
             service_name="storage_manager",
-            token=request_context["signed_token"],
+            token=token,
         ) 
 
         claims = JWTClaims.from_claims(claims=request_context["request_claims"])
@@ -248,7 +257,7 @@ class ExecuteAPI(ChildAPI):
             try:
                 agent_definition = AgentDefinition.load_from_fs(
                     agent_file_location=request_body["agent_definition_path"],
-                    token=request_context["signed_token"],
+                    token=token,
                 )
 
             except Exception as e:
@@ -312,7 +321,7 @@ class ExecuteAPI(ChildAPI):
                 arguments=processed_args.to_dict(),
                 argument_schema=agent_definition.arguments,
                 process_id=proc.process_id,
-                token=request_context["signed_token"],
+                token=token,
                 working_directory=working_directory,
                 instructions=agent_definition.instructions,
                 response_definition=agent_definition.responses,
@@ -334,6 +343,41 @@ class ExecuteAPI(ChildAPI):
         # Create the base directory for the process
         execution_engine.initialize_path()
 
+        if arguments:
+            try:
+                # Create a mock instruction for the parent process to save arguments
+                parent_instruction = AgentInstruction(
+                    definition=agent_definition,
+                    execution_id=proc.process_id,
+                    provided_arguments=processed_args.to_dict(),
+                )
+
+                # Save arguments to parent process directory
+                parent_argument_path = execution_engine.prepare_for_execution(
+                    agent_instruction=parent_instruction,
+                    process_id=proc.process_id,
+                    working_directory=working_directory,
+                )
+
+                # Set the arguments path on the parent process
+                if parent_argument_path:
+                    proc.arguments_path = parent_argument_path
+
+                    process_client.put(proc)
+
+                    logging.debug(f"Saved parent process arguments to: {parent_argument_path}")
+
+            except (InvalidSchemaError, InvalidObjectSchemaError) as save_err:
+                logging.debug(f"Error saving parent arguments: {save_err}")
+
+                # Delete the process as it failed to initialize properly
+                process_client.delete(proc)
+
+                return self.respond(
+                    status_code=400,
+                    body={"message": f"Failed to save parent arguments: {str(save_err)}"},
+                )
+
         # Create the event bus client
         event_bus_client = EventPublisher()
 
@@ -350,7 +394,7 @@ class ExecuteAPI(ChildAPI):
                     parent_process=proc,
                     process_client=process_client,
                     skipped_ids=skipped,
-                    token=request_context["signed_token"],
+                    token=token,
                 )
 
             if not execution_ids:
@@ -361,17 +405,12 @@ class ExecuteAPI(ChildAPI):
                     body={"message": "no available executions for agent, likely due to invalid agent definition"}
                 )
 
-            # Set base working directory for the child processes
-            base_working_dir = execution_engine.get_path()
-
-            logging.debug(f"Base working directory for child processes: {base_working_dir}")
-
             for execution_id in execution_ids:
                 logging.debug(f"Creating child process for execution ID: {execution_id}")
 
                 child_proc = proc.create_child(
                     execution_id=execution_id,
-                    working_directory=base_working_dir,
+                    working_directory=working_directory,
                     process_owner=claims.entity,
                 )
 
@@ -384,14 +423,14 @@ class ExecuteAPI(ChildAPI):
                     argument_path = execution_engine.prepare_for_execution(
                         agent_instruction=execution_engine.instructions[execution_id],
                         process_id=child_proc.process_id,
-                        working_directory=base_working_dir,
+                        working_directory=working_directory,
                     )
 
                     child_proc.arguments_path = argument_path
 
                     process_client.put(child_proc)
 
-                except (InvalidSchemaError, InvalidObjectSchemaError, InvalidReferenceError) as invalid_err:
+                except (InvalidSchemaError, InvalidObjectSchemaError, InvalidReferenceError, MappingError) as invalid_err:
                     logging.debug(f"Error preparing for execution: {invalid_err}")
 
                     # Delete the child process as it never started
@@ -413,7 +452,7 @@ class ExecuteAPI(ChildAPI):
                     if not definition_og_file_path:
                         # Save the agent definition to the working directory
                         temp_definition_path = os.path.join(
-                            execution_engine.get_path(working_dir=base_working_dir, process_id=child_proc.process_id),
+                            execution_engine.get_path(working_dir=working_directory, process_id=child_proc.process_id),
                             "agent_definition.agent"
                         )
 
@@ -421,7 +460,7 @@ class ExecuteAPI(ChildAPI):
 
                         execution_engine.instructions[execution_id].definition.export_to_fs(
                             file_path=temp_definition_path,
-                            token=request_context["signed_token"],
+                            token=token,
                         )
 
                         definition_og_file_path = temp_definition_path
@@ -432,8 +471,8 @@ class ExecuteAPI(ChildAPI):
                             "agent_definition_path": definition_og_file_path,
                             "parent_process_id": proc.process_id,
                             "process_id": child_proc.process_id,
-                            "token": request_context["signed_token"],
-                            "working_directory": execution_engine.get_path(working_dir=base_working_dir, process_id=child_proc.process_id),
+                            "token": token,
+                            "working_directory": working_directory,
                         },
                         schema=ExecuteAgentInternalRequest,
                     )
@@ -451,8 +490,8 @@ class ExecuteAPI(ChildAPI):
                             "parent_process_id": proc.process_id,
                             "process_id": child_proc.process_id,
                             "response_schema": execution_engine.instructions[execution_id].definition.responses,
-                            "token": request_context["signed_token"],
-                            "working_directory": execution_engine.get_path(working_dir=base_working_dir, process_id=child_proc.process_id),
+                            "token": token,
+                            "working_directory": working_directory,
                         },
                         schema=SystemExecuteAgentRequest,
                     )
@@ -502,7 +541,7 @@ class ExecuteAPI(ChildAPI):
                     "parent_process_id": proc.parent_process_id,
                     "process_id": proc.process_id,
                     "response_schema": agent_definition.responses,
-                    "token": request_context["signed_token"],
+                    "token": token,
                     "working_directory": execution_engine.get_path(),
                 },
                 schema=SystemExecuteAgentRequest,

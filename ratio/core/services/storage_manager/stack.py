@@ -192,6 +192,14 @@ class StorageManagerStack(Stack):
 
         RegisteredFileType(
             scope=self,
+            type_name="ratio::markdown",
+            description="Markdown File",
+            is_directory_type=False,
+            content_type="text/markdown"
+        )
+
+        RegisteredFileType(
+            scope=self,
             type_name="ratio::png",
             description="FS PNG Image File",
             is_directory_type=False,

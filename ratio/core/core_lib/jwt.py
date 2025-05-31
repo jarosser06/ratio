@@ -85,20 +85,20 @@ class JWTVerificationException(Exception):
 class InternalJWTManager:
     signing_algorithm = 'RSASSA_PKCS1_V1_5_SHA_256'
 
-    def __init__(self, kms_key_id: str, issuer: str = "ratio", expiry_hours: int = 1):
+    def __init__(self, kms_key_id: str, issuer: str = "ratio", expiry_minutes: int = 30):
         """
         Initialize the JWT Manager with KMS key information
 
         Keyword arguments:
         kms_key_id -- The KMS key ID used for signing JWTs
         issuer -- The issuer of the JWT (default: "Ratio")
-        expiry_hours -- The expiration time in hours (default: 24)
+        expiry_minutes -- The expiration time for the JWT in minutes (default: 30)
         """
         self.kms_key_id = kms_key_id
 
         self.issuer = issuer
 
-        self.expiry_hours = expiry_hours
+        self.expiry_minutes = expiry_minutes
 
         self.kms_client = boto3.client('kms')
     
@@ -188,7 +188,7 @@ class InternalJWTManager:
         # Create payload with standard claims
         now = datetime.now(tz=utc_tz)
 
-        expires_at = now + timedelta(hours=self.expiry_hours)
+        expires_at = now + timedelta(minutes=self.expiry_minutes)
 
         payload = JWTClaims(
             authorized_groups=authorized_groups,

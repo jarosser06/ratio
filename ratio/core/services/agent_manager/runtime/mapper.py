@@ -1,4 +1,8 @@
+"""
+Mapping module for transforming data based on mapping rules.
+"""
 import json
+import logging
 import re
 
 from typing import Any, Dict, List, Callable, Optional, Union
@@ -339,8 +343,8 @@ class ObjectMapper:
                 try:
                     resolved_params[param_name] = self._resolve_argument_value(arg_str=param_value, context_object=context)
 
-                except:
-                    resolved_params[param_name] = param_value
+                except Exception as excp:
+                    raise MappingError(f"Failed to resolve parameter '{param_name}' = '{param_value}': {str(excp)}")
 
         # Call function with keyword arguments
         return self.mapping_functions[func_name](**resolved_params)
@@ -431,12 +435,170 @@ class ObjectMapper:
         Keyword arguments:
         args_str -- The string containing keyword arguments (e.g., "param1=value1, param2=value2")
         """
+        if not args_str.strip():
+            return {}
+
         params = {}
 
-        for match in self.keyword_arg_pattern.finditer(args_str):
-            param_name, param_value = match.groups()
+        current_key = ""
 
-            params[param_name.strip()] = param_value.strip()
+        current_value = ""
+
+        state = "seeking_key"  # "seeking_key", "in_key", "seeking_equals", "seeking_value", "in_value"
+
+        # Tracking nested structures
+        bracket_count = 0
+
+        brace_count = 0  
+
+        paren_count = 0
+
+        quote_char = None
+
+        i = 0
+
+        while i < len(args_str):
+            char = args_str[i]
+
+            # Handle quote state
+            if quote_char:
+                current_value += char
+
+                if char == quote_char and (i == 0 or args_str[i-1] != '\\'):
+                    quote_char = None
+
+                i += 1
+
+                continue
+
+            # Handle starting quotes
+            if char in '"\'':
+                if state == "in_value":
+                    current_value += char
+
+                    quote_char = char
+
+                elif state == "seeking_value":
+                    current_value = char
+
+                    state = "in_value"
+
+                    quote_char = char
+
+                i += 1
+
+                continue
+
+            # Handle nesting characters  
+            if char == '[':
+                if state == "in_value":
+                    current_value += char
+
+                    bracket_count += 1
+
+                elif state == "seeking_value":
+                    current_value = char
+
+                    state = "in_value"
+
+                    bracket_count += 1
+
+            elif char == ']':
+                if state == "in_value":
+                    current_value += char
+
+                    bracket_count -= 1
+
+            elif char == '{':
+                if state == "in_value":
+                    current_value += char
+
+                    brace_count += 1
+
+                elif state == "seeking_value":
+                    current_value = char
+
+                    state = "in_value"
+
+                    brace_count += 1
+
+            elif char == '}':
+                if state == "in_value":
+                    current_value += char
+
+                    brace_count -= 1
+
+            elif char == '(':
+                if state == "in_value":
+                    current_value += char
+
+                    paren_count += 1
+
+                elif state == "seeking_value":
+                    current_value = char
+
+                    state = "in_value"
+
+                    paren_count += 1
+
+            elif char == ')':
+                if state == "in_value":
+                    current_value += char
+
+                    paren_count -= 1
+
+            # Handle state transitions
+            elif char == '=' and state in ["in_key", "seeking_equals"]:
+                state = "seeking_value"
+
+            elif char == ',' and bracket_count == 0 and brace_count == 0 and paren_count == 0:
+                # End of parameter - save it
+                if current_key and current_value:
+                    params[current_key.strip()] = current_value.strip()
+
+                current_key = ""
+
+                current_value = ""
+
+                state = "seeking_key"
+
+            elif char.isspace():
+                # Skip whitespace in transitions
+                if state == "seeking_key":
+                    pass  # Skip leading whitespace
+
+                elif state == "in_key":
+                    state = "seeking_equals"
+
+                elif state == "seeking_value":
+                    pass  # Skip whitespace before value
+
+                elif state == "in_value":
+                    current_value += char
+
+            else:
+                # Regular character
+                if state == "seeking_key":
+                    current_key = char
+
+                    state = "in_key"
+
+                elif state == "in_key":
+                    current_key += char
+
+                elif state == "seeking_value":
+                    current_value = char
+
+                    state = "in_value"
+
+                elif state == "in_value":
+                    current_value += char
+
+            i += 1
+
+        # Handle the last parameter
+        if current_key and current_value:
+            params[current_key.strip()] = current_value.strip()
 
         return params
 
@@ -556,6 +718,8 @@ class ObjectMapper:
         Returns:
             The result of the function execution
         """
+        logging.debug(f"Executing function '{function_name}' with args: {args_str} in context: {context_object}")
+
         if function_name not in self.mapping_functions and function_name != "pipeline":
             raise MappingError(f"Unknown function: {function_name}")
 
@@ -579,6 +743,8 @@ class ObjectMapper:
                 # Parse as keyword arguments
                 params = self._parse_keyword_arguments(args_str)
 
+                logging.debug(f"Resolved keyword arguments for function '{function_name}': {params}")
+
                 resolved_params = {}
 
                 for param_name, param_value in params.items():
@@ -594,8 +760,8 @@ class ObjectMapper:
                         try:
                             resolved_params[param_name] = self._resolve_argument_value(context_object=context_object, arg_str=param_value)
 
-                        except:
-                            resolved_params[param_name] = param_value
+                        except Exception as excp:
+                            raise MappingError(f"Failed to resolve parameter '{param_name}' = '{param_value}': {str(excp)}")
 
                 # Call function with keyword arguments
                 return self.mapping_functions[function_name](**resolved_params)

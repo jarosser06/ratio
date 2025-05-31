@@ -38,18 +38,28 @@
       "agent_definition_path": "/agents/core/bedrock_text.agent",
       "transform_arguments": {
         "variables": {
-          "user_request": "REF:arguments.request",
-          "capability_map": "REF:arguments.agent_directory_mapping",
-          "manual": "REF:arguments.authoring_manual",
-          "header": "AGENT FEASIBILITY ANALYSIS",
-          "request_label": "User Request:",
-          "capabilities_label": "Available Agent Capabilities:",
-          "manual_label": "Authoring Manual:",
-          "instructions": "Analyze this request pessimistically. Only mark as feasible if you can see a clear 5-7 step implementation path using existing agents. Missing capabilities or overly complex workflows should be marked not feasible.\n\nRespond with exactly this format:\nFEASIBILITY: [FEASIBLE or NOT_FEASIBLE]\nREASONING: [Your analysis]\nSUGGESTED_APPROACH: [Implementation steps if feasible, or missing capabilities if not]",
-          "separator": "\n"
+          "prompt_sections": [
+            "AGENT FEASIBILITY ANALYSIS",
+            "",
+            "User Request:",
+            "REF:arguments.request",
+            "",
+            "Available Agent Capabilities:",
+            "REF:arguments.agent_directory_mapping",
+            "",
+            "Authoring Manual:",
+            "REF:arguments.authoring_manual",
+            "",
+            "Analyze this request pessimistically. Only mark as feasible if you can see a clear 5-7 step implementation path using existing agents. Missing capabilities or overly complex workflows should be marked not feasible.",
+            "",
+            "Respond with exactly this format:",
+            "FEASIBILITY: [FEASIBLE or NOT_FEASIBLE]",
+            "REASONING: [Your analysis]",
+            "SUGGESTED_APPROACH: [Implementation steps if feasible, or missing capabilities if not]"
+          ]
         },
         "transforms": {
-          "prompt": "join([header, separator, separator, request_label, user_request, separator, separator, capabilities_label, capability_map, separator, separator, manual_label, manual, separator, separator, instructions], separator)"
+          "prompt": "join(array=prompt_sections, separator=\"\\n\")"
         }
       },
       "arguments": {
@@ -66,20 +76,26 @@
       ],
       "transform_arguments": {
         "variables": {
-          "user_request": "REF:arguments.request",
-          "capability_map": "REF:arguments.agent_directory_mapping",
-          "manual": "REF:arguments.authoring_manual",
-          "feasibility_result": "REF:feasibility_analysis.response",
-          "header": "AGENT DEFINITION GENERATION",
-          "request_label": "Original Request:",
-          "agents_label": "Available Agents:",
-          "manual_label": "Authoring Manual:",
-          "feasibility_label": "Feasibility Analysis:",
-          "instructions": "Generate a complete JSON agent definition that fulfills the request. Follow the patterns in the authoring manual exactly. Use proper REF strings, dependencies, and conditional logic as needed. Output only valid JSON.",
-          "separator": "\n"
+          "prompt_sections": [
+            "AGENT DEFINITION GENERATION",
+            "",
+            "Original Request:",
+            "REF:arguments.request",
+            "",
+            "Available Agents:",
+            "REF:arguments.agent_directory_mapping",
+            "",
+            "Authoring Manual:",
+            "REF:arguments.authoring_manual",
+            "",
+            "Feasibility Analysis:",
+            "REF:feasibility_analysis.response",
+            "",
+            "Generate a complete JSON agent definition that fulfills the request. Follow the patterns in the authoring manual exactly. Use proper REF strings, dependencies, and conditional logic as needed. Output only valid JSON."
+          ]
         },
         "transforms": {
-          "prompt": "join([header, separator, separator, request_label, user_request, separator, separator, agents_label, capability_map, separator, separator, manual_label, manual, separator, separator, feasibility_label, feasibility_result, separator, separator, instructions], separator)"
+          "prompt": "join(array=prompt_sections, separator=\"\\n\")"
         }
       },
       "arguments": {
@@ -96,16 +112,30 @@
       ],
       "transform_arguments": {
         "variables": {
-          "generated_agent": "REF:generate_creation_prompt.response",
-          "manual": "REF:arguments.authoring_manual",
-          "header": "AGENT DEFINITION VALIDATION",
-          "agent_label": "Generated Agent Definition:",
-          "manual_label": "Authoring Manual:",
-          "instructions": "Validate this agent definition against the authoring manual. Check for:\n- Proper JSON structure\n- Correct REF usage\n- Appropriate dependencies\n- Following composition patterns\n- Schema compliance\n\nRespond with exactly:\nVALIDATION: [PASS or FAIL]\nISSUES: [List any problems found]\nFINAL_AGENT: [The corrected agent definition if needed, otherwise repeat the original]",
-          "separator": "\n"
+          "prompt_sections": [
+            "AGENT DEFINITION VALIDATION",
+            "",
+            "Generated Agent Definition:",
+            "REF:generate_creation_prompt.response",
+            "",
+            "Authoring Manual:",
+            "REF:arguments.authoring_manual",
+            "",
+            "Validate this agent definition against the authoring manual. Check for:",
+            "- Proper JSON structure",
+            "- Correct REF usage",
+            "- Appropriate dependencies",
+            "- Following composition patterns",
+            "- Schema compliance",
+            "",
+            "Respond with exactly:",
+            "VALIDATION: [PASS or FAIL]",
+            "ISSUES: [List any problems found]",
+            "FINAL_AGENT: [The corrected agent definition if needed, otherwise repeat the original]"
+          ]
         },
         "transforms": {
-          "prompt": "join([header, separator, separator, agent_label, generated_agent, separator, separator, manual_label, manual, separator, separator, instructions], separator)"
+          "prompt": "join(array=prompt_sections, separator=\"\\n\")"
         }
       },
       "arguments": {
@@ -123,14 +153,15 @@
       ],
       "transform_arguments": {
         "variables": {
-          "agent_name": "REF:arguments.agent_name",
-          "output_dir": "REF:arguments.output_directory",
-          "separator": "/",
-          "extension": ".agent",
-          "empty_string": ""
+          "path_components": [
+            "REF:arguments.output_directory",
+            "/",
+            "REF:arguments.agent_name",
+            ".agent"
+          ]
         },
         "transforms": {
-          "file_path": "join([output_dir, separator, agent_name, extension], empty_string)"
+          "file_path": "join(array=path_components, separator=\"\")"
         }
       },
       "arguments": {

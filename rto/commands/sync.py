@@ -725,14 +725,18 @@ class SyncCommand(RTOCommand):
             if base_64_encoded:
                 # Server sent base64 encoded binary data
                 mode = 'wb'
+
                 if isinstance(content, str):
                     content = base64.b64decode(content)
+
             elif isinstance(content, bytes):
                 # Direct download - raw binary data
                 mode = 'wb'
+
             else:
                 # Server sent text data
                 mode = 'w'
+
                 if not isinstance(content, str):
                     content = content.decode('utf-8')
 

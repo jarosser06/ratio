@@ -45,7 +45,7 @@
       },
       "transform_arguments": {
         "transforms": {
-          "content_list": "map(parallel_results, item.analysis_result)"
+          "content_list": "map(array=parallel_results, template=\"item.analysis_result\")"
         }
       }
     }

@@ -48,7 +48,8 @@ def _generate_token(entity_id: str):
         raise Exception(f"Entity with ID {entity_id} not found")
 
     jwt_manager = InternalJWTManager(
-        expiry_hours=setting_value(namespace="ratio::core", setting_key="token_active_hours"),
+        # Don't need a very long expiry for scheduler tokens, execution will create its own tokens
+        expiry_minutes=5,
         kms_key_id=setting_value(namespace="ratio::core", setting_key="internal_signing_kms_key_id"),
     )
 

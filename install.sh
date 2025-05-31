@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# install.sh - Ratio AI Operating System Installation Script
+# install.sh - Ratio Installation Script
 set -e  # Exit on any error
 
 # Colors for output
@@ -48,7 +48,7 @@ print_header() {
 show_usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
-    echo "Install and configure the Ratio AI Operating System"
+    echo "Install and configure Ratio"
     echo ""
     echo "Options:"
     echo "  --skip-deploy         Skip CDK deployment (deploy runs by default)"
@@ -113,7 +113,7 @@ check_existing_installation() {
 
 # Main installation function
 main() {
-    print_header "🚀 Ratio AI Operating System Installation"
+    print_header "🚀 Ratio Installation"
     echo ""
 
     # Step 0: Check for existing installation
@@ -162,11 +162,15 @@ main() {
 
     # Step 4: Copy shell bin files
     print_status "Installing shell utilities..."
+
     if [ -d "ratio_shell/bin" ]; then
         cp -r ratio_shell/bin/* "$BIN_DIR/" 2>/dev/null || true
+
         # Make bin files executable
         find "$BIN_DIR" -type f -exec chmod +x {} \;
+
         print_success "Shell utilities installed to $BIN_DIR"
+
     else
         print_warning "ratio_shell/bin directory not found, skipping shell utilities"
     fi
@@ -228,7 +232,7 @@ main() {
     echo ""
     print_header "🎉 Installation Complete!"
     echo ""
-    print_success "Ratio AI Operating System has been successfully installed and configured."
+    print_success "Ratio has been successfully deployed and configured."
     echo ""
     echo "Configuration details:"
     echo "  • Profile: default"

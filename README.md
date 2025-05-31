@@ -1,10 +1,10 @@
 Ratio
 =====
-An AI Operating System for building and executing complex agent workflows with automatic dependency resolution, parallel processing, and event-driven orchestration.
+An AI Operating System for composing and managing complex agent workflows with automatic dependency
+resolution, parallel processing, and event-driven orchestration.
 
-Ratio is named after the Golden Ratio, representing the ideal balance between AI capabilities and engineering infrastructure.
-The system is designed to enable AI expansion within the confines of thoughtful, robust engineering - ensuring that as AI
-capabilities grow, they do so within a secure, manageable framework.
+Ratio is named after the Golden Ratio, attempting to represent an ideal balance between AI
+capabilities and engineering infrastructure. It's an attempt to control the chaos!
 
 ## Agent Composition Example
 

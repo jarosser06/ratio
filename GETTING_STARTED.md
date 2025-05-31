@@ -1,7 +1,8 @@
 Ratio CLI (RTO) Getting Started Guide
 =====================================
 
-Ratio is an AI Operating System built on Cloud Native AWS Technologies. This guide walks you through installing and configuring the Ratio Terminal Operator (RTO) command line interface.
+This guide walks you through installing and configuring the Ratio Terminal Operator (RTO) command
+line interface.
 
 ## Prerequisites
 
@@ -14,7 +15,8 @@ Ratio is an AI Operating System built on Cloud Native AWS Technologies. This gui
 
 ### Step 1: Set Up Python Environment
 
-**Virtual Environment Recommended**: Ratio recommends using a Python virtual environment to isolate dependencies and avoid conflicts with other Python projects on your system.
+**Virtual Environment Recommended**: Ratio recommends using a Python virtual environment to isolate
+dependencies and avoid conflicts with other Python projects on your system.
 
 Clone the repository and create a virtual environment:
 
@@ -30,7 +32,8 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 poetry install
 ```
 
-The virtual environment ensures Ratio's dependencies don't interfere with other Python projects and makes it easy to manage different versions.
+The virtual environment ensures Ratio's dependencies don't interfere with other Python projects and
+makes it easy to manage different versions.
 
 ### Step 2: Run Installation Script
 
@@ -104,7 +107,9 @@ Use the `fs_sync` utility to populate your Ratio filesystem from the root of the
 fs_sync
 ```
 
-The `fs_sync` command maps your local `_fs` directory structure directly to the Ratio filesystem (e.g., `_fs/agents/` → `ratio:/agents/`). This must be run from the ratio project root where the `_fs` directory is located.
+The `fs_sync` command maps your local `_fs` directory structure directly to the Ratio filesystem
+(e.g., `_fs/agents/` → `ratio:/agents/`). This must be run from the ratio project root where the 
+`_fs` directory is located.
 
 ## Interactive Shell
 
@@ -129,9 +134,11 @@ The shell provides:
 
 ## Troubleshooting
 
-**Command not found**: Ensure your virtual environment is activated and `poetry install` completed successfully.
+**Command not found**: Ensure your virtual environment is activated and `poetry install` completed
+successfully.
 
-**CDK deployment fails**: Check AWS credentials and permissions. Deployment logs are saved to `deploy.log` if not running with `--verbose`.
+**CDK deployment fails**: Check AWS credentials and permissions. Deployment logs are saved to
+`deploy.log` if not running with `--verbose`.
 
 **Profile configuration issues**: Run `rto configure` to reconfigure your default profile manually.
 

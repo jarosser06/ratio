@@ -168,6 +168,9 @@ class ReferenceValueObject(ReferenceValueBase):
 
             return self.original_value.get(attribute_name)
 
+        if not self.original_value:
+            return {}
+
         return dict(self.original_value)
 
 
@@ -386,10 +389,10 @@ class Reference:
 
         # It's an execution_id
         if context not in self.responses:
-            raise InvalidReferenceError(f"Unknown execution ID: {context}")
+            raise InvalidReferenceError(f"Execution ID: {context} not available for reference resolution")
 
         if key not in self.responses[context]:
-            raise InvalidReferenceError(f"Unknown response key: {key}")
+            raise InvalidReferenceError(f"Execution ID: {context} does not have key: {key} for reference resolution")
 
         reference_obj = self.responses[context][key]
 
@@ -416,6 +419,16 @@ class Reference:
             arg_type = argument_types.get(key, "string")
 
             if arg_type not in self.reference_type_map:
-                raise ValueError(f"Unknown argument type: {arg_type} for key: {key}")
+
+                if arg_type == "any":
+                    # Infer type from value
+                    arg_type = self._infer_type_from_value(value)
+
+                    # use the inferred type
+                    if arg_type not in self.reference_type_map:
+                        raise ValueError(f"Cannot infer type for argument: {key} with value: {value}")
+
+                else:
+                    raise ValueError(f"Unknown argument type: {arg_type} for key: {key}")
 
             self.arguments[key] = self.reference_type_map[arg_type](original_value=value)

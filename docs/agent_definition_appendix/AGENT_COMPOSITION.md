@@ -1,6 +1,9 @@
 # Agent Definition Composition
 
-Ratio's agent composition system enables you to build sophisticated, multi-step workflows by orchestrating individual agents into complex composite agents. This system provides powerful features including automatic dependency resolution, conditional execution, parallel processing, and dynamic value referencing.
+Ratio's agent composition system enables you to build multi-step workflows by
+orchestrating individual agents into complex composite agents. This system provides automatic
+dependency resolution, conditional execution, parallel processing, dynamic value referencing,
+and data transformation capabilities.
 
 ## Core Concepts
 
@@ -49,7 +52,8 @@ An agent definition specifies how an agent should be executed, what arguments it
 
 ## Reference System (REF)
 
-The REF system is the backbone of agent composition, enabling dynamic value resolution between agents and arguments.
+The REF system is the backbone of agent composition, enabling dynamic value resolution between
+agents and arguments.
 
 ### REF String Format
 
@@ -99,9 +103,422 @@ REF strings follow the pattern: `REF:<context>.<key>[.<attribute>]`
 }
 ```
 
+## Data Transformation System
+
+The transformation system provides data manipulation capabilities that work with REF resolution.
+Transforms can modify agent arguments before execution or process agent responses
+after completion.
+
+### Transform Types
+
+#### Transform Arguments
+Applied **after** REF resolution but **before** schema validation. Used to:
+- Prepare and combine input data
+- Convert data formats
+- Create new arguments from existing ones
+- Build complex data structures
+
+#### Transform Results
+Applied **after** agent execution but **before** final response validation. Used to:
+- Format response data
+- Extract specific information
+- Create summary data
+- Clean up response structure
+
+### Transform Structure
+
+Transforms use a two-phase approach: variable resolution followed by data transformation.
+
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "variable_name": "REF:source.data",
+      "static_value": "constant"
+    },
+    "transforms": {
+      "new_argument": "function_call(variable_name)"
+    }
+  },
+  "transform_results": {
+    "variables": {
+      "result_data": "REF:response.output"
+    },
+    "transforms": {
+      "formatted_result": "process(result_data)"
+    }
+  }
+}
+```
+
+### Transform Execution Flow
+
+1. **Variable Resolution Phase**: 
+   - All variables are resolved using standard REF resolution
+   - Variables can contain REF strings, arrays, objects, or static values
+   - Variables become available in the local transform context
+
+2. **Context Merging Phase**:
+   - Original arguments/response are merged with resolved variables
+   - Variables override original values on key conflicts
+   - Creates unified context object for transforms
+
+3. **Transform Execution Phase**:
+   - Transform functions execute against the merged context
+   - Local variables referenced directly by name (no REF: prefix)
+   - Transform results directly modify the arguments/response object
+
+### Built-in Transform Functions
+
+Transform functions support both **positional** and **keyword argument** syntax for improved readability and flexibility.
+
+#### Function Call Syntax
+
+**Positional Arguments (traditional):**
+```json
+{
+  "result": "function_name(arg1, arg2)"
+}
+```
+
+**Keyword Arguments (recommended):**
+```json
+{
+  "result": "function_name(param1=arg1, param2=arg2)"
+}
+```
+
+Keyword arguments provide better readability and allow parameters to be specified in any order.
+
+#### get_object_property() Function
+Extracts properties from objects using dot notation paths.
+
+**Function Signature:**
+```python
+get_object_property(obj: Any, property_path: str) -> Any
+```
+
+**Positional Usage:**
+```json
+{
+  "user_name": "get_object_property(user_data, \"name\")",
+  "user_email": "get_object_property(user_data, \"profile.email\")"
+}
+```
+
+**Keyword Usage:**
+```json
+{
+  "user_name": "get_object_property(obj=user_data, property_path=\"name\")",
+  "nested_value": "get_object_property(obj=api_response, property_path=\"data.items.0.title\")"
+}
+```
+
+**Array Indexing Support:**
+```json
+{
+  "first_item": "get_object_property(obj=data_array, property_path=\"0\")",
+  "nested_array_item": "get_object_property(obj=complex_data, property_path=\"results.2.value\")"
+}
+```
+
+#### json_parse() Function
+Parses JSON strings into structured data objects.
+
+**Function Signature:**
+```python
+json_parse(json_string: str) -> Union[Dict, List, Any]
+```
+
+**Usage:**
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "raw_json": "REF:api_call.response_body"
+    },
+    "transforms": {
+      "parsed_data": "json_parse(json_string=raw_json)",
+      "user_info": "get_object_property(obj=parsed_data, property_path=\"user\")"
+    }
+  }
+}
+```
+
+#### pipeline() Function
+Executes a sequence of operations on data, with each operation receiving the output of the previous step.
+
+**Function Signature:**
+```python
+pipeline(initial_value: Any, operations: List[Dict]) -> Any
+```
+
+**Pipeline Operations Syntax:**
+Pipeline operations support keyword argument syntax, making data flow explicit and readable.
+
+**Usage:**
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "json_string": "REF:api_response.body",
+      "property_path": "user.profile.name"
+    },
+    "transforms": {
+      "extracted_name": "pipeline(json_string, [json_parse(json_string=current), get_object_property(obj=current, property_path=property_path)])"
+    }
+  }
+}
+```
+
+**Pipeline Flow:**
+1. **Step 1**: `json_parse(json_string=current)` - parses the JSON string (current = initial json_string)
+2. **Step 2**: `get_object_property(obj=current, property_path=property_path)` - extracts property from parsed object (current = parsed JSON)
+
+**Complex Pipeline Example:**
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "api_data": "REF:data_fetch.response",
+      "filter_criteria": "active",
+      "separator": ", "
+    },
+    "transforms": {
+      "processed_summary": "pipeline(api_data, [json_parse(json_string=current), get_object_property(obj=current, property_path=\"users\"), map(array=current, template=\"item.name\"), join(array=current, separator=separator)])"
+    }
+  }
+}
+```
+
+#### map() Function
+Transforms arrays using templates with support for both object templates and simple extraction.
+
+**Function Signature:**
+```python
+map(array: List, template: Union[Dict, str]) -> List
+```
+
+**Object Template Usage:**
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "user_list": "REF:user_data.users"
+    },
+    "transforms": {
+      "user_summaries": "map(array=user_list, template={name: item.full_name, email: item.contact.email})"
+    }
+  }
+}
+```
+
+**String Template Usage:**
+```json
+{
+  "file_paths": "map(array=file_scan_results, template=\"item.file_path\")"
+}
+```
+
+**With Keyword Arguments:**
+```json
+{
+  "extracted_names": "map(array=users, template=\"item.name\")",
+  "structured_data": "map(array=raw_records, template={id: item.user_id, status: item.active})"
+}
+```
+
+#### sum() Function
+Calculates numeric totals from array elements.
+
+**Function Signature:**
+```python
+sum(array: List, item_path: str) -> Union[int, float]
+```
+
+**Usage:**
+```json
+{
+  "transform_results": {
+    "variables": {
+      "invoice_items": "REF:response.line_items"
+    },
+    "transforms": {
+      "total_cost": "sum(array=invoice_items, item_path=\"item.amount\")",
+      "item_count": "REF:response.line_items.length"
+    }
+  }
+}
+```
+
+#### join() Function
+Combines array elements into strings with configurable separators.
+
+**Function Signature:**
+```python
+join(array: List, separator: str) -> str
+```
+
+**Usage:**
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "file_list": "REF:scan_results.files",
+      "tag_list": "REF:metadata.tags",
+      "delimiter": ", "
+    },
+    "transforms": {
+      "file_summary": "join(array=file_list, separator=delimiter)",
+      "tag_string": "join(array=tag_list, separator=\" | \")"
+    }
+  }
+}
+```
+
+**Auto-extraction for Objects:**
+```json
+// If array contains objects with 'name' property, join() automatically extracts names
+{
+  "participant_names": "join(array=meeting_attendees, separator=\", \")"
+}
+// Result: "Alice Johnson, Bob Smith, Carol Williams"
+```
+
+### Transform Examples
+
+#### JSON Processing Pipeline
+```json
+{
+  "execution_id": "process_api_response",
+  "agent_definition_path": "/agents/data_processor.agent",
+  "transform_arguments": {
+    "variables": {
+      "raw_response": "REF:api_call.response_body",
+      "user_path": "data.user",
+      "name_path": "profile.display_name"
+    },
+    "transforms": {
+      "user_name": "pipeline(raw_response, [json_parse(json_string=current), get_object_property(obj=current, property_path=user_path), get_object_property(obj=current, property_path=name_path)])"
+    }
+  }
+}
+```
+
+#### Data Preparation Pipeline
+```json
+{
+  "execution_id": "analyze_with_llm",
+  "agent_definition_path": "/agents/core/bedrock_text.agent",
+  "transform_arguments": {
+    "variables": {
+      "prompt_parts": ["REF:arguments.analysis_prompt", "REF:arguments.file_to_analyze"],
+      "separator": "\n\n"
+    },
+    "transforms": {
+      "prompt": "join(array=prompt_parts, separator=separator)"
+    }
+  },
+  "arguments": {
+    "model_id": "REF:arguments.model_id"
+  }
+}
+```
+
+#### Response Processing
+```json
+{
+  "execution_id": "process_results",
+  "agent_definition_path": "/agents/data_processor.agent",
+  "arguments": {
+    "raw_data": "REF:data_fetcher.results"
+  },
+  "transform_results": {
+    "variables": {
+      "processed_items": "REF:response.processed_items",
+      "success_template": "item.success",
+      "delimiter": "; "
+    },
+    "transforms": {
+      "summary_report": "join(array=map(array=processed_items, template=\"item.description\"), separator=delimiter)",
+      "success_count": "sum(array=map(array=processed_items, template=success_template), item_path=\"item.value\")"
+    }
+  }
+}
+```
+
+#### Complex Data Shaping with Pipeline
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "api_response": "REF:data_fetcher.raw_response",
+      "sales_path": "data.sales_records",
+      "threshold": 1000
+    },
+    "transforms": {
+      "high_value_sales": "pipeline(api_response, [json_parse(json_string=current), get_object_property(obj=current, property_path=sales_path), map(array=current, template={amount: item.total, customer: item.customer_name})])",
+      "revenue_total": "pipeline(api_response, [json_parse(json_string=current), get_object_property(obj=current, property_path=sales_path), sum(array=current, item_path=\"item.total\")])"
+    }
+  }
+}
+```
+
+### Variable Reference Rules
+
+**In Variables Section:**
+- Use `REF:` for external references (arguments, execution responses)
+- Can reference complex paths: `REF:file_processor.results.0.path`
+- Can build arrays: `["REF:arg1", "REF:arg2", "static_value"]`
+- Can use static values: `"separator": "\n\n"`
+
+**In Transforms Section:**
+- Reference variables directly by name: `prompt_parts`, `separator`
+- Reference original context with REF: `REF:response.items`
+- Use in function calls: `join(array=prompt_parts, separator=separator)`
+- Transform keys create/modify fields in arguments or response
+
+**In Pipeline Operations:**
+- Use `current` to reference the flowing pipeline value
+- Use variable names to reference declared variables
+- Use string literals with quotes: `property_path="user.name"`
+
+### Transform Error Handling
+
+**Variable Resolution Errors:**
+- Invalid REF strings in variables section
+- Missing referenced executions or arguments
+- Type mismatches in variable assignment
+
+**Transform Execution Errors:**
+- Undefined variables referenced in transforms
+- Invalid function calls or parameters
+- Schema validation failures after transforms
+
+**Example Error Scenarios:**
+```json
+// ❌ Error: undefined variable
+{
+  "variables": {
+    "data": "REF:processor.results"
+  },
+  "transforms": {
+    "summary": "join(array=undefined_var, separator=', ')"  // undefined_var not in variables
+  }
+}
+
+// ❌ Error: schema validation failure
+{
+  "transforms": {
+    "required_field": "invalid_function(data)"  // Function doesn't exist or fails
+  }
+}
+```
+
 ## Dependency Management
 
-Dependencies are automatically calculated based on REF usage, creating a directed acyclic graph (DAG) that determines execution order.
+Dependencies are automatically calculated based on REF usage, creating a directed acyclic graph
+(DAG) that determines execution order.
 
 ### Automatic Dependency Resolution
 
@@ -260,13 +677,13 @@ Parallel executions return their results as a list, maintaining the order of the
 
 ## Advanced Composition Patterns
 
-### Pipeline Processing
+### Pipeline Processing with Transforms
 
-Create sequential data processing pipelines:
+Create sequential data processing pipelines with data transformation:
 
 ```json
 {
-  "description": "Document processing pipeline",
+  "description": "Document processing pipeline with transforms",
   "arguments": [
     {"name": "input_documents", "type_name": "list", "required": true}
   ],
@@ -281,7 +698,18 @@ Create sequential data processing pipelines:
     },
     {
       "execution_id": "analyze_sentiment",
-      "agent_definition_path": "/agents/sentiment_analyzer.agent", 
+      "agent_definition_path": "/agents/sentiment_analyzer.agent",
+      "transform_arguments": {
+        "variables": {
+          "extracted_texts": "REF:extract_text.response"
+        },
+        "transforms": {
+          "combined_texts": "map(array=extracted_texts, template=\"item.content\")"
+        }
+      },
+      "arguments": {
+        "text_count": "REF:extract_text.response.length"
+      },
       "parallel_execution": {
         "iterate_over": "REF:extract_text.response",
         "child_argument_name": "text_content"
@@ -290,8 +718,16 @@ Create sequential data processing pipelines:
     {
       "execution_id": "generate_summary",
       "agent_definition_path": "/agents/summarizer.agent",
+      "transform_arguments": {
+        "variables": {
+          "sentiment_results": "REF:analyze_sentiment.response"
+        },
+        "transforms": {
+          "average_sentiment": "sum(array=sentiment_results, item_path=\"item.score\")",
+          "sentiment_summary": "join(array=map(array=sentiment_results, template=\"item.label\"), separator=\", \")"
+        }
+      },
       "arguments": {
-        "all_sentiments": "REF:analyze_sentiment.response",
         "document_count": "REF:extract_text.response.length"
       }
     }
@@ -299,9 +735,9 @@ Create sequential data processing pipelines:
 }
 ```
 
-### Conditional Branching
+### Conditional Branching with Transform Logic
 
-Execute different paths based on runtime conditions:
+Execute different paths based on transformed data:
 
 ```json
 {
@@ -317,7 +753,18 @@ Execute different paths based on runtime conditions:
       "conditions": [
         {"param": "REF:validate_input.is_valid", "operator": "equals", "value": true}
       ],
-      "arguments": {"data": "REF:arguments.user_data"}
+      "transform_arguments": {
+        "variables": {
+          "valid_records": "REF:validate_input.clean_records"
+        },
+        "transforms": {
+          "processed_data": "map(array=valid_records, template={id: item.identifier, value: item.data})"
+        }
+      },
+      "arguments": {
+        "processing_mode": "REF:arguments.mode",
+        "batch_size": "REF:validate_input.clean_records.length"
+      }
     },
     {
       "execution_id": "handle_invalid_data",
@@ -325,15 +772,25 @@ Execute different paths based on runtime conditions:
       "conditions": [
         {"param": "REF:validate_input.is_valid", "operator": "equals", "value": false}
       ],
-      "arguments": {"errors": "REF:validate_input.validation_errors"}
+      "transform_arguments": {
+        "variables": {
+          "error_details": "REF:validate_input.validation_errors"
+        },
+        "transforms": {
+          "error_summary": "join(array=map(array=error_details, template=\"item.message\"), separator=\"; \")"
+        }
+      },
+      "arguments": {
+        "error_count": "REF:validate_input.validation_errors.length"
+      }
     }
   ]
 }
 ```
 
-### Fan-out/Fan-in Pattern
+### Fan-out/Fan-in Pattern with Result Aggregation
 
-Process data in parallel and aggregate results:
+Process data in parallel and transform aggregated results:
 
 ```json
 {
@@ -354,9 +811,26 @@ Process data in parallel and aggregate results:
     {
       "execution_id": "aggregate_results",
       "agent_definition_path": "/agents/aggregator.agent",
+      "transform_arguments": {
+        "variables": {
+          "analysis_results": "REF:parallel_analysis.response"
+        },
+        "transforms": {
+          "successful_analyses": "sum(array=map(array=analysis_results, template=\"item.success_flag\"), item_path=\"item.value\")",
+          "combined_metrics": "sum(array=analysis_results, item_path=\"item.metric_value\")"
+        }
+      },
       "arguments": {
-        "partial_results": "REF:parallel_analysis.response",
         "total_chunks": "REF:split_data.chunks.length"
+      },
+      "transform_results": {
+        "variables": {
+          "final_summary": "REF:response.aggregated_data"
+        },
+        "transforms": {
+          "completion_percentage": "sum(array=final_summary, item_path=\"item.completion_rate\")",
+          "summary_report": "join(array=map(array=final_summary, template=\"item.description\"), separator=\"\\n\")"
+        }
       }
     }
   ]
@@ -431,14 +905,88 @@ Map outputs from child agents to the composite agent's response schema:
 
 ## Best Practices
 
-### 1. Meaningful Execution IDs
+### Use Simple REF for Direct References
+Use direct REF strings in arguments for simple value passing. Only use transforms when actual data manipulation is needed:
+
+```json
+// ✅ Good: Simple reference - use direct REF
+{
+  "arguments": {
+    "user_id": "REF:validate_user.user_id",
+    "file_path": "REF:file_scanner.primary_file"
+  }
+}
+
+// ❌ Avoid: Unnecessary transform for simple pass-through
+{
+  "transform_arguments": {
+    "variables": {
+      "user_id": "REF:validate_user.user_id"
+    },
+    "transforms": {
+      "user_id": "user_id"  // No actual transformation
+    }
+  }
+}
+
+// ✅ Good: Transform when actual manipulation is needed
+{
+  "transform_arguments": {
+    "variables": {
+      "file_list": "REF:scanner.files",
+      "metadata": "REF:scanner.metadata"
+    },
+    "transforms": {
+      "file_summary": "join(array=file_list, separator=', ')",
+      "total_files": "REF:scanner.files.length"
+    }
+  }
+}
+```
+
+### Use Keyword Arguments for Clarity
+Prefer keyword arguments for transform functions to improve readability:
+
+```json
+// ✅ Good: Clear keyword arguments
+{
+  "extracted_name": "get_object_property(obj=user_data, property_path=\"profile.name\")",
+  "joined_list": "join(array=items, separator=\", \")"
+}
+
+// ❌ Avoid: Positional arguments (harder to understand)
+{
+  "extracted_name": "get_object_property(user_data, \"profile.name\")",
+  "joined_list": "join(items, \", \")"
+}
+```
+
+### Declare Path Variables for Reusability
+Declare property paths and other constants as variables for better maintainability:
+
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "json_data": "REF:api_response.body",
+      "user_path": "data.user.profile",
+      "name_field": "display_name"
+    },
+    "transforms": {
+      "user_name": "pipeline(json_data, [json_parse(json_string=current), get_object_property(obj=current, property_path=user_path), get_object_property(obj=current, property_path=name_field)])"
+    }
+  }
+}
+```
+
+### Meaningful Execution IDs
 Use descriptive execution IDs that clearly indicate the step's purpose:
 ```json
 {"execution_id": "fetch_user_profile"}  // Good
 {"execution_id": "step_1"}              // Avoid
 ```
 
-### 2. Explicit Response Schemas
+### Explicit Response Schemas
 Always define clear response schemas for reusable agents:
 ```json
 {
@@ -453,17 +1001,7 @@ Always define clear response schemas for reusable agents:
 }
 ```
 
-### 3. Conditional Validation
-Use conditions to validate prerequisites:
-```json
-{
-  "conditions": [
-    {"param": "REF:arguments.api_key", "operator": "exists"}
-  ]
-}
-```
-
-### 4. Parallel Processing for Scale
+### Parallel Processing for Scale
 Use parallel execution for independent batch operations:
 ```json
 {
@@ -474,22 +1012,29 @@ Use parallel execution for independent batch operations:
 }
 ```
 
-### 5. Defensive Error Handling
-Always plan for failure scenarios:
+### Transform Variable Management
+Organize complex transforms with clear variable naming:
 ```json
 {
-  "execution_id": "handle_api_errors",
-  "conditions": [
-    {"param": "REF:api_call.status_code", "operator": "greater_than", "value": 299}
-  ]
+  "transform_arguments": {
+    "variables": {
+      "source_records": "REF:data_source.records",
+      "filter_criteria": "REF:arguments.filter",
+      "processing_mode": "batch"
+    },
+    "transforms": {
+      "filtered_data": "map(array=source_records, template=\"item.data\")",
+      "batch_size": "REF:data_source.records.length"
+    }
+  }
 }
 ```
 
-## Complete Example: Document Analysis Workflow
+## Complete Example: Advanced Document Analysis Workflow
 
 ```json
 {
-  "description": "Comprehensive document analysis with parallel processing and conditional logic",
+  "description": "Comprehensive document analysis with transforms, parallel processing, and conditional logic",
   "arguments": [
     {
       "name": "document_paths",
@@ -510,6 +1055,15 @@ Always plan for failure scenarios:
       "agent_definition_path": "/agents/document_validator.agent",
       "arguments": {
         "file_paths": "REF:arguments.document_paths"
+      },
+      "transform_results": {
+        "variables": {
+          "validation_results": "REF:response.validation_results"
+        },
+        "transforms": {
+          "valid_count": "sum(array=validation_results, item_path=\"item.is_valid\")",
+          "error_summary": "join(array=map(array=validation_results, template=\"item.error_message\"), separator=\"; \")"
+        }
       }
     },
     {
@@ -518,6 +1072,15 @@ Always plan for failure scenarios:
       "parallel_execution": {
         "iterate_over": "REF:validate_documents.valid_documents",
         "child_argument_name": "document_path"
+      },
+      "transform_results": {
+        "variables": {
+          "extraction_results": "REF:response"
+        },
+        "transforms": {
+          "total_pages": "sum(array=extraction_results, item_path=\"item.page_count\")",
+          "file_summary": "join(array=map(array=extraction_results, template=\"item.filename\"), separator=\", \")"
+        }
       }
     },
     {
@@ -533,6 +1096,17 @@ Always plan for failure scenarios:
       "parallel_execution": {
         "iterate_over": "REF:validate_documents.valid_documents",
         "child_argument_name": "document_path"
+      },
+      "transform_arguments": {
+        "variables": {
+          "basic_results": "REF:extract_basic_info.response"
+        },
+        "transforms": {
+          "context_data": "map(array=basic_results, template={file: item.filename, pages: item.page_count})"
+        }
+      },
+      "arguments": {
+        "analysis_mode": "REF:arguments.analysis_depth"
       }
     },
     {
@@ -544,23 +1118,60 @@ Always plan for failure scenarios:
       "parallel_execution": {
         "iterate_over": "REF:validate_documents.valid_documents", 
         "child_argument_name": "document_path"
+      },
+      "transform_arguments": {
+        "variables": {
+          "detailed_results": "REF:detailed_analysis.response",
+          "basic_data": "REF:extract_basic_info.response"
+        },
+        "transforms": {
+          "combined_context": "map(array=detailed_results, template={analysis: item.insights, metadata: item.metadata})",
+          "processing_summary": "join(array=map(array=basic_data, template=\"item.summary\"), separator=\"\\n\")"
+        }
       }
     },
     {
       "execution_id": "aggregate_results",
       "agent_definition_path": "/agents/result_aggregator.agent",
+      "transform_arguments": {
+        "variables": {
+          "basic_results": "REF:extract_basic_info.response",
+          "detailed_results": "REF:detailed_analysis.response", 
+          "comprehensive_results": "REF:comprehensive_analysis.response"
+        },
+        "transforms": {
+          "analysis_summary": "map(array=basic_results, template={file: item.filename, status: item.status})",
+          "combined_insights": "join(array=map(array=detailed_results, template=\"item.key_findings\"), separator=\"; \")"
+        }
+      },
       "arguments": {
-        "basic_results": "REF:extract_basic_info.response",
-        "detailed_results": "REF:detailed_analysis.response", 
-        "comprehensive_results": "REF:comprehensive_analysis.response",
-        "analysis_level": "REF:arguments.analysis_depth"
+        "analysis_level": "REF:arguments.analysis_depth",
+        "total_documents": "REF:extract_basic_info.response.length"
+      },
+      "transform_results": {
+        "variables": {
+          "aggregated_data": "REF:response.summary"
+        },
+        "transforms": {
+          "completion_report": "join(array=map(array=aggregated_data, template=\"item.description\"), separator=\"\\n\")",
+          "success_metrics": "sum(array=aggregated_data, item_path=\"item.success_count\")"
+        }
       }
     },
     {
       "execution_id": "generate_report",
       "agent_definition_path": "/agents/report_generator.agent",
+      "transform_arguments": {
+        "variables": {
+          "summary_data": "REF:aggregate_results.summary",
+          "document_metrics": "REF:extract_basic_info.response"
+        },
+        "transforms": {
+          "executive_summary": "join(array=map(array=summary_data, template=\"item.key_point\"), separator=\"\\n• \")",
+          "document_stats": "map(array=document_metrics, template={name: item.filename, pages: item.page_count})"
+        }
+      },
       "arguments": {
-        "aggregated_data": "REF:aggregate_results.summary",
         "document_count": "REF:extract_basic_info.response.length"
       }
     }
@@ -581,7 +1192,7 @@ Always plan for failure scenarios:
     {
       "name": "processing_summary",
       "type_name": "object",
-      "description": "Summary of processing results",
+      "description": "Summary of processing results with metrics",
       "required": true
     }
   ],

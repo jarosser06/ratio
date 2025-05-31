@@ -320,6 +320,17 @@ class AgentInstruction:
         for arg_value in self.provided_arguments.values():
             find_refs(arg_value)
 
+        if self.transform_arguments:
+            transform_variables = self.transform_arguments.get("variables", {})
+
+            for transform_variable in transform_variables.values():
+                find_refs(transform_variable)
+
+            transforms = self.transform_arguments.get("transforms", {})
+
+            for transform_value in transforms.values():
+                find_refs(transform_value)
+
         # Check for conditions
         if self.conditions:
             for condition in self.conditions:

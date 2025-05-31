@@ -89,22 +89,21 @@ class RTOConfig:
 
         self.save_config()
 
-    def add_profile(self, profile_name: str, entity_id: str, app_name: str, 
-                   deployment_id: str, private_key_path: str, set_default: bool = False):
+    def add_profile(self, profile_name: str, entity_id: str, deployment_id: str,
+                    private_key_path: str, set_default: bool = False):
         """
         Add a new profile
 
         Keyword arguments:
         profile_name -- Unique name for the profile
         entity_id -- Unique identifier for the entity
-        app_name -- Name of the application
         deployment_id -- Unique identifier for the deployment
         private_key_path -- Path to the private key file
         set_default -- Whether to set this profile as the default
         """
         self._config["profiles"][profile_name] = {
             "entity_id": entity_id,
-            "app_name": app_name,
+            "app_name": "ratio",
             "deployment_id": deployment_id,
             "private_key_path": private_key_path
         }

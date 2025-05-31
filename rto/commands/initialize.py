@@ -30,6 +30,13 @@ class InitializeCommand(RTOCommand):
         """
         Execute the command.
         """
+        # client is none b/c of the requires_authentication = False
+
+        client = Ratio(
+            app_name="ratio",
+            deployment_id=args.deployment_id,
+        )
+
         public_key = args.public_key
 
         private_key_value = None

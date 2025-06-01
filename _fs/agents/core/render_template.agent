@@ -14,6 +14,12 @@
       "required": true
     },
     {
+      "name": "file_path",
+      "type_name": "file",
+      "description": "An optional file path to save the results to",
+      "required": false
+    },
+    {
       "name": "strict_undefined",
       "type_name": "boolean",
       "description": "Whether to raise an error for undefined variables (true) or treat them as empty strings (false)",
@@ -41,6 +47,12 @@
       "type_name": "string",
       "description": "The template rendered with the provided variables",
       "required": true
+    },
+    {
+      "name": "file_path",
+      "type_name": "file",
+      "description": "The optional file path to save the results to",
+      "required": false
     },
     {
       "name": "used_variables",

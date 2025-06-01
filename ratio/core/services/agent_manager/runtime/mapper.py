@@ -1,212 +1,65 @@
 """
 Mapping module for transforming data based on mapping rules.
 """
-import json
 import logging
+import inspect
 import re
 
 from typing import Any, Dict, List, Callable, Optional, Union
 
+from ratio.core.services.agent_manager.runtime.exceptions import MappingError
 
-class MappingError(Exception):
-    """Exception raised for errors during object mapping"""
-    def __init__(self, message: str, path: str = None):
-        self.path = path
+from ratio.core.services.agent_manager.runtime.mapper_functions import (
+    MappingContext,
+    # Original functions
+    get_object_property_function,
+    join_function,
+    json_parse_function,
+    map_function,
+    sum_function,
 
-        self.message = f"Mapping Error at '{path}': {message}" if path else f"Mapping Error: {message}"
+    # Conditional logic functions
+    if_function,
+    filter_function,
+    group_by_function,
+    sort_function,
+    unique_function,
+    flatten_function,
 
-        super().__init__(self.message)
-
-
-def get_object_property_function(obj: Any, property_path: str) -> Any:
-    """
-    Get a property from an object using dot notation.
-
-    Keyword arguments:
-    obj - The object to get the property from  
-    property_path - Dot-separated path (e.g., "message" or "user.name")
-    """
-    if not isinstance(property_path, str):
-        raise MappingError(f"Property path must be a string, got {type(property_path).__name__}")
-
-    current = obj
-
-    for part in property_path.split('.'):
-        if isinstance(current, dict) and part in current:
-            current = current[part]
-
-        elif isinstance(current, list) and part.isdigit():
-            index = int(part)
-
-            if 0 <= index < len(current):
-                current = current[index]
-
-            else:
-                raise MappingError(f"List index {index} out of range")
-
-        else:
-            raise MappingError(f"Property '{part}' not found")
-
-    return current
+    # File system functions
+    list_files_function,
+    list_file_versions_function,
+    describe_version_function,
+    read_file_function,
+    read_files_function,
+)
 
 
-def join_function(array: List, separator: str) -> str:
-    """
-    Join function that combines an array of values into a string.
-
-    Keyword arguments:
-    array - The source array
-    separator - The string to use as a separator
-
-    Returns:
-        Joined string
-    """
-    if not isinstance(array, list):
-        raise MappingError(f"First argument must be an array, got {type(array)}")
-
-    # If array contains dictionaries with a 'name' property, extract the names
-    if array and isinstance(array[0], dict) and "name" in array[0]:
-        # Extract the 'name' property from each item
-
-        values = []
-
-        for item in array:
-            if isinstance(item, dict) and "name" in item:
-                values.append(str(item["name"]))
-
-            else:
-                values.append(str(item))
-    else:
-        # Convert all elements to strings
-        values = [str(item) for item in array]
-
-    # Convert separator to string in case it's not already
-    separator_str = str(separator)
-
-    return separator_str.join(values)
-
-
-def json_parse_function(json_string: str) -> Union[Dict, List, Any]:
-    """
-    Parse a JSON string into a Python object.
-
-    Keyword arguments:
-    json_string - The JSON string to parse
-
-    Returns:
-        Parsed JSON object (dict, list, or primitive)
-    """
-    if not isinstance(json_string, str):
-        raise MappingError(f"JSON parse requires a string, got {type(json_string).__name__}")
-
-    try:
-        return json.loads(json_string.strip())
-
-    except json.JSONDecodeError as e:
-        raise MappingError(f"Invalid JSON string: {str(e)}")
-
-
-def map_function(array: List, template: Dict) -> List:
-    """
-    Map function that transforms an array using a template.
-
-    Keyword arguments:
-        array: The source array
-        template: The mapping template (e.g., {"key": "item.X"})
-
-    Returns:
-        List of transformed objects
-    """
-    result = []
-
-    if isinstance(template, str):
-        # Handle simple path case like "item.file_path"
-        if template.startswith("item."):
-            attr = template[5:]  # Remove "item."
-
-            for item in array:
-                if attr in item:
-                    result.append(item[attr])
-
-                else:
-                    raise MappingError(f"Attribute '{attr}' not found in array item")
-
-        else:
-            raise MappingError("String template must be in format 'item.X'")
-
-    elif isinstance(template, dict):
-        # Handle dictionary template case (original behavior)
-        for item in array:
-            output = {}
-
-            for key, path in template.items():
-                # Extract the attribute name from "item.X" format
-                if isinstance(path, str) and path.startswith("item."):
-                    attr = path[5:]  # Remove "item."
-
-                    if attr in item:
-                        output[key] = item[attr]
-
-                    else:
-                        raise MappingError(f"Attribute '{attr}' not found in array item")
-
-                else:
-                    output[key] = path  # static value
-
-            result.append(output)
-
-    else:
-        raise MappingError(f"Template must be either a dict or string, got {type(template)}")
-
-    return result
-
-
-def sum_function(array: List, item_path: str) -> Union[int, float]:
-    """
-    Sum function that calculates the sum of values in an array.
-
-    Keyword arguments:
-    array - The source array
-    item_path - The path to the attribute to sum (e.g., "item.X")
-
-    Returns:
-        Sum of the values
-    """
-    total = 0
-
-    if not isinstance(array, list):
-        raise MappingError("First argument must be an array")
-
-    # Extract the attribute name from "item.X" format
-    if item_path.startswith("item."):
-        attr = item_path[5:]  # Remove "item."
-
-        for item in array:
-            if attr in item:
-                val = item[attr]
-
-                if isinstance(val, (int, float)):
-                    total += val
-
-                else:
-                    raise MappingError(f"Attribute '{attr}' is not a number")
-
-            else:
-                raise MappingError(f"Attribute '{attr}' not found in array item")
-
-    else:
-        raise MappingError("Item path must be in format 'item.X'")
-
-    return total
-
-
-# Default mapping functions
+# Updated mapping functions dictionary
 DEFAULT_MAPPING_FUNCTIONS = {
+    # Original functions
     "get_object_property": get_object_property_function,
     "join": join_function,
     "json_parse": json_parse_function,
     "map": map_function,
     "sum": sum_function,
+
+    # New conditional logic functions
+    "if": if_function,
+    "filter": filter_function,
+
+    # New data manipulation functions
+    "group_by": group_by_function,
+    "sort": sort_function,
+    "unique": unique_function,
+    "flatten": flatten_function,
+
+    # New file system functions
+    "list_files": list_files_function,
+    "list_file_versions": list_file_versions_function,
+    "describe_version": describe_version_function,
+    "read_file": read_file_function,
+    "read_files": read_files_function,
 }
 
 
@@ -318,7 +171,7 @@ class ObjectMapper:
         return arguments
 
     def _execute_keyword_function(self, func_name: str, params: Dict, current_value: Any,
-                                  context: Dict) -> Any:
+                                  context: MappingContext) -> Any:
         """
         Execute a keyword function with parameters, resolving 'current' references.
 
@@ -326,7 +179,7 @@ class ObjectMapper:
         func_name -- The name of the function to execute
         params -- A dictionary of parameters for the function
         current_value -- The current value to use for 'current' references
-        context -- The context object for resolving paths
+        context -- The mapping context for resolving paths
 
         Returns:
             The result of the function execution
@@ -341,13 +194,18 @@ class ObjectMapper:
             else:
                 # Try to resolve as path, fallback to literal
                 try:
-                    resolved_params[param_name] = self._resolve_argument_value(arg_str=param_value, context_object=context)
+                    resolved_params[param_name] = self._resolve_argument_value(arg_str=param_value, context=context)
 
                 except Exception as excp:
                     raise MappingError(f"Failed to resolve parameter '{param_name}' = '{param_value}': {str(excp)}")
 
+        # Add context to resolved params first
+        final_params = {"context": context}
+
+        final_params.update(resolved_params)
+
         # Call function with keyword arguments
-        return self.mapping_functions[func_name](**resolved_params)
+        return self.mapping_functions[func_name](**final_params)
 
     def _parse_pipeline_operations(self, ops_str: str) -> List[Dict]:
         """
@@ -602,7 +460,7 @@ class ObjectMapper:
 
         return params
 
-    def pipeline_function(self, initial_value: Any, operations: List[Dict], original_context: Dict = None) -> Any:
+    def pipeline_function(self, initial_value: Any, operations: List[Dict], context: MappingContext) -> Any:
         """
         Execute a pipeline of operations on an initial value.
 
@@ -619,9 +477,11 @@ class ObjectMapper:
         for i, operation in enumerate(operations):
             try:
                 # Combine original context with current value
-                operation_context = (original_context or {}).copy()
+                operation_data = context.data.copy()
 
-                operation_context['current'] = current_value
+                operation_data['current'] = current_value
+
+                operation_context = MappingContext(data=operation_data, token=context.token)
 
                 if operation["type"] == "keyword":
                     current_value = self._execute_keyword_function(
@@ -639,13 +499,14 @@ class ObjectMapper:
 
         return current_value
 
-    def map_object(self, resolved_variables: Dict, mapping: Dict[str, Any]) -> Dict:
+    def map_object(self, resolved_variables: Dict, mapping: Dict[str, Any], token: str) -> Dict:
         """
         Transform an object based on mapping rules.
 
         Keyword arguments:
         original_object -- The source object to be transformed
         object_map -- A dictionary defining the mapping rules
+        token -- The token used for system functions
 
         Returns:
             The transformed object
@@ -653,11 +514,13 @@ class ObjectMapper:
         try:
             result = {}
 
+            context = MappingContext(data=resolved_variables, token=token)
+
             # Process each mapping rule
             for output_path, mapping_rule in mapping.items():
                 try:
                     # Extract the value using the mapping rule
-                    value = self._evaluate_mapping_rule(resolved_variables, mapping_rule)
+                    value = self._evaluate_mapping_rule(context=context, mapping_rule=mapping_rule)
 
                     # Split path and set value
                     path_parts = output_path.split('.')
@@ -684,7 +547,7 @@ class ObjectMapper:
 
             raise MappingError(f"Failed to map object: {str(e)}")
 
-    def _evaluate_mapping_rule(self, original_object: Dict, mapping_rule: str) -> Any:
+    def _evaluate_mapping_rule(self, context: MappingContext, mapping_rule: str) -> Any:
         """
         Evaluate a mapping rule against the original object.
 
@@ -701,24 +564,27 @@ class ObjectMapper:
         if match:
             function_name, args_str = match.groups()
 
-            return self._execute_function(function_name, args_str, original_object)
+            return self._execute_function(
+                function_name=function_name,
+                args_str=args_str,
+                context=context)
 
         # Otherwise, treat as a path reference
-        return self._resolve_argument_value(arg_str=mapping_rule, context_object=original_object)
+        return self._resolve_argument_value(arg_str=mapping_rule, context=context)
 
-    def _execute_function(self, function_name: str, args_str: str, context_object: Dict) -> Any:
+    def _execute_function(self, function_name: str, args_str: str, context: MappingContext) -> Any:
         """
         Execute a mapping function with the given arguments.
 
         Keyword arguments:
         function_name -- The name of the function to execute
         args_str -- The string representation of the function arguments
-        context_object -- The source object for context
+        context -- The mapping context or source object for context
 
         Returns:
             The result of the function execution
         """
-        logging.debug(f"Executing function '{function_name}' with args: {args_str} in context: {context_object}")
+        logging.debug(f"Executing function '{function_name}' with args: {args_str}")
 
         if function_name not in self.mapping_functions and function_name != "pipeline":
             raise MappingError(f"Unknown function: {function_name}")
@@ -732,12 +598,12 @@ class ObjectMapper:
                     raise MappingError("Pipeline requires exactly 2 arguments: initial_value, [operations]")
 
                 # Get initial value
-                initial_value = self._resolve_argument_value(arg_str=args[0], context_object=context_object)
+                initial_value = self._resolve_argument_value(arg_str=args[0], context=context)
 
                 # Parse operations array
                 operations = self._parse_pipeline_operations(args[1])
 
-                return self.pipeline_function(initial_value=initial_value, operations=operations, original_context=context_object)
+                return self.pipeline_function(initial_value=initial_value, operations=operations, context=context)
 
             elif '=' in args_str:
                 # Parse as keyword arguments
@@ -758,77 +624,61 @@ class ObjectMapper:
                     else:
                         # Try to resolve as path, fallback to literal
                         try:
-                            resolved_params[param_name] = self._resolve_argument_value(context_object=context_object, arg_str=param_value)
+                            resolved_params[param_name] = self._resolve_argument_value(context=context, arg_str=param_value)
 
                         except Exception as excp:
                             raise MappingError(f"Failed to resolve parameter '{param_name}' = '{param_value}': {str(excp)}")
 
+                # Check if function accepts context parameter
+                func = self.mapping_functions[function_name]
+
+                resolved_params['context'] = context
+
                 # Call function with keyword arguments
-                return self.mapping_functions[function_name](**resolved_params)
+                return func(**resolved_params)
 
             else:
                 # Split arguments properly for regular functions
                 args = self._split_function_arguments(args_str)
 
-                if len(args) == 1:
-                    # Single argument case
-                    arg = self._resolve_argument_value(arg_str=args[0], context_object=context_object)
+                # Resolve all arguments
+                resolved_args = []
 
-                    return self.mapping_functions[function_name](arg)
+                for arg_str in args:
+                    resolved_args.append(self._resolve_argument_value(arg_str=arg_str, context=context))
 
-                elif len(args) == 2:
-                    # Two arguments case
-                    first_arg = self._resolve_argument_value(arg_str=args[0], context_object=context_object)
+                # Get function signature to properly map arguments
+                func = self.mapping_functions[function_name]
 
-                    second_arg_str = args[1]
+                sig = inspect.signature(func)
 
-                    # Handle string literals
-                    if second_arg_str.startswith('"') and second_arg_str.endswith('"'):
-                        second_arg = second_arg_str[1:-1]  # Remove quotes
+                param_names = list(sig.parameters.keys())
 
-                    elif second_arg_str.startswith("'") and second_arg_str.endswith("'"):
-                        second_arg = second_arg_str[1:-1]  # Remove quotes
+                # Context is always first parameter, if not this is a system code issue
+                if len(param_names) == 0 or param_names[0] != 'context':
+                    raise Exception(f"Function {function_name} must have 'context' as first parameter")
 
-                    # Handle item path
-                    elif second_arg_str.startswith('item.'):
-                        second_arg = second_arg_str
+                # Map resolved arguments to parameter names (skip context)
+                if len(resolved_args) > len(param_names) - 1:
+                    raise MappingError(f"Function {function_name} called with {len(resolved_args)} arguments, but expects {len(param_names) - 1}")
 
-                    # Handle template objects for map function
-                    elif function_name == 'map' and second_arg_str.startswith('{') and second_arg_str.endswith('}'):
-                        # Parse template object
-                        template = {}
+                # Build keyword arguments
+                kwargs = {"context": context}
 
-                        template_content = second_arg_str[1:-1]  # Remove braces
+                for i, arg_value in enumerate(resolved_args):
+                    param_name = param_names[i + 1]  # Skip context parameter
 
-                        for pair in template_content.split(','):
-                            if ':' in pair:
-                                key, value = pair.split(':', 1)
+                    kwargs[param_name] = arg_value
 
-                                template[key.strip()] = value.strip()
-
-                        second_arg = template
-
-                    # Try as path reference
-                    else:
-                        try:
-                            second_arg = self._resolve_argument_value(arg_str=second_arg_str, context_object=context_object)
-
-                        except Exception:
-                            # If path lookup fails, use as literal
-                            second_arg = second_arg_str
-
-                    # Call the function with two arguments
-                    return self.mapping_functions[function_name](first_arg, second_arg)
-
-                else:
-                    raise MappingError(f"Function {function_name} called with {len(args)} arguments, but only 1-2 arguments are supported")
+                # Call function with keyword arguments
+                return func(**kwargs)
 
         except Exception as e:
             error_msg = f"Function execution error: {str(e)}"
 
             raise MappingError(error_msg)
 
-    def _get_value_by_path(self, obj: Dict, path: str) -> Any:
+    def _get_value_by_path(self, context: MappingContext, path: str) -> Any:
         """
         Get a value from an object using a dot-notation path.
 
@@ -839,11 +689,11 @@ class ObjectMapper:
         Returns:
             The value at the specified path
         """
-        current = obj
+        current = context.data
 
         # Handle the special case where path is just a reference to the entire object
         if path == "original_object":
-            return obj
+            return context.data
 
         path_parts = path.split('.')
 
@@ -875,7 +725,7 @@ class ObjectMapper:
 
         return current
 
-    def _resolve_argument_value(self, arg_str: str, context_object: Dict) -> Any:
+    def _resolve_argument_value(self, arg_str: str, context: MappingContext) -> Any:
         """
         Resolve an argument value, handling arrays, strings, and path references.
 
@@ -896,6 +746,7 @@ class ObjectMapper:
 
             for elem in elements:
                 elem = elem.strip()
+
                 if elem.startswith('"') and elem.endswith('"'):
                     result.append(elem[1:-1])  # String literal
 
@@ -903,7 +754,7 @@ class ObjectMapper:
                     result.append(elem[1:-1])  # String literal
 
                 else:
-                    result.append(self._get_value_by_path(context_object, elem))
+                    result.append(self._get_value_by_path(context=context, path=elem))
 
             return result
 
@@ -916,7 +767,7 @@ class ObjectMapper:
 
         # Handle path references
         else:
-            return self._get_value_by_path(context_object, arg_str)
+            return self._get_value_by_path(context=context, path=arg_str)
 
     def _set_nested_value(self, obj: Dict, path_parts: List[str], value: Any) -> None:
         """

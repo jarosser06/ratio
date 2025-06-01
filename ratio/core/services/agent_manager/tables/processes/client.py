@@ -50,7 +50,7 @@ class Process(TableObject):
         attribute_type=TableObjectAttributeType.DATETIME,
         description="The time to live for the process.",
         optional=True,
-        default=lambda: datetime.now(tz=utc_tz) + timedelta(hours=8),
+        default=lambda: datetime.now(tz=utc_tz) + timedelta(hours=2),
     )
 
     attributes = [

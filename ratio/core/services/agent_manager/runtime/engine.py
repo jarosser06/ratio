@@ -438,7 +438,7 @@ class ExecutionEngine:
             body={
                 "file_path": response_body_path,
                 "file_type": AGENT_IO_FILE_TYPE,
-                "permissions": "444",
+                "permissions": "644",
                 "metadata": {
                     "description": "Agent response",
                     "execution_id": self.process_id,
@@ -664,6 +664,8 @@ class ExecutionEngine:
 
         logging.debug(f"Loaded response for {execution_id}: {instruction.response}")
 
+        already_added = []
+
         for response_definition in instruction.definition.responses:
             logging.debug(f"Processing response definition: {response_definition}")
 
@@ -691,6 +693,28 @@ class ExecutionEngine:
                 response_value=response_value,
                 response_type=response_type,
             )
+
+            already_added.append(response_key)
+
+        if instruction.response:
+            current_response_keys = set(instruction.response.keys())
+
+            transform_created_keys = current_response_keys - set(already_added)
+
+            if transform_created_keys:
+                logging.debug(f"Found {len(transform_created_keys)} transform-created response keys for {execution_id}: {transform_created_keys}")
+
+                for new_key in transform_created_keys:
+                    response_value = instruction.response[new_key]
+
+                    logging.debug(f"Registering transform-created response {execution_id}.{new_key}: {response_value} (type will be inferred)")
+
+                    # Register with inferred type
+                    self.reference.add_inferred_response(
+                        execution_id=execution_id,
+                        response_key=new_key,
+                        response_value=response_value,
+                    )
 
     def initialize_path(self):
         """

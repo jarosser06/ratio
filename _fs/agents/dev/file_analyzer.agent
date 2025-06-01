@@ -45,7 +45,7 @@
           "separator": "\n\n"
         },
         "transforms": {
-          "prompt": "join(prompt_parts, separator)"
+          "prompt": "join(array=prompt_parts, separator=separator)"
         }
       },
       "arguments": {

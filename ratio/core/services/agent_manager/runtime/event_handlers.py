@@ -9,7 +9,7 @@ import re
 import time
 
 from datetime import datetime, UTC as utc_tz
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Tuple
 from uuid import uuid4
 
 from da_vinci.core.logging import Logger
@@ -39,8 +39,7 @@ from ratio.core.services.storage_manager.request_definitions import (
 from ratio.core.services.agent_manager.runtime.agent import (
     AgentDefinition,
     AgentInstruction,
-    AIO_EXT,
-    AGENT_IO_FILE_TYPE,
+    AgentExportError,
 )
 
 from ratio.core.services.agent_manager.runtime.engine import (
@@ -48,17 +47,23 @@ from ratio.core.services.agent_manager.runtime.engine import (
     InvalidSchemaError,
 )
 
-
 from ratio.core.services.agent_manager.runtime.events import (
     ExecuteAgentInternalRequest,
+    ParallelCompletionReconciliationRequest,
     SystemExecuteAgentResponse,
     SystemExecuteAgentRequest,
 )
+
+from ratio.core.services.agent_manager.runtime.mapper import MappingError
 
 from ratio.core.services.agent_manager.runtime.no_op import execute_no_ops
 
 from ratio.core.services.agent_manager.runtime.reference import (
     InvalidReferenceError,
+)
+
+from ratio.core.services.agent_manager.runtime.token import (
+    token_check_and_refresh
 )
 
 
@@ -259,7 +264,7 @@ def _load_arguments(arguments_path: str, token: str) -> Union[ObjectBody, None]:
 
 
 def _all_parallel_siblings_complete(original_execution_id: str, parent_proc: Process, 
-                                   process_client: ProcessTableClient) -> bool:
+                                   process_client: ProcessTableClient) -> Tuple[bool, int]:
     """
     Check if all parallel siblings are complete.
 
@@ -274,6 +279,8 @@ def _all_parallel_siblings_complete(original_execution_id: str, parent_proc: Pro
 
     sibling_pattern = re.compile(rf'^{re.escape(original_execution_id)}\[\d+\]$')
 
+    remaining_children = 0
+
     for child in all_children:
         if child.execution_id and sibling_pattern.match(child.execution_id):
             logging.debug(f"Child process {child.process_id} with execution ID {child.execution_id} and status {child.execution_status} is part of parallel group {original_execution_id}")
@@ -281,9 +288,9 @@ def _all_parallel_siblings_complete(original_execution_id: str, parent_proc: Pro
             if child.execution_status not in [ProcessStatus.COMPLETED, ProcessStatus.SKIPPED]:
                 logging.debug(f"Child process {child.process_id} is not complete, status: {child.execution_status}")
 
-                return False
+                remaining_children += 1
 
-    return True
+    return remaining_children == 0, remaining_children
 
 
 def _try_complete_parallel_group(original_execution_id: str, parent_proc: Process, execution_engine: ExecutionEngine,
@@ -305,9 +312,30 @@ def _try_complete_parallel_group(original_execution_id: str, parent_proc: Proces
 
     storage_client = RatioInternalClient(service_name="storage_manager", token=token)
 
+    all_siblings_complete, remaining_siblings = _all_parallel_siblings_complete(original_execution_id, parent_proc, process_client)
+
     # Check if all siblings are complete first
-    if not _all_parallel_siblings_complete(original_execution_id, parent_proc, process_client):
+    if not all_siblings_complete:
         logging.debug(f"Not all parallel siblings are complete for {original_execution_id}, cannot complete yet")
+
+        if remaining_siblings == 1:
+            event_publisher = EventPublisher()
+
+            reconciliation_event = EventBusEvent(
+                event_type="ratio::parallel_completion_reconciliation",
+                body=ObjectBody(
+                    body={
+                        "parent_process_id": parent_proc.process_id,
+                        "original_execution_id": original_execution_id,
+                        "token": token,
+                    },
+                    schema=ParallelCompletionReconciliationRequest,
+                )
+            )
+
+            event_publisher.submit(event=reconciliation_event, delay=15)
+
+            logging.info(f"Sent delayed reconciliation event for parallel group {original_execution_id}")
 
         return False
 
@@ -376,14 +404,6 @@ def _execute_children(claims: JWTClaims, execution_engine: ExecutionEngine, exec
     """
     base_working_dir = execution_engine.working_directory
 
-    if "agent_exec" not in base_working_dir:
-        logging.debug(f"Parent process working directory provided ... appending parent process directory")
-
-        base_working_dir = os.path.join(
-            base_working_dir,
-            f"agent_exec-{parent_process.process_id}",
-        )
-
     logging.debug(f"Base working directory for child processes: {base_working_dir}")
 
     # Create the event bus client
@@ -414,7 +434,7 @@ def _execute_children(claims: JWTClaims, execution_engine: ExecutionEngine, exec
 
             process_client.put(child_proc)
 
-        except (InvalidSchemaError, InvalidObjectSchemaError, InvalidReferenceError) as invalid_err:
+        except (InvalidSchemaError, InvalidObjectSchemaError, InvalidReferenceError, MappingError) as invalid_err:
             logging.debug(f"Error preparing for execution: {invalid_err}")
 
             _close_out_process(
@@ -446,10 +466,30 @@ def _execute_children(claims: JWTClaims, execution_engine: ExecutionEngine, exec
 
                 logging.debug(f"Exporting agent definition to: {temp_definition_path}")
 
-                execution_engine.instructions[execution_id].definition.export_to_fs(
-                    file_path=temp_definition_path,
-                    token=token,
-                )
+                try:
+                    execution_engine.instructions[execution_id].definition.export_to_fs(
+                        file_path=temp_definition_path,
+                        token=token,
+                    )
+
+                except AgentExportError as export_err:
+                    # Handle export error
+                    logging.debug(f"Error exporting agent definition to file {temp_definition_path}: {export_err}")
+
+                    _close_out_process(
+                        process=child_proc,
+                        failure_reason=f"error exporting agent definition to file {temp_definition_path}: {export_err}",
+                        skip_failure_notification=True,  # Skiping since the parent is handled right after
+                        token=token,
+                    )
+
+                    _close_out_process(
+                        process=parent_process,
+                        failure_reason=f"error exporting agent definition to file {temp_definition_path}: {export_err}",
+                        token=token,
+                    )
+
+                    raise export_err
 
                 definition_og_file_path = temp_definition_path
 
@@ -516,6 +556,8 @@ def process_complete_handler(event: Dict, context: Dict):
         schema=SystemExecuteAgentResponse,
     )
 
+    token = token_check_and_refresh(token=event_body["token"])
+
     process_id = event_body["process_id"]
 
     process_client = ProcessTableClient()
@@ -538,7 +580,7 @@ def process_complete_handler(event: Dict, context: Dict):
             process=proc,
             response_path=event_body["response"],
             failure_reason=failure,
-            token=event_body["token"],
+            token=token,
         )
 
         return
@@ -564,7 +606,7 @@ def process_complete_handler(event: Dict, context: Dict):
     # Load the engine from the parent working directory
     execution_engine = ExecutionEngine.load_from_fs(
         process_id=parent_proc.process_id,
-        token=event_body["token"],
+        token=token,
         working_directory=parent_proc.working_directory,
     )
 
@@ -574,7 +616,7 @@ def process_complete_handler(event: Dict, context: Dict):
             notify_parent=True,
             process=proc,
             response_path=event_body["response"],
-            token=event_body["token"],
+            token=token,
         )
 
         return
@@ -586,7 +628,7 @@ def process_complete_handler(event: Dict, context: Dict):
             notify_parent=False,
             process=proc,
             response_path=event_body["response"],
-            token=event_body["token"],
+            token=token,
         )
 
     all_children = process_client.get_by_parent(parent_process_id=parent_proc.process_id)
@@ -648,7 +690,7 @@ def process_complete_handler(event: Dict, context: Dict):
                     _close_out_process(
                         process=parent_proc,
                         failure_reason=f"error marking execution {child.execution_id} as completed: {invalid_err}",
-                        token=event_body["token"],
+                        token=token,
                     )
 
                     return
@@ -662,7 +704,7 @@ def process_complete_handler(event: Dict, context: Dict):
             _close_out_process(
                 process=parent_proc,
                 failure_reason=child.status_message,
-                token=event_body["token"],
+                token=token,
             )
 
             return
@@ -674,7 +716,7 @@ def process_complete_handler(event: Dict, context: Dict):
             parent_proc=parent_proc,
             execution_engine=execution_engine,
             process_client=process_client,
-            token=event_body["token"]
+            token=token
         )
 
         if can_complete:
@@ -685,7 +727,7 @@ def process_complete_handler(event: Dict, context: Dict):
                 original_execution_id=parallel_group,
                 parent_proc=parent_proc,
                 execution_engine=execution_engine,
-                token=event_body["token"]
+                token=token
             )
 
             execution_engine.mark_completed(
@@ -701,7 +743,7 @@ def process_complete_handler(event: Dict, context: Dict):
 
     execution_ids, skipped_ids = execution_engine.get_available_executions()
 
-    claims = InternalJWTManager.verify_token(token=event_body["token"])
+    claims = InternalJWTManager.verify_token(token=token)
 
     # Add skipped IDs to already executed
     already_executed.extend(skipped_ids)
@@ -720,7 +762,7 @@ def process_complete_handler(event: Dict, context: Dict):
             execution_engine=execution_engine,
             parent_process=parent_proc,
             process_client=process_client,
-            token=event_body["token"],
+            token=token,
         )
 
     logging.debug(f"Execution IDs: {execution_ids}")
@@ -737,7 +779,7 @@ def process_complete_handler(event: Dict, context: Dict):
             _close_out_process(
                 process=parent_proc,
                 failure_reason=f"error closing execution engine, encountered invalid schema: {invalid_err}",
-                token=event_body["token"],
+                token=token,
             )
 
             return
@@ -748,7 +790,7 @@ def process_complete_handler(event: Dict, context: Dict):
             _close_out_process(
                 process=parent_proc,
                 failure_reason=f"error closing execution engine {e}",
-                token=event_body["token"],
+                token=token,
             )
 
             raise e
@@ -757,7 +799,7 @@ def process_complete_handler(event: Dict, context: Dict):
             process=parent_proc,
             notify_parent=not self_is_parent,
             response_path=response_path,
-            token=event_body["token"],
+            token=token,
         )
 
         return
@@ -768,7 +810,7 @@ def process_complete_handler(event: Dict, context: Dict):
         execution_ids=execution_ids,
         parent_process=parent_proc,
         process_client=process_client,
-        token=event_body["token"],
+        token=token,
     )
 
 
@@ -790,8 +832,8 @@ def execute_composite_agent_handler(event: Dict, context: Dict):
     )
 
     logging.debug(f"Executing agent with request body: {event_body.to_dict()}")
-    
-    token = event_body["token"]
+
+    token = token_check_and_refresh(token=event_body["token"])
 
     # If agent definition path was passed, need to validate the requestor has access
     storage_client = RatioInternalClient(

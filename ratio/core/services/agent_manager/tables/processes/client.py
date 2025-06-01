@@ -23,6 +23,7 @@ class ProcessStatus(StrEnum):
     RUNNING = "RUNNING"
     SKIPPED = "SKIPPED"
     TERMINATED = "TERMINATED"
+    TIMED_OUT = "TIMED_OUT"
 
 
 class Process(TableObject):
@@ -259,6 +260,111 @@ class ProcessTableClient(TableClient):
                 comparison="equal",
                 value=execution_status,
             )
+
+        return self.full_scan(scan_definition=scan_definition)
+
+    def get_running_processes_older_than(self, minutes: int) -> List[Process]:
+        """
+        Get all processes that have been running longer than the specified minutes.
+
+        Keyword arguments:
+        minutes -- Number of minutes to check against
+        """
+        from datetime import datetime, timedelta, UTC as utc_tz
+
+        cutoff_time = datetime.now(tz=utc_tz) - timedelta(minutes=minutes)
+        
+        scan_definition = TableScanDefinition(
+            table_object_class=self.default_object_class
+        )
+
+        scan_definition.add(
+            attribute_name="execution_status",
+            comparison="equal",
+            value=ProcessStatus.RUNNING,
+        )
+
+        scan_definition.add(
+            attribute_name="started_on",
+            comparison="less_than",
+            value=cutoff_time,
+        )
+
+        return self.full_scan(scan_definition=scan_definition)
+
+    def get_running_parent_processes(self) -> List[Process]:
+        """
+        Get all parent processes that are currently running.
+        """
+        scan_definition = TableScanDefinition(
+            table_object_class=self.default_object_class
+        )
+
+        scan_definition.add(
+            attribute_name="execution_status",
+            comparison="equal",
+            value=ProcessStatus.RUNNING,
+        )
+
+        # Filter for parent processes (those that have children)
+        # This might need adjustment based on your data structure
+        all_running = self.full_scan(scan_definition=scan_definition)
+
+        # Filter to only include processes that have children
+        parent_processes = []
+
+        for proc in all_running:
+            children = self.get_by_parent(parent_process_id=proc.process_id)
+
+            if children:  # Has children, so it's a parent
+                parent_processes.append(proc)
+
+        return parent_processes
+
+    def get_stuck_parent_processes(self) -> List[Process]:
+        """
+        Get parent processes where all children are complete but parent is still running.
+        """
+        running_parents = self.get_running_parent_processes()
+
+        stuck_parents = []
+
+        for parent in running_parents:
+            children = self.get_by_parent(parent_process_id=parent.process_id)
+
+            if not children:
+                continue
+
+            # Check if all children are in terminal states
+            all_children_done = all(
+                child.execution_status in [
+                    ProcessStatus.COMPLETED, 
+                    ProcessStatus.FAILED, 
+                    ProcessStatus.SKIPPED,
+                    ProcessStatus.TERMINATED,
+                    ProcessStatus.TIMED_OUT
+                ] 
+                for child in children
+            )
+
+            if all_children_done:
+                stuck_parents.append(parent)
+
+        return stuck_parents
+
+    def get_all_running_processes(self) -> List[Process]:
+        """
+        Get all processes currently in RUNNING status.
+        """
+        scan_definition = TableScanDefinition(
+            table_object_class=self.default_object_class
+        )
+
+        scan_definition.add(
+            attribute_name="execution_status",
+            comparison="equal",
+            value=ProcessStatus.RUNNING,
+        )
 
         return self.full_scan(scan_definition=scan_definition)
 

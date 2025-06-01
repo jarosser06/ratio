@@ -609,8 +609,9 @@ class ExecutionEngine:
                     raise InvalidSchemaError(message=strip_class_from_error(str(ref_err)))
 
         results = mapper.map_object(
-            resolved_variables=context_object,
             mapping=transforms,
+            resolved_variables=context_object,
+            token=self.token,
         )
 
         new_response = dict(response)

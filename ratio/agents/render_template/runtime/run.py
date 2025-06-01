@@ -49,6 +49,8 @@ def handler(event: Dict, context: Dict):
 
         trim_blocks = system.arguments.get("trim_blocks", default_return=True)
 
+        file_path = system.arguments.get("file_path", default_return=None)
+
         try:
             # Configure Jinja environment
             env = Environment(
@@ -71,6 +73,19 @@ def handler(event: Dict, context: Dict):
                 "rendered_string": rendered_string,
                 "used_variables": used_vars,
             }
+
+            if file_path:
+                response["file_path"] = file_path
+
+                # Save the rendered string to a file
+                system.put_file(
+                    file_path=file_path,
+                    file_type="ratio::text",
+                    data=rendered_string,
+                    metadata={
+                        "description": "Rendered template output",
+                    }
+                )
 
             system.success(response_body=response)
 

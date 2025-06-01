@@ -385,6 +385,265 @@ join(array: List, separator: str) -> str
 // Result: "Alice Johnson, Bob Smith, Carol Williams"
 ```
 
+#### if() Function
+A ternary operator that returns one of two values based on a condition.
+
+**Function Signature:**
+```python
+if(condition: Any, true_value: Any, false_value: Any) -> Any
+```
+
+**Usage:**
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "error_count": "REF:validation.error_count",
+      "status": "REF:process.status"
+    },
+    "transforms": {
+      "result_message": "if(error_count, \"Errors found\", \"Success\")",
+      "priority_level": "if(status, \"high\", \"normal\")"
+    }
+  }
+}
+```
+
+#### filter() Function
+Filters array elements based on condition expressions using 'item' to reference each element.
+
+**Function Signature:**
+```python
+filter(array: List, condition_string: str) -> List
+```
+
+**Usage:**
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "all_records": "REF:data_source.records"
+    },
+    "transforms": {
+      "active_records": "filter(array=all_records, condition_string=\"item.status == 'active'\")",
+      "high_priority": "filter(array=all_records, condition_string=\"item.priority > 5 and item.urgent == true\")"
+    }
+  }
+}
+```
+
+**Supported Operators in Conditions:**
+- Comparison: `==`, `!=`, `>`, `<`, `>=`, `<=`
+- Logical: `and`, `or`, `not`
+- Examples: `"item.score > 80"`, `"item.type == 'urgent' and item.assigned == true"`
+
+#### group_by() Function
+Groups array elements by the specified key path.
+
+**Function Signature:**
+```python
+group_by(array: List, key_path: str) -> Dict
+```
+
+**Usage:**
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "transactions": "REF:financial_data.transactions"
+    },
+    "transforms": {
+      "by_category": "group_by(array=transactions, key_path=\"item.category\")",
+      "by_status": "group_by(array=transactions, key_path=\"item.status\")"
+    }
+  }
+}
+```
+
+#### sort() Function
+Sorts arrays by key path with configurable direction.
+
+**Function Signature:**
+```python
+sort(array: List, key_path: str = None, direction: str = "asc") -> List
+```
+
+**Usage:**
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "user_scores": "REF:evaluation.scores"
+    },
+    "transforms": {
+      "sorted_ascending": "sort(array=user_scores, key_path=\"item.score\", direction=\"asc\")",
+      "sorted_descending": "sort(array=user_scores, key_path=\"item.priority\", direction=\"desc\")"
+    }
+  }
+}
+```
+
+#### unique() Function
+Returns array with duplicate values removed, preserving order.
+
+**Function Signature:**
+```python
+unique(array: List) -> List
+```
+
+**Usage:**
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "all_tags": "REF:content.tags",
+      "categories": "REF:items.categories"
+    },
+    "transforms": {
+      "unique_tags": "unique(array=all_tags)",
+      "distinct_categories": "unique(array=categories)"
+    }
+  }
+}
+```
+
+#### flatten() Function
+Flattens nested arrays one level deep.
+
+**Function Signature:**
+```python
+flatten(array: List) -> List
+```
+
+**Usage:**
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "nested_results": "REF:parallel_process.response"
+    },
+    "transforms": {
+      "flattened_data": "flatten(array=nested_results)"
+    }
+  }
+}
+```
+
+#### list_files() Function
+Lists files in a directory with optional glob pattern filtering. Limited to 50 results.
+
+**Function Signature:**
+```python
+list_files(directory_path: str, pattern: str = None) -> List[str]
+```
+
+**Usage:**
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "workspace_dir": "REF:arguments.workspace_path"
+    },
+    "transforms": {
+      "all_files": "list_files(directory_path=workspace_dir)",
+      "python_files": "list_files(directory_path=workspace_dir, pattern=\"*.py\")",
+      "config_files": "list_files(directory_path=\"/config\", pattern=\"*.json\")"
+    }
+  }
+}
+```
+
+#### list_file_versions() Function
+Lists all versions of a specific file.
+
+**Function Signature:**
+```python
+list_file_versions(file_path: str) -> List[Dict]
+```
+
+**Usage:**
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "target_file": "REF:arguments.file_path"
+    },
+    "transforms": {
+      "file_history": "list_file_versions(file_path=target_file)"
+    }
+  }
+}
+```
+
+#### describe_version() Function
+Returns metadata for a specific file version.
+
+**Function Signature:**
+```python
+describe_version(file_path: str, version_id: str = None) -> Dict
+```
+
+**Usage:**
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "file_path": "REF:arguments.document_path",
+      "version": "REF:arguments.version_id"
+    },
+    "transforms": {
+      "file_metadata": "describe_version(file_path=file_path)",
+      "specific_version": "describe_version(file_path=file_path, version_id=version)"
+    }
+  }
+}
+```
+
+#### read_file() Function
+Reads content of a file, optionally specifying version.
+
+**Function Signature:**
+```python
+read_file(file_path: str, version_id: str = None) -> str
+```
+
+**Usage:**
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "config_path": "REF:arguments.config_file"
+    },
+    "transforms": {
+      "config_content": "read_file(file_path=config_path)",
+      "previous_version": "read_file(file_path=config_path, version_id=\"v1.2\")"
+    }
+  }
+}
+```
+
+#### read_files() Function
+Reads content of multiple files. Limited to 5 files maximum.
+
+**Function Signature:**
+```python
+read_files(file_paths: List[str]) -> List[str]
+```
+
+**Usage:**
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "source_files": "REF:file_scanner.important_files"
+    },
+    "transforms": {
+      "file_contents": "read_files(file_paths=source_files)"
+    }
+  }
+}
+```
+
 ### Transform Examples
 
 #### JSON Processing Pipeline
@@ -630,6 +889,9 @@ Execute agents conditionally based on dynamic evaluation of previous results or 
 ## Parallel Execution
 
 Execute agents in parallel over collections, dramatically improving performance for batch operations.
+
+**Important Note**: Parallel execution can only iterate over externally generated lists.
+The `iterate_over` does not have any ability to reference transformed arguments.
 
 ### Basic Parallel Execution
 

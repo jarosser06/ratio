@@ -5,11 +5,11 @@ Ratio is an agent composition platform designed for AI systems to build and evol
 AI can reason its way to solutions, Ratio provides structured building blocks where AI can have genuine agency within principled
 guardrails.
 
-The system treats everything as files - agent definitions, execution artifacts, documentation. This creates a persistent knowledge
+The system treats everything as files: agent definitions, execution artifacts, documentation. This creates a persistent knowledge
 base that AI can reference, analyze, and learn from. Agents can generate other agents, analyze past executions, and build
 self-documenting catalogs of what works.
 
-Named after the Golden Ratio - an attempt to find the right balance between AI capability and engineering safety. It's
+Named after the Golden Ratio, it's an attempt to find the right balance between AI capability and engineering safety. Meant to be 
 infrastructure that lets AI systems evolve systematically rather than chaotically.
 
 ## Extensibility & Integration Potential

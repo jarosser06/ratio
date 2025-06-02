@@ -4,14 +4,52 @@ from da_vinci.core.immutable_object import (
     SchemaAttributeType,
 )
 
-from ratio.core.core_lib.definitions.events import FileEventType
+
+class GeneralSystemEvent(ObjectBodySchema):
+    """
+    Schema for general system events.
+    """
+    attributes = [
+        SchemaAttribute(
+            name="event_type",
+            type_name=SchemaAttributeType.STRING,
+            description="The event bus event type. This is used to route the event to the correct handler.",
+            required=False,
+            default_value="ratio::system_event",
+        ),
+        SchemaAttribute(
+            name="system_event_type",
+            type_name=SchemaAttributeType.STRING,
+            description="The specific type of system event (e.g., process_start, process_stop, file_type_update).",
+            required=True,
+        ),
+        SchemaAttribute(
+            name="event_details",
+            type_name=SchemaAttributeType.OBJECT,
+            description="Event-specific details payload.",
+            required=False,
+        ),
+        SchemaAttribute(
+            name="source_system",
+            type_name=SchemaAttributeType.STRING,
+            description="The system that generated this event.",
+            required=False,
+        ),
+    ]
 
 
 class CreateSubscriptionRequest(ObjectBodySchema):
     """
-    Schema for creating a subscription to a file system event.
+    Schema for creating a subscription to system events.
     """
     attributes = [
+        SchemaAttribute(
+            name="event_type",
+            type_name=SchemaAttributeType.STRING,
+            description="The type of event to subscribe to (e.g., process_start, process_stop, file_type_update).",
+            required=True,
+            regex_pattern="^[a-z_]+$",
+        ),
         SchemaAttribute(
             name="agent_definition",
             type_name=SchemaAttributeType.STRING,
@@ -33,26 +71,6 @@ class CreateSubscriptionRequest(ObjectBodySchema):
             required=False,
         ),
         SchemaAttribute(
-            name="file_path",
-            type_name=SchemaAttributeType.STRING,
-            description="The full path to the file or directory to subscribe to",
-            required=True,
-            regex_pattern="^/[a-zA-Z0-9_\\-\\/\\.]+$"
-        ),
-        SchemaAttribute(
-            name="file_type",
-            type_name=SchemaAttributeType.STRING,
-            description="The optional type of file to subscribe to. This is only supported for directory subscriptions",
-            required=False,
-        ),
-        SchemaAttribute(
-            name="file_event_type",
-            type_name=SchemaAttributeType.STRING,
-            description="The type of file system event to which the subscription is limited. E.g. create, delete, update etc",
-            enum=[event_type.value for event_type in FileEventType],
-            required=True,
-        ),
-        SchemaAttribute(
             name="owner",
             type_name=SchemaAttributeType.STRING,
             description="The owner of the process. This can only be set by the admin, the default is the creator of the subscription.",
@@ -65,6 +83,12 @@ class CreateSubscriptionRequest(ObjectBodySchema):
             description="Whether the subscription is single use or not.",
             required=False,
             default_value=False,
+        ),
+        SchemaAttribute(
+            name="filter_conditions",
+            type_name=SchemaAttributeType.OBJECT,
+            description="Event-specific filter conditions (JSON object). For filesystem events: include file_path, file_event_type, file_type. For process events: include process_name, owner_pattern, etc.",
+            required=False,
         ),
     ]
 
@@ -105,11 +129,10 @@ class ListSubscriptionsRequest(ObjectBodySchema):
     """
     attributes = [
         SchemaAttribute(
-            name="file_path",
+            name="event_type",
             type_name=SchemaAttributeType.STRING,
-            description="The full path to the file or directory to subscribe to. If not provided, all subscriptions will be listed.",
+            description="The type of event to list subscriptions for (e.g., process_start, process_stop, file_type_update). If not provided, all subscriptions will be listed.",
             required=False,
-            regex_pattern="^/[a-zA-Z0-9_\\-\\/\\.]+$",
         ),
         SchemaAttribute(
             name="owner",

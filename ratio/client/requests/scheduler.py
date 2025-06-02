@@ -18,29 +18,23 @@ class CreateSubscriptionRequest(RequestBody):
 
     attribute_definitions = [
         RequestBodyAttribute(
+            name="event_type",
+            attribute_type=RequestAttributeType.STRING,
+            optional=False,
+        ),
+        RequestBodyAttribute(
             name="agent_definition",
             attribute_type=RequestAttributeType.STRING,
             optional=False,
         ),
         RequestBodyAttribute(
-            name="expiration",
-            attribute_type=RequestAttributeType.DATETIME,
+            name="execution_working_directory",
+            attribute_type=RequestAttributeType.STRING,
             optional=True,
         ),
-        # "created", "deleted", "updated", "version_created", "version_deleted"
         RequestBodyAttribute(
-            name="file_event_type",
-            attribute_type=RequestAttributeType.STRING,
-            optional=False,
-        ),
-        RequestBodyAttribute(
-            name="file_path",
-            attribute_type=RequestAttributeType.STRING,
-            optional=False,
-        ),
-        RequestBodyAttribute(
-            name="file_type",
-            attribute_type=RequestAttributeType.STRING,
+            name="expiration",
+            attribute_type=RequestAttributeType.DATETIME,
             optional=True,
         ),
         RequestBodyAttribute(
@@ -54,30 +48,36 @@ class CreateSubscriptionRequest(RequestBody):
             default=False,
             optional=True,
         ),
+        RequestBodyAttribute(
+            name="filter_conditions",
+            attribute_type=RequestAttributeType.OBJECT,
+            optional=True,
+        ),
     ]
 
-    def __init__(self, agent_definition: str, file_path: str, file_event_type: str, expiration: Optional[datetime] = None,
-                 file_type: Optional[str] = None, owner: Optional[str] = None, single_use: Optional[bool] = None):
+    def __init__(self, event_type: str, agent_definition: str, expiration: Optional[datetime] = None,
+                 execution_working_directory: Optional[str] = None, owner: Optional[str] = None, 
+                 single_use: Optional[bool] = None, filter_conditions: Optional[dict] = None):
         """
         Initialize the CreateSubscription request body.
 
         Keyword arguments:
+        event_type -- The type of event to subscribe to (e.g., process_start, process_stop, file_type_update).
         agent_definition -- The path to the agent that will be executed for the subscription.
-        file_path -- The full path to the file or directory to subscribe to.
         expiration -- The optional datetime the subscription will expire.
-        file_type -- The optional type of file to subscribe to. Only supported for directory subscriptions.
-        file_event_type -- The type of file system event to which the subscription is limited. E.g. created, deleted, updated, version_created, version_deleted.
+        execution_working_directory -- The optional working directory for the agent execution.
         owner -- The owner of the process. This can only be set by the admin, the default is the creator.
         single_use -- Whether the subscription is single use or not.
+        filter_conditions -- Event-specific filter conditions. For filesystem events: include file_path, file_event_type, file_type.
         """
         super().__init__(
+            event_type=event_type,
             agent_definition=agent_definition,
-            file_path=file_path,
             expiration=expiration,
-            file_type=file_type,
-            file_event_type=file_event_type,
+            execution_working_directory=execution_working_directory,
             owner=owner,
             single_use=single_use,
+            filter_conditions=filter_conditions,
         )
 
 
@@ -143,7 +143,7 @@ class ListSubscriptionsRequest(RequestBody):
 
     attribute_definitions = [
         RequestBodyAttribute(
-            name="file_path",
+            name="event_type",
             attribute_type=RequestAttributeType.STRING,
             optional=True,
         ),
@@ -154,15 +154,15 @@ class ListSubscriptionsRequest(RequestBody):
         ),
     ]
 
-    def __init__(self, file_path: Optional[str] = None, owner: Optional[str] = None):
+    def __init__(self, event_type: Optional[str] = None, owner: Optional[str] = None):
         """
         Initialize the ListSubscriptions request body.
 
         Keyword arguments:
-        file_path -- The full path to the file or directory. If not provided, all subscriptions will be listed.
+        event_type -- The event type to filter by.
         owner -- The owner of the subscriptions to list. If not provided, all subscriptions will be listed.
         """
         super().__init__(
-            file_path=file_path,
+            event_type=event_type,
             owner=owner,
         )

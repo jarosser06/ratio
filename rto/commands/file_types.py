@@ -342,7 +342,6 @@ class PutFileTypeCommand(RTOCommand):
         request = PutFileTypeRequest(
             file_type=args.file_type,
             description=args.description,
-            content_search_instructions_path=args.content_search_instructions_path,
             is_container_type=args.is_container_type,
             name_restrictions=args.name_restrictions,
         )

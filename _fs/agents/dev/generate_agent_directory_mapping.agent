@@ -5,7 +5,7 @@
       "name": "agents_directory",
       "type_name": "string",
       "description": "Directory containing agent definitions to analyze",
-      "default_value": "/agents/dev",
+      "default_value": "/agents/core",
       "required": false
     }
   ],
@@ -18,7 +18,7 @@
       },
       "transform_responses": {
         "transforms": {
-          "file_paths": "map(files, item.file_path)"
+          "file_paths": "map(files, 'item.file_path')"
         }
       }
     },

@@ -14,22 +14,13 @@ from rto.commands.base import RTOCommand, RTOErrorMessage
 from rto.config import RTOConfig
 
 
-_FILE_EVENT_TYPES = [
-    "created",
-    "deleted",
-    "updated",
-    "version_created",
-    "version_deleted"
-]
-
-
 class CreateSubscriptionCommand(RTOCommand):
     """
     Create a new subscription
     """
     name = "create-subscription"
     alias = "mksub"
-    description = "Create a new subscription to trigger an agent when a file or directory changes"
+    description = "Create a new subscription to trigger an agent when events occur"
     requires_authentication = True
 
     @classmethod
@@ -40,19 +31,19 @@ class CreateSubscriptionCommand(RTOCommand):
         Keyword arguments:
         parser -- The argument parser to configure
         """
+        parser.add_argument("event_type", help="Type of event to subscribe to (e.g., filesystem_update, process_start, file_type_update)", type=str)
+        
         parser.add_argument("agent_definition", help="Path to the agent definition that will be executed", type=str)
 
-        parser.add_argument("file_path", help="Path to the file or directory to subscribe to", type=str)
+        parser.add_argument("--execution-working-directory", help="Working directory for agent execution", type=str)
 
         parser.add_argument("--expiration", help="Date and time when the subscription expires (ISO format: YYYY-MM-DDTHH:MM:SS)", type=str)
-
-        parser.add_argument("--file-event-type", help="Type of file event to subscribe to (e.g. created, deleted, updated)", type=str, default="updated")
-
-        parser.add_argument("--file-type", help="Type of file to subscribe to (only for directory subscriptions)", type=str)
 
         parser.add_argument("--owner", help="Owner of the subscription (admin only)", type=str)
 
         parser.add_argument("--single-use", help="Subscription triggers only once then is deleted", action="store_true", default=False)
+
+        parser.add_argument("--filter", help="Filter conditions as JSON string", type=str)
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
@@ -62,15 +53,11 @@ class CreateSubscriptionCommand(RTOCommand):
 
         Keyword arguments:
         client -- The Ratio client
+        config -- The RTO config
         args -- The command line arguments
         """
         # Resolve paths
         agent_definition_path = config.resolve_path(args.agent_definition)
-
-        file_path = config.resolve_path(args.file_path)
-
-        if args.file_event_type not in _FILE_EVENT_TYPES:
-            raise RTOErrorMessage(f"Invalid file event type. Supported types are: {', '.join(_FILE_EVENT_TYPES)}")
 
         # Parse expiration if provided
         expiration = None
@@ -82,15 +69,25 @@ class CreateSubscriptionCommand(RTOCommand):
             except ValueError:
                 raise RTOErrorMessage(f"Invalid expiration format. Please use ISO format (YYYY-MM-DDTHH:MM:SS)")
 
+        # Parse filter conditions
+        filter_conditions = None
+
+        if args.filter:
+            try:
+                filter_conditions = json.loads(args.filter)
+
+            except json.JSONDecodeError:
+                raise RTOErrorMessage("Invalid JSON format for --filter argument")
+
         # Create the request
         request = CreateSubscriptionRequest(
+            event_type=args.event_type,
             agent_definition=agent_definition_path,
-            file_path=file_path,
+            execution_working_directory=args.execution_working_directory,
             expiration=expiration,
-            file_type=args.file_type,
-            file_event_type=args.file_event_type,
             owner=args.owner,
-            single_use=args.single_use
+            single_use=args.single_use,
+            filter_conditions=filter_conditions
         )
 
         resp = client.request(request, raise_for_status=False)
@@ -132,21 +129,28 @@ class CreateSubscriptionCommand(RTOCommand):
         # Show additional details
         print("\nSubscription Details:")
 
-        print(f"  File Path: {subscription_data.get("file_path", file_path)}")
+        print(f"  Event Type: {subscription_data.get('event_type', args.event_type)}")
 
-        print(f"  File Event Type: {subscription_data.get("file_event_type", args.file_event_type)}")
+        print(f"  Owner: {subscription_data.get('process_owner', 'Unknown')}")
 
-        print(f"  Owner: {subscription_data["process_owner"]}")
-
-        print(f"  Agent Definition: {subscription_data.get("agent_definition", agent_definition_path)}")
-
-        if args.file_type:
-            print(f"  File Type: {args.file_type}")
-
+        print(f"  Agent Definition: {subscription_data.get('agent_definition', agent_definition_path)}")
+        
+        if args.execution_working_directory:
+            print(f"  Working Directory: {args.execution_working_directory}")
+        
         if expiration:
             print(f"  Expiration: {expiration}")
+        
+        print(f"  Single Use: {'Yes' if args.single_use else 'No'}")
+        
+        # Show filter conditions
+        filter_conditions = subscription_data.get("filter_conditions", {})
 
-        print(f"  Single Use: {"Yes" if args.single_use else "No"}")
+        if filter_conditions:
+            print(f"  Filter Conditions:")
+
+            for key, value in filter_conditions.items():
+                print(f"    {key}: {value}")
 
 
 class DeleteSubscriptionCommand(RTOCommand):
@@ -176,6 +180,7 @@ class DeleteSubscriptionCommand(RTOCommand):
 
         Keyword arguments:
         client -- The Ratio client
+        config -- The RTO config
         args -- The command line arguments
         """
         # Create the request
@@ -193,6 +198,7 @@ class DeleteSubscriptionCommand(RTOCommand):
             elif resp.status_code == 400:
                 try:
                     error_msg = json.loads(resp.response_body)
+
                     raise RTOErrorMessage(f"Invalid request: {error_msg.get('message', resp.response_body)}")
 
                 except json.JSONDecodeError:
@@ -247,6 +253,7 @@ class DescribeSubscriptionCommand(RTOCommand):
 
         Keyword arguments:
         client -- The Ratio client
+        config -- The RTO config
         args -- The command line arguments
         """
         # Create the request
@@ -288,13 +295,21 @@ class DescribeSubscriptionCommand(RTOCommand):
 
         print(f"  Subscription ID: {subscription.get('subscription_id', 'Unknown')}")
 
-        print(f"  File Path: {subscription.get('file_path', 'Unknown')}")
+        print(f"  Event Type: {subscription.get('event_type', 'Unknown')}")
+        
+        # Show filter conditions if present
+        filter_conditions = subscription.get('filter_conditions', {})
 
-        # Print file type if present
-        if "file_type" in subscription and subscription["file_type"]:
-            print(f"  File Type: {subscription['file_type']}")
+        if filter_conditions:
+            print(f"  Filter Conditions:")
+
+            for key, value in filter_conditions.items():
+                print(f"    {key}: {value}")
 
         print(f"  Agent Definition: {subscription.get('agent_definition', 'Unknown')}")
+        
+        if "execution_working_directory" in subscription and subscription["execution_working_directory"]:
+            print(f"  Working Directory: {subscription['execution_working_directory']}")
 
         # Handle owner (using process_owner field)
         print(f"  Owner: {subscription.get('process_owner', 'Unknown')}")
@@ -318,19 +333,9 @@ class DescribeSubscriptionCommand(RTOCommand):
         if "created_on" in subscription and subscription["created_on"]:
             print(f"  Created On: {subscription['created_on']}")
 
-        # Print active status if present
-        if "active" in subscription:
-            active = "Yes" if subscription["active"] else "No"
-
-            print(f"  Active: {active}")
-
-        # Print last triggered if present
-        if "last_triggered" in subscription and subscription["last_triggered"]:
-            print(f"  Last Triggered: {subscription['last_triggered']}")
-
-        # Print trigger count if present
-        if "trigger_count" in subscription:
-            print(f"  Trigger Count: {subscription['trigger_count']}")
+        # Print last execution if present
+        if "last_execution" in subscription and subscription["last_execution"]:
+            print(f"  Last Execution: {subscription['last_execution']}")
 
 
 class ListSubscriptionsCommand(RTOCommand):
@@ -350,14 +355,14 @@ class ListSubscriptionsCommand(RTOCommand):
         Keyword arguments:
         parser -- The argument parser to configure
         """
-        parser.add_argument("--file-path", help="Filter subscriptions by file path", type=str)
+        parser.add_argument("--event-type", help="Filter subscriptions by event type", type=str)
 
         parser.add_argument("--owner", help="Filter subscriptions by owner", type=str)
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
         parser.add_argument("--detailed", "-d", help="Show detailed information for each subscription", 
-                           action="store_true", default=False)
+                            action="store_true", default=False)
 
     def execute(self, client: Ratio, config: RTOConfig, args):
         """
@@ -365,11 +370,12 @@ class ListSubscriptionsCommand(RTOCommand):
 
         Keyword arguments:
         client -- The Ratio client
+        config -- The RTO config
         args -- The command line arguments
         """
         # Create the request
         request = ListSubscriptionsRequest(
-            file_path=args.file_path,
+            event_type=args.event_type,
             owner=args.owner
         )
 
@@ -418,32 +424,35 @@ class ListSubscriptionsCommand(RTOCommand):
         subscriptions -- List of subscription dictionaries
         """
         # Format and print the header
-        header_format = "{:<36} {:<36} {:<24} {:<24}"
+        header_format = "{:<36} {:<20} {:<30} {:<24}"
 
         print(header_format.format(
             "SUBSCRIPTION ID", 
-            "FILE PATH", 
-            "FILE EVENT TYPE",
-            "OWNER", 
-            "EXPIRATION"
+            "EVENT TYPE",
+            "PRIMARY FILTER", 
+            "OWNER"
         ))
 
-        print("-" * 120)
+        print("-" * 110)
 
         # Format and print each subscription
         for sub in subscriptions:
-            # Ensure expiration is a string, defaulting to "Never" if None or empty
-            expiration = sub.get("expiration")
+            # Get the primary filter
+            primary_filter = "N/A"
 
-            if expiration is None or expiration == "":
-                expiration = "Never"
+            filter_conditions = sub.get("filter_conditions", {})
+
+            if filter_conditions:
+                # Show first filter condition
+                key, value = next(iter(filter_conditions.items()))
+
+                primary_filter = f"{key}: {value}"
 
             print(header_format.format(
                 sub.get("subscription_id", "Unknown"),
-                sub.get("file_path", "Unknown"),
-                sub.get("file_event_type", "Unknown"),
-                sub.get("process_owner", "Unknown"),
-                expiration  # Now guaranteed to be a string
+                sub.get("event_type", "Unknown"),
+                primary_filter[:28] + "..." if len(str(primary_filter)) > 30 else str(primary_filter),
+                sub.get("process_owner", "Unknown")
             ))
 
         print(f"\nTotal: {len(subscriptions)} subscriptions")
@@ -460,21 +469,29 @@ class ListSubscriptionsCommand(RTOCommand):
             if i > 0:
                 print("\n" + "-" * 80)
 
-            print(f"Subscription ID: {sub["subscription_id"]}")
+            print(f"Subscription ID: {sub.get('subscription_id', 'Unknown')}")
 
-            print(f"File Path: {sub["file_path"]}")
+            print(f"Event Type: {sub.get('event_type', 'Unknown')}")
 
-            print(f"File Event Type: {sub["file_event_type"]}")
+            # Show filter conditions
+            filter_conditions = sub.get('filter_conditions', {})
 
-            if "file_type" in sub and sub["file_type"]:
-                print(f"File Type: {sub["file_type"]}")
+            if filter_conditions:
+                print(f"Filter Conditions:")
 
-            print(f"Agent Definition: {sub.get("agent_definition", "Unknown")}")
+                for key, value in filter_conditions.items():
+                    print(f"  {key}: {value}")
 
-            print(f"Owner: {sub.get("process_owner", "Unknown")}")
+            print(f"Agent Definition: {sub.get('agent_definition', 'Unknown')}")
+
+            if "execution_working_directory" in sub and sub["execution_working_directory"]:
+                print(f"Working Directory: {sub['execution_working_directory']}")
+
+            print(f"Owner: {sub.get('process_owner', 'Unknown')}")
 
             # Handle expiration properly
             expiration = sub.get("expiration")
+
             if expiration is None or expiration == "":
                 print("Expiration: Never")
 
@@ -490,5 +507,9 @@ class ListSubscriptionsCommand(RTOCommand):
             # Handle created_on properly
             if "created_on" in sub and sub["created_on"]:
                 print(f"Created On: {sub['created_on']}")
+
+            # Handle last_execution properly
+            if "last_execution" in sub and sub["last_execution"]:
+                print(f"Last Execution: {sub['last_execution']}")
 
         print(f"\nTotal: {len(subscriptions)} subscriptions")

@@ -1,8 +1,12 @@
+"""
+Mapper functions for Agent Manager Transformations
+"""
 import json
 import logging
 import re
 import fnmatch
 
+from datetime import datetime, UTC as utc_tz
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from da_vinci.core.immutable_object import ObjectBody
@@ -157,7 +161,36 @@ class ExpressionEvaluator:
         return value_str
 
 
-# Original functions with context parameter added where needed
+def datetime_now_function(context: MappingContext, format: str = "iso") -> Union[str, int]:
+    """
+    Returns current date/time in specified format.
+
+    Keyword arguments:
+    context -- The mapping context (unused but available)
+    format -- Format type: "iso" for ISO 8601 string, "unix" for Unix timestamp
+    """
+    if format not in ("iso", "unix"):
+        raise MappingError("Format must be 'iso' or 'unix'")
+
+    now = datetime.now(tz=utc_tz)
+
+    if format == "iso":
+        return now.isoformat()
+
+    else:
+        return now.timestamp()
+
+
+def create_object_function(context: MappingContext, **kwargs) -> Dict:
+    """
+    Creates an object from keyword arguments, resolving each value.
+
+    Keyword arguments:
+    context -- The mapping context
+    **kwargs -- Key-value pairs where values are resolved from context
+    """
+    return dict(kwargs)
+
 
 def get_object_property_function(context: MappingContext, obj: Any, property_path: str) -> Any:
     """
@@ -391,7 +424,7 @@ def filter_function(context: MappingContext, array: List, condition_string: str)
     return result
 
 
-# New data manipulation functions
+# Data manipulation functions
 
 def group_by_function(context: MappingContext, array: List, key_path: str) -> Dict:
     """

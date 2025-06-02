@@ -117,8 +117,11 @@ def _refresh_token(claims: JWTClaims) -> str:
         expiry_minutes=15,
     )
 
-    # Keep execution marker if it exists, otherwise add it
-    custom_claims = claims.custom_claims.copy()
+    if claims.custom_claims is None:
+        custom_claims = {}
+
+    else:
+        custom_claims = claims.custom_claims.copy()
 
     if custom_claims.get("token_type") != "execution":
         custom_claims.update({

@@ -30,55 +30,12 @@ from ratio.core.services.storage_manager.request_definitions import (
     ValidateFileAccessRequest,
 )
 
-from ratio.core.services.scheduler.tables.subscriptions.client import (
-    Subscription,
-    SubscriptionsTableClient,
+from ratio.core.services.scheduler.tables.filesystem_subscriptions.client import (
+    FilesystemSubscription,
+    FilesystemSubscriptionsTableClient,
 )
 
-def _generate_token(entity_id: str):
-    """
-    Create a token for the entity.
-    """
-    entity_client = EntitiesTableClient()
-
-    # Get the entity
-    entity = entity_client.get(entity_id=entity_id)
-
-    if not entity:
-        raise Exception(f"Entity with ID {entity_id} not found")
-
-    jwt_manager = InternalJWTManager(
-        # Don't need a very long expiry for scheduler tokens, execution will create its own tokens
-        expiry_minutes=5,
-        kms_key_id=setting_value(namespace="ratio::core", setting_key="internal_signing_kms_key_id"),
-    )
-
-    admin_entity_id = setting_value(namespace="ratio::core", setting_key="admin_entity_id")
-
-    admin_group_id = setting_value(namespace="ratio::core", setting_key="admin_group_id")
-
-    if entity_id == admin_entity_id or admin_group_id in entity.groups:
-        logging.debug(f"Entity is admin or part of the admin group: {entity_id}")
-
-        is_admin = True
-
-    else:
-        logging.debug(f"Entity is not admin or part of the admin group: {entity_id}")
-
-        is_admin = False
-
-    token, _ = jwt_manager.create_token(
-        authorized_groups=entity.groups,
-        entity=entity.entity_id,
-        custom_claims={
-            "auth_method": "scheduler",
-        },
-        home=entity.home_directory,
-        primary_group=entity.primary_group_id,
-        is_admin=is_admin,
-    )
-
-    return token
+from ratio.core.services.scheduler.runtime.token import generate_token
 
 
 _FN_NAME = "ratio.services.agents.scheduler.fs_update_handler"
@@ -89,7 +46,6 @@ def fs_update_handler(event, context):
     """
     Handler for file system update events.
     """
-
     logging.debug(f"Received request: {event}")
 
     source_event = EventBusEvent.from_lambda_event(event)
@@ -99,9 +55,9 @@ def fs_update_handler(event, context):
         schema=FileUpdateEvent,
     )
 
-    subscriptions_client = SubscriptionsTableClient()
+    subscriptions_client = FilesystemSubscriptionsTableClient()
 
-    file_path_hash = Subscription.create_full_path_hash_from_path(file_path=event_body["file_path"])
+    file_path_hash = FilesystemSubscription.create_full_path_hash_from_path(file_path=event_body["file_path"])
 
     # Find all subscriptions for the file
     subscriptions = subscriptions_client.get_by_full_path_hash(full_path_hash=file_path_hash)
@@ -109,7 +65,7 @@ def fs_update_handler(event, context):
     # Get the parent directory to catch any subscriptions to the parent directory
     parent_dir = os.path.dirname(event_body["file_path"])
 
-    parent_dir_hash = Subscription.create_full_path_hash_from_path(file_path=parent_dir)
+    parent_dir_hash = FilesystemSubscription.create_full_path_hash_from_path(file_path=parent_dir)
 
     # Find all subscriptions for the parent directory
     parent_dir_subscriptions = subscriptions_client.get_by_full_path_hash(full_path_hash=parent_dir_hash)
@@ -163,7 +119,7 @@ def fs_update_handler(event, context):
 
                 continue
 
-        token = _generate_token(entity_id=subscription.process_owner)
+        token = generate_token(entity_id=subscription.process_owner)
 
         # Validate the agent definition path
         validate_file_access_request = ObjectBody(

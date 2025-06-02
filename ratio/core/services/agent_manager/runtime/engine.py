@@ -161,12 +161,12 @@ class ExecutionEngine:
 
         logging.debug(f"Initializing references with arguments: {self.arguments}")
 
+        self.reference = Reference()
+
         if self.arguments:
             if self.argument_schema:
                 # Extract argument types from schema
                 argument_types = {arg['name']: arg['type_name'] for arg in self.argument_schema}
-
-                self.reference = Reference()
 
                 try:
                     self.reference.set_arguments(self.arguments, argument_types)

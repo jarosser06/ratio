@@ -13,11 +13,8 @@ The CLI stores configuration in a dedicated directory (default: `~/.rto/`):
 ~/.rto/
 ├── config.json          # Main configuration file
 ├── tokens/               # Cached authentication tokens
-│   ├── default.token
-│   └── prod.token
-└── keys/                 # Generated private keys
-    ├── admin_priv_key.pem
-    └── dev_user_priv_key.pem
+    ├── default.token
+    └── prod.token
 ```
 
 ## Configuration File Format

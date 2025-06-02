@@ -11,14 +11,13 @@ from ratio.core.services.agent_manager.runtime.exceptions import MappingError
 
 from ratio.core.services.agent_manager.runtime.mapper_functions import (
     MappingContext,
-    # Original functions
+    create_object_function,
     get_object_property_function,
     join_function,
     json_parse_function,
     map_function,
     sum_function,
 
-    # Conditional logic functions
     if_function,
     filter_function,
     group_by_function,
@@ -32,34 +31,40 @@ from ratio.core.services.agent_manager.runtime.mapper_functions import (
     describe_version_function,
     read_file_function,
     read_files_function,
+
+    # Other
+    datetime_now_function,
 )
 
 
 # Updated mapping functions dictionary
 DEFAULT_MAPPING_FUNCTIONS = {
-    # Original functions
+    "create_object": create_object_function,
     "get_object_property": get_object_property_function,
     "join": join_function,
     "json_parse": json_parse_function,
     "map": map_function,
     "sum": sum_function,
 
-    # New conditional logic functions
+    # Conditional logic functions
     "if": if_function,
     "filter": filter_function,
 
-    # New data manipulation functions
+    # Data manipulation functions
     "group_by": group_by_function,
     "sort": sort_function,
     "unique": unique_function,
     "flatten": flatten_function,
 
-    # New file system functions
+    # File system functions
     "list_files": list_files_function,
     "list_file_versions": list_file_versions_function,
     "describe_version": describe_version_function,
     "read_file": read_file_function,
     "read_files": read_files_function,
+
+    # DT
+    "datetime_now": datetime_now_function,
 }
 
 

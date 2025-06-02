@@ -529,6 +529,90 @@ flatten(array: List) -> List
 }
 ```
 
+#### datetime_now() Function
+Returns current date and time in the specified format.
+
+**Function Signature:**
+```python
+datetime_now(format: str = "iso") -> Union[str, int]
+```
+
+**Usage:**
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "current_time": "datetime_now(format=\"iso\")",
+      "timestamp": "datetime_now(format=\"unix\")"
+    },
+    "transforms": {
+      "created_at": "current_time",
+      "processing_time": "timestamp"
+    }
+  }
+}
+```
+
+**Parameters:**
+- `format`: Format type - `"iso"` for ISO 8601 string (default), `"unix"` for Unix timestamp
+
+**Examples:**
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "report_date": "datetime_now()",
+      "log_timestamp": "datetime_now(format=\"unix\")"
+    },
+    "transforms": {
+      "report_metadata": "create_object(generated_at=report_date, timestamp=log_timestamp)"
+    }
+  }
+}
+```
+
+#### create_object() Function
+Creates an object from keyword arguments, useful for building structured data within transforms.
+
+**Function Signature:**
+```python
+create_object(**kwargs) -> Dict
+```
+
+**Usage:**
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "user_name": "REF:user_data.name",
+      "user_email": "REF:user_data.email",
+      "current_time": "datetime_now()"
+    },
+    "transforms": {
+      "user_summary": "create_object(name=user_name, email=user_email, last_updated=current_time)",
+      "metadata": "create_object(version=\"1.0\", status=\"active\")"
+    }
+  }
+}
+```
+
+**Complex Example:**
+```json
+{
+  "transform_arguments": {
+    "variables": {
+      "file_list": "REF:scanner.files",
+      "process_time": "datetime_now()",
+      "total_size": "REF:scanner.total_bytes"
+    },
+    "transforms": {
+      "scan_report": "create_object(files=file_list, scanned_at=process_time, total_size_bytes=total_size, file_count=REF:scanner.files.length)",
+      "summary": "create_object(status=\"completed\", message=\"Scan finished successfully\")"
+    }
+  }
+}
+```
+
 #### list_files() Function
 Lists files in a directory with optional glob pattern filtering. Limited to 50 results.
 

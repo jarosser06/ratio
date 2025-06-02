@@ -77,7 +77,7 @@ class AgentDefinitionSchema(ObjectBodySchema):
         name="arguments",
         type_name=SchemaAttributeType.OBJECT_LIST,
         description="The defined arguments the agent takes. Defined using the ObjectBodySchema",
-        required=True,
+        required=False,
     ),
     SchemaAttribute(
         name="description",

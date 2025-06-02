@@ -23,6 +23,10 @@ from ratio.core.services.storage_manager.tables.file_types.client import (
     FileTypeTableClient,
 )
 
+from ratio.core.services.storage_manager.runtime.events import (
+    publish_file_type_update_event,
+)
+
 
 class FileTypesAPI(ChildAPI):
     routes = [
@@ -92,6 +96,14 @@ class FileTypesAPI(ChildAPI):
             )
 
         self.file_types_table_client.delete(file_type=f_type)
+
+        publish_file_type_update_event(
+            file_type=f_type.type_name,
+            requestor=claims.entity,
+            details={
+                "action": "delete",
+            },
+        )
 
         return self.respond(
             body={
@@ -175,6 +187,15 @@ class FileTypesAPI(ChildAPI):
         )
 
         self.file_types_table_client.put(file_type=f_type)
+
+        publish_file_type_update_event(
+            file_type=f_type.type_name,
+            requestor=claims.entity,
+            details={
+                "action": "put",
+                "properties": f_type.to_dict(json_compatible=True),
+            },
+        )
 
         return self.respond(
             status_code=200,

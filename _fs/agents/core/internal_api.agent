@@ -8,17 +8,17 @@
       "required": true
     },
     {
-        "name": "fail_on_error",
-        "type_name": "boolean",
-        "description": "Whether the agent run should fail in the case of ",
-        "default_value": true,
-        "required": false,
+      "name": "fail_on_error",
+      "type_name": "boolean",
+      "description": "Whether the agent run should fail in the case of ",
+      "default_value": true,
+      "required": false
     },
     {
-        "name": "request",
-        "type_name": "object",
-        "description": "The API request object",
-        "required": true
+      "name": "request",
+      "type_name": "object",
+      "description": "The API request object",
+      "required": true
     },
     {
       "name": "target_service",
@@ -37,7 +37,7 @@
     },
     {
         "name": "response_body",
-        "type_namee": "object",
+        "type_name": "object",
         "description": "The response body from the API call",
         "required": false
     }

@@ -5,10 +5,10 @@ from aws_cdk import aws_dynamodb as cdk_dynamodb
 from da_vinci_cdk.constructs.dynamodb import DynamoDBTable
 from da_vinci_cdk.stack import Stack
 
-from ratio.core.services.scheduler.tables.subscriptions.client import Subscription
+from ratio.core.services.scheduler.tables.general_subscriptions.client import GeneralSubscription
 
 
-class SubscriptionsTableStack(Stack):
+class GeneralSubscriptionsTableStack(Stack):
     def __init__(self, app_name: str, deployment_id: str,
                  scope: Construct, stack_name: str):
         super().__init__(
@@ -20,7 +20,7 @@ class SubscriptionsTableStack(Stack):
 
         self.table = DynamoDBTable.from_orm_table_object(
             scope=self,
-            table_object=Subscription,
+            table_object=GeneralSubscription,
         )
 
         self.table.table.add_global_secondary_index(

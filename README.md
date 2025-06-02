@@ -1,10 +1,37 @@
 Ratio
 =====
-An AI Operating System for composing and managing complex agent workflows with automatic dependency
-resolution, parallel processing, and event-driven orchestration.
 
-Ratio is named after the Golden Ratio, attempting to represent an ideal balance between AI
-capabilities and engineering infrastructure. It's an attempt to control the chaos!
+Ratio is an agent composition platform designed for AI systems to build and evolve their own capabilities. Rather than hoping
+AI can reason its way to solutions, Ratio provides structured building blocks where AI can have genuine agency within principled
+guardrails.
+
+The system treats everything as files - agent definitions, execution artifacts, documentation. This creates a persistent knowledge
+base that AI can reference, analyze, and learn from. Agents can generate other agents, analyze past executions, and build
+self-documenting catalogs of what works.
+
+Named after the Golden Ratio - an attempt to find the right balance between AI capability and engineering safety. It's
+infrastructure that lets AI systems evolve systematically rather than chaotically.
+
+## Extensibility & Integration Potential
+Ratio's architecture is designed to work with existing AI infrastructure rather than replace it:
+
+- **Execution Flexibility**: While currently Lambda-based, the system can potentially support any execution environment that reports back through Ratio's event system
+- **Framework Integration**: The agent model could be extended to orchestrate MCP clients, Bedrock Agents, or other AI frameworks
+- **Compute Options**: Future agents could spawn traditional servers, containers, or specialized hardware
+
+The core requirement is simply that execution completes and reports status back to Ratio. This approach means Ratio can evolve to
+incorporate new agent frameworks and execution models as they emerge, while providing consistent orchestration, dependency
+management, and evolution capabilities across all of them.
+
+## How It Works
+
+Ratio enables AI to bootstrap itself through:
+
+- **File-Based Everything**: Agent definitions, execution results, and system documentation stored as versioned files
+- **Agent Composition**: Complex workflows built by orchestrating simpler agents with automatic dependency resolution
+- **Self-Documentation**: Agents that generate catalogs and documentation about system capabilities
+- **Execution Analysis**: Full artifact trails allowing agents to learn from past successes and failures
+- **Event-Driven Evolution**: Reactive automation that responds to system changes
 
 ## Agent Composition Example
 
@@ -51,12 +78,47 @@ rto execute --agent-definition-path=/agents/pipeline.agent \
     --arguments='{"input_files": ["/data/doc1.pdf", "/data/doc2.pdf"]}'
 ```
 
+## Agent Subscriptions
+Ratio's scheduler enables reactive automation through event subscriptions. Agents can automatically execute
+when system events occur, creating responsive workflows that adapt to changes.
+
+```bash
+# Create subscription to update file type catalog when types change
+rto create-subscription file_types_update /agents/system/update_catalog.agent
+
+# Subscribe to file system changes
+rto create-subscription filesystem_created /agents/processors/new_file_handler.agent \
+    --filter '{"file_path": "/data/incoming", "file_type": "ratio::document"}'
+```
+
+### Basic Example: File Type Catalog Updates
+Create a subscription that triggers when file types are updated in the system:
+
+```bash
+rto mksub file_types_update /agents/system/update_file_type_catalog.agent
+```
+
+**What This Does:**
+
+- **Event Type**: file_types_update - triggers when file type definitions change in the system
+- **Agent**: /agents/system/update_file_type_catalog.agent - executes automatically when the event occurs
+
+**Workflow**
+
+When file types are updated in the system, the subscribed agent automatically:
+
+Retrieves current file type definitions from the system API
+Updates a local catalog file (e.g., /data/file_types_catalog.json)
+Provides other agents easy file-based access to file type metadata instead of requiring direct API calls
+
+The subscription runs indefinitely until manually deleted with `rto rmsub <subscription_id>`.
+
 ## Core Features
 - **Automatic Dependency Resolution**: `REF:` references create execution dependencies
 - **Parallel Processing**: Execute agents over collections with `parallel_execution`
 - **Conditional Execution**: Run agents based on dynamic conditions
 - **File System**: Versioned storage with lineage tracking and Unix-like permissions
-- **Event-Driven Triggers**: Auto-execute agents on file changes
+- **Event-Driven Triggers**: Auto-execute agents on subscriptions to system events
 - **Nested Composition**: Unlimited depth agent orchestration
 
 ## System Components
@@ -103,7 +165,7 @@ Built on cloud-native AWS services with:
 - **Process Management**: Agent execution and lifecycle tracking
 - **Storage Manager**: Versioned file system with metadata and lineage
 - **Event Bus**: Inter-agent communication and coordination  
-- **Scheduler**: File-based and time-based triggers
+- **Scheduler**: System event-based triggers
 - **Authentication**: RSA key-based entity and group management
 
 Designed for agent development with integrated debugging, exception handling, and process visibility.

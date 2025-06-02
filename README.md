@@ -12,16 +12,9 @@ self-documenting catalogs of what works.
 Named after the Golden Ratio, it's an attempt to find the right balance between AI capability and engineering safety. Meant to be 
 infrastructure that lets AI systems evolve systematically rather than chaotically.
 
-## Extensibility & Integration Potential
-Ratio's architecture is designed to work with existing AI infrastructure rather than replace it:
+## Architecture Overview
 
-- **Execution Flexibility**: While currently Lambda-based, the system can potentially support any execution environment that reports back through Ratio's event system
-- **Framework Integration**: The agent model could be extended to orchestrate MCP clients, Bedrock Agents, or other AI frameworks
-- **Compute Options**: Future agents could spawn traditional servers, containers, or specialized hardware
-
-The core requirement is simply that execution completes and reports status back to Ratio. This approach means Ratio can evolve to
-incorporate new agent frameworks and execution models as they emerge, while providing consistent orchestration, dependency
-management, and evolution capabilities across all of them.
+![Ratio Architecture](docs/Ratio%20High%20Level.jpeg)
 
 ## How It Works
 
@@ -32,6 +25,17 @@ Ratio enables AI to bootstrap itself through:
 - **Self-Documentation**: Agents that generate catalogs and documentation about system capabilities
 - **Execution Analysis**: Full artifact trails allowing agents to learn from past successes and failures
 - **Event-Driven Evolution**: Reactive automation that responds to system changes
+
+## Extensibility & Integration Potential
+Ratio's architecture is designed to work with existing AI infrastructure rather than replace it:
+
+- **Execution Flexibility**: While currently Lambda-based, the system can potentially support any execution environment that reports back through Ratio's event system
+- **Framework Integration**: The agent model could be extended to orchestrate MCP clients, Bedrock Agents, or other AI frameworks
+- **Compute Options**: Future agents could spawn traditional servers, containers, or specialized hardware
+
+The core requirement is simply that execution completes and reports status back to Ratio. This approach means Ratio can evolve to
+incorporate new agent frameworks and execution models as they emerge, while providing consistent orchestration, dependency
+management, and evolution capabilities across all of them.
 
 ## Agent Composition Example
 

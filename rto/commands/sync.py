@@ -67,6 +67,9 @@ class SyncCommand(RTOCommand):
         "txt": "ratio::text",
         "text": "ratio::text",
 
+        # Markdown files
+        "md": "ratio::markdown",
+
         # Image files
         "gif": "ratio::gif",
         "jpg": "ratio::jpeg",

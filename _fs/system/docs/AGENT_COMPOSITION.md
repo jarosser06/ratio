@@ -1,4 +1,4 @@
-# Agent Definition Composition
+# Agent Definition Composition Reference
 
 Ratio's agent composition system enables you to build multi-step workflows by
 orchestrating individual agents into complex composite agents. This system provides automatic

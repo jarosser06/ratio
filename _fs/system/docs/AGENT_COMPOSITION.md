@@ -140,7 +140,7 @@ Transforms use a two-phase approach: variable resolution followed by data transf
       "new_argument": "function_call(variable_name)"
     }
   },
-  "transform_results": {
+  "transform_responses": {
     "variables": {
       "result_data": "REF:response.output"
     },
@@ -339,7 +339,7 @@ sum(array: List, item_path: str) -> Union[int, float]
 **Usage:**
 ```json
 {
-  "transform_results": {
+  "transform_responses": {
     "variables": {
       "invoice_items": "REF:response.line_items"
     },
@@ -776,7 +776,7 @@ read_files(file_paths: List[str]) -> List[str]
   "arguments": {
     "raw_data": "REF:data_fetcher.results"
   },
-  "transform_results": {
+  "transform_responses": {
     "variables": {
       "processed_items": "REF:response.processed_items",
       "success_template": "item.success",
@@ -1169,7 +1169,7 @@ Process data in parallel and transform aggregated results:
       "arguments": {
         "total_chunks": "REF:split_data.chunks.length"
       },
-      "transform_results": {
+      "transform_responses": {
         "variables": {
           "final_summary": "REF:response.aggregated_data"
         },
@@ -1402,7 +1402,7 @@ Organize complex transforms with clear variable naming:
       "arguments": {
         "file_paths": "REF:arguments.document_paths"
       },
-      "transform_results": {
+      "transform_responses": {
         "variables": {
           "validation_results": "REF:response.validation_results"
         },
@@ -1419,7 +1419,7 @@ Organize complex transforms with clear variable naming:
         "iterate_over": "REF:validate_documents.valid_documents",
         "child_argument_name": "document_path"
       },
-      "transform_results": {
+      "transform_responses": {
         "variables": {
           "extraction_results": "REF:response"
         },
@@ -1494,7 +1494,7 @@ Organize complex transforms with clear variable naming:
         "analysis_level": "REF:arguments.analysis_depth",
         "total_documents": "REF:extract_basic_info.response.length"
       },
-      "transform_results": {
+      "transform_responses": {
         "variables": {
           "aggregated_data": "REF:response.summary"
         },

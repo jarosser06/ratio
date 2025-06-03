@@ -1,30 +1,17 @@
 Ratio
 =====
 
-Ratio is an agent composition platform designed for AI systems to build and evolve their own capabilities. Rather than hoping
-AI can reason its way to solutions, Ratio provides structured building blocks where AI can have genuine agency within principled
-guardrails.
+Ratio is an agent composition platform designed to support AI systems in building and evolving. Ratio provides building
+blocks where AI can operate with structured agency.
 
-The system treats everything as files: agent definitions, execution artifacts, documentation. This creates a persistent knowledge
-base that AI can reference, analyze, and learn from. Agents can generate other agents, analyze past executions, and build
-self-documenting catalogs of what works.
+The system treats everything as files which creates a persistent knowledge base that can be self-referencable, enabling Agents to assist in generating other agents, analyze past executions, and build self-documenting catalogs of what works.
 
 Named after the Golden Ratio, it's an attempt to find the right balance between AI capability and engineering safety. Meant to be 
-infrastructure that lets AI systems evolve systematically rather than chaotically.
+infrastructure designed to support AI evolution systematically rather than chaotically.
 
 ## Architecture Overview
 
 ![Ratio Architecture](docs/Ratio%20High%20Level.jpeg)
-
-## How It Works
-
-Ratio enables AI to bootstrap itself through:
-
-- **File-Based Everything**: Agent definitions, execution results, and system documentation stored as versioned files
-- **Agent Composition**: Complex workflows built by orchestrating simpler agents with automatic dependency resolution
-- **Self-Documentation**: Agents that generate catalogs and documentation about system capabilities
-- **Execution Analysis**: Full artifact trails allowing agents to learn from past successes and failures
-- **Event-Driven Evolution**: Reactive automation that responds to system changes
 
 ## Extensibility & Integration Potential
 Ratio's architecture is designed to work with existing AI infrastructure rather than replace it:
@@ -33,9 +20,8 @@ Ratio's architecture is designed to work with existing AI infrastructure rather 
 - **Framework Integration**: The agent model could be extended to orchestrate MCP clients, Bedrock Agents, or other AI frameworks
 - **Compute Options**: Future agents could spawn traditional servers, containers, or specialized hardware
 
-The core requirement is simply that execution completes and reports status back to Ratio. This approach means Ratio can evolve to
-incorporate new agent frameworks and execution models as they emerge, while providing consistent orchestration, dependency
-management, and evolution capabilities across all of them.
+The core requirement is simply that execution completes and reports status back to Ratio. This approach means Ratio can be updated to
+incorporate new agent frameworks and execution models as they emerge.
 
 ## Agent Composition Example
 

@@ -1,4 +1,5 @@
 import json
+
 from argparse import ArgumentParser
 from datetime import datetime
 
@@ -20,7 +21,7 @@ class CreateSubscriptionCommand(RTOCommand):
     """
     name = "create-subscription"
     alias = "mksub"
-    description = "Create a new subscription to trigger an agent when events occur"
+    description = "Create a new subscription to trigger an tool when events occur"
     requires_authentication = True
 
     @classmethod
@@ -33,9 +34,9 @@ class CreateSubscriptionCommand(RTOCommand):
         """
         parser.add_argument("event_type", help="Type of event to subscribe to (e.g., filesystem_update, process_start, file_type_update)", type=str)
         
-        parser.add_argument("agent_definition", help="Path to the agent definition that will be executed", type=str)
+        parser.add_argument("tool_definition", help="Path to the tool definition that will be executed", type=str)
 
-        parser.add_argument("--execution-working-directory", help="Working directory for agent execution", type=str)
+        parser.add_argument("--execution-working-directory", help="Working directory for tool execution", type=str)
 
         parser.add_argument("--expiration", help="Date and time when the subscription expires (ISO format: YYYY-MM-DDTHH:MM:SS)", type=str)
 
@@ -57,7 +58,7 @@ class CreateSubscriptionCommand(RTOCommand):
         args -- The command line arguments
         """
         # Resolve paths
-        agent_definition_path = config.resolve_path(args.agent_definition)
+        tool_definition_path = config.resolve_path(args.tool_definition)
 
         # Parse expiration if provided
         expiration = None
@@ -82,7 +83,7 @@ class CreateSubscriptionCommand(RTOCommand):
         # Create the request
         request = CreateSubscriptionRequest(
             event_type=args.event_type,
-            agent_definition=agent_definition_path,
+            tool_definition=tool_definition_path,
             execution_working_directory=args.execution_working_directory,
             expiration=expiration,
             owner=args.owner,
@@ -133,7 +134,7 @@ class CreateSubscriptionCommand(RTOCommand):
 
         print(f"  Owner: {subscription_data.get('process_owner', 'Unknown')}")
 
-        print(f"  Agent Definition: {subscription_data.get('agent_definition', agent_definition_path)}")
+        print(f"  Tool Definition: {subscription_data.get('tool_definition', tool_definition_path)}")
         
         if args.execution_working_directory:
             print(f"  Working Directory: {args.execution_working_directory}")
@@ -306,7 +307,7 @@ class DescribeSubscriptionCommand(RTOCommand):
             for key, value in filter_conditions.items():
                 print(f"    {key}: {value}")
 
-        print(f"  Agent Definition: {subscription.get('agent_definition', 'Unknown')}")
+        print(f"  Tool Definition: {subscription.get('tool_definition', 'Unknown')}")
         
         if "execution_working_directory" in subscription and subscription["execution_working_directory"]:
             print(f"  Working Directory: {subscription['execution_working_directory']}")
@@ -482,7 +483,7 @@ class ListSubscriptionsCommand(RTOCommand):
                 for key, value in filter_conditions.items():
                     print(f"  {key}: {value}")
 
-            print(f"Agent Definition: {sub.get('agent_definition', 'Unknown')}")
+            print(f"Tool Definition: {sub.get('tool_definition', 'Unknown')}")
 
             if "execution_working_directory" in sub and sub["execution_working_directory"]:
                 print(f"Working Directory: {sub['execution_working_directory']}")

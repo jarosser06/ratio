@@ -12,7 +12,7 @@ from da_vinci.exception_trap.client import fn_exception_reporter
 
 from ratio.core.core_lib.factories.api import ParentAPI
 
-from ratio.core.api.runtime.agent import AgentAPI
+from ratio.core.api.runtime.process import ProcessAPI
 from ratio.core.api.runtime.auth import AuthAPI
 from ratio.core.api.runtime.scheduler import SchedulerAPI
 from ratio.core.api.runtime.storage import StorageAPI
@@ -28,7 +28,7 @@ def handler(event: Dict, context: Dict) -> Dict:
     """
     api = ParentAPI(
         child_apis=[
-            AgentAPI,
+            ToolAPI,
             AuthAPI,
             SchedulerAPI,
             StorageAPI,

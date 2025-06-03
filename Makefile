@@ -42,9 +42,9 @@ deploy:
 	$(call cdk_deploy, --all)
 
 deploy_process:
-	@echo "Deploying Agent Manager..."
+	@echo "Deploying Process Manager..."
 
-	$(call cdk_deploy, -e ratio-dev-agentmanagerstack)
+	$(call cdk_deploy, -e ratio-dev-processmanagerstack)
 
 deploy_api:
 	@echo "Deploying API..."
@@ -61,14 +61,14 @@ deploy_storage:
 
 	$(call cdk_deploy, -e ratio-dev-storagemanagerstack)
 
-deploy_agents:
-	@echo "Deploying Agents..."
+deploy_tools:
+	@echo "Deploying Tools..."
 
-	$(call cdk_deploy, -e ratio-dev-ratiobedrockagents)
-	$(call cdk_deploy, -e ratio-dev-ratiocombinecontentagent)
-	$(call cdk_deploy, -e ratio-dev-ratiomathagent)
-	$(call cdk_deploy, -e ratio-dev-ratiorendertemplateagent)
-	$(call cdk_deploy, -e ratio-dev-ratioagentinternalapi)
+	$(call cdk_deploy, -e ratio-dev-ratiobedrocktools)
+	$(call cdk_deploy, -e ratio-dev-ratiocombinecontenttool)
+	$(call cdk_deploy, -e ratio-dev-ratiomathtool)
+	$(call cdk_deploy, -e ratio-dev-ratiorendertemplatetool)
+	$(call cdk_deploy, -e ratio-dev-ratiointernalapitool)
 
 
-deploy_compute: deploy_api, deploy_storage, deploy_agents, deploy_process, deploy_scheduler
+deploy_compute: deploy_api, deploy_storage, deploy_tools, deploy_process, deploy_scheduler

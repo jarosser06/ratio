@@ -2,13 +2,13 @@
 
 ## Overview
 
-The Da Vinci framework provides two critical subsystems for troubleshooting Ratio agent issues: the Exception Trap and the Event Bus
-System. Understanding how these work is crucial for diagnosing problems in agent execution.
+The Da Vinci framework provides two critical subsystems for troubleshooting Ratio tool issues: the Exception Trap and the Event Bus
+System. Understanding how these work is crucial for diagnosing problems in tool execution.
 
 ## Exception Trap System
 
 ### Purpose
-The Exception Trap automatically captures and logs exceptions from agent executions.
+The Exception Trap automatically captures and logs exceptions from tool executions.
 
 ### How It Works
 
@@ -20,16 +20,16 @@ def exception_trap_enabled() -> bool:
 ```
 
 #### Exception Capture Process
-Agents use the `@fn_exception_reporter` decorator to automatically capture exceptions:
+Tools use the `@fn_exception_reporter` decorator to automatically capture exceptions:
 ```python
 @fn_exception_reporter(
-    function_name="ratio.agents.my_agent",
+    function_name="ratio.tools.my_tool",
     metadata={"additional": "context"},
     logger=Logger("my_namespace"),
     re_raise=False
 )
 def handler(event: Dict, context: Dict):
-    # Agent logic here
+    # Tool logic here
     pass
 ```
 
@@ -57,7 +57,7 @@ Exceptions are stored in the `da_vinci_trapped_exceptions` table with these attr
 ## Event Bus System
 
 ### Purpose
-The Event Bus coordinates asynchronous communication between agents and system components.
+The Event Bus coordinates asynchronous communication between tools and system components.
 
 ### Core Components
 
@@ -76,7 +76,7 @@ Functions subscribe to events using the `@fn_event_response` decorator:
 ```python
 @fn_event_response(
     exception_reporter=ExceptionReporter(),
-    function_name="ratio.agents.my_handler", 
+    function_name="ratio.tools.my_handler", 
     logger=Logger("my_namespace"),
     handle_callbacks=True,  # Send callback events
     re_raise=False
@@ -86,22 +86,22 @@ def handler(event: Dict, context: Dict):
     pass
 ```
 
-#### Event Flow in Ratio Agent System
+#### Event Flow in Ratio Tool System
 
-**1. Agent Execution Request**
-- Event Type: `ratio::agent::{agent_name}::execution`
-- Schema: `SystemExecuteAgentRequest`
+**1. Tool Execution Request**
+- Event Type: `ratio::tool::{tool_name}::execution`
+- Schema: `SystemExecuteToolRequest`
 - Contains: `arguments_path`, `argument_schema`, `process_id`, `token`, `working_directory`
 
-**2. Agent Response**  
-- Event Type: `ratio::agent_response`
-- Schema: `SystemExecuteAgentResponse`
+**2. Tool Response**  
+- Event Type: `ratio::tool_response`
+- Schema: `SystemExecuteToolResponse`
 - Contains: `process_id`, `status`, `response`, `failure`, `token`
 
-**3. Composite Agent Execution**
-- Event Type: `ratio::execute_composite_agent`
-- Schema: `ExecuteAgentInternalRequest`
-- Contains: `agent_definition_path`, `arguments_path`, `process_id`, `working_directory`
+**3. Composite Tool Execution**
+- Event Type: `ratio::execute_composite_tool`
+- Schema: `ExecuteToolInternalRequest`
+- Contains: `tool_definition_path`, `arguments_path`, `process_id`, `working_directory`
 
 ### Event Bus Tables
 
@@ -157,31 +157,31 @@ if event_obj.callback_event_type_on_failure:
     )
 ```
 
-## Agent Manager Event Flow
+## Tool Manager Event Flow
 
 ### Process Completion Handler
-**Event Type:** `ratio::agent_response`
+**Event Type:** `ratio::tool_response`
 
-The `process_complete_handler` processes agent completions:
+The `process_complete_handler` processes tool completions:
 
 1. **Updates Process Status:** Marks processes as COMPLETED or FAILED
-2. **Handles Composite Agents:** Determines next steps for T2 agents
-3. **Triggers Child Executions:** Launches dependent agent executions
+2. **Handles Composite Tools:** Determines next steps for T2 tools
+3. **Triggers Child Executions:** Launches dependent tool executions
 4. **Manages Dependencies:** Uses execution engine to resolve REF references
 
-### Composite Agent Handler  
-**Event Type:** `ratio::execute_composite_agent`
+### Composite Tool Handler  
+**Event Type:** `ratio::execute_composite_tool`
 
-The `execute_composite_agent_handler`:
+The `execute_composite_tool_handler`:
 
-1. **Validates Access:** Checks file permissions for agent definitions
-2. **Loads Definitions:** Parses agent definition files
+1. **Validates Access:** Checks file permissions for tool definitions
+2. **Loads Definitions:** Parses tool definition files
 3. **Creates Execution Engine:** Sets up dependency resolution
 4. **Schedules Executions:** Launches child processes for instructions
 
 ## Troubleshooting Common Issues
 
-### Agent Execution Failures
+### Tool Execution Failures
 
 **Check Exception Trap:**
 If `DaVinciFramework_ExceptionTrapEnabled=true`, look in `da_vinci_trapped_exceptions` table for:
@@ -221,7 +221,7 @@ Look in `da_vinci_event_bus_responses` for:
 ### Schema Validation Errors
 
 **Common in:**
-- Agent argument validation
+- Tool argument validation
 - Response schema validation  
 - REF reference resolution
 
@@ -232,12 +232,12 @@ Look in `da_vinci_event_bus_responses` for:
 
 ## Process Management Integration
 
-The Agent Manager uses both systems extensively:
+The Tool Manager uses both systems extensively:
 
 **Exception Integration:**
 ```python
 try:
-    # Agent execution logic
+    # Tool execution logic
 except InvalidSchemaError as invalid_err:
     _close_out_process(
         process=proc,
@@ -252,7 +252,7 @@ except InvalidSchemaError as invalid_err:
 event_publisher.submit(
     event=EventBusEvent(
         body=response_body,
-        event_type="ratio::agent_response"
+        event_type="ratio::tool_response"
     )
 )
 ```
@@ -273,15 +273,13 @@ EXCEPTION_TRAP_ENV_VAR = 'DaVinciFramework_ExceptionTrapEnabled'
 
 ### Event Bus Setup
 ```python
-# For agents that need to respond to events
+# For tools that need to respond to events
 @fn_event_response(
     exception_reporter=ExceptionReporter(),
     handle_callbacks=True,  # Enable callback support
     schema=MyEventSchema     # Validate event body
 )
 ```
-
-
 
 ## Related Tables Summary
 
@@ -293,4 +291,4 @@ EXCEPTION_TRAP_ENV_VAR = 'DaVinciFramework_ExceptionTrapEnabled'
 - `da_vinci_event_bus_responses`: 8-hour TTL, tracks event processing outcomes
 
 **Process Management:**
-- Agent Manager process table: Tracks execution status and hierarchy
+- Process Manager process table: Tracks execution status and hierarchy

@@ -1,12 +1,14 @@
 
 import json
+import time
 
 from argparse import ArgumentParser
 
 from ratio.client.client import Ratio
-from ratio.client.requests.agent import (
+
+from ratio.client.requests.process import (
     DescribeProcessRequest,
-    ExecuteAgentRequest,
+    ExecuteToolRequest,
     ListProcessesRequest,
 )
 
@@ -110,12 +112,12 @@ class DescribeProcessCommand(RTOCommand):
         print(f"  Response Path: {process.get('response_path', 'None')}")
 
 
-class ExecuteAgentCommand(RTOCommand):
+class ExecuteToolCommand(RTOCommand):
     """
-    Execute an agent
+    Execute an tool
     """
     name = "execute"
-    description = "Execute an agent with the given definition and arguments"
+    description = "Execute an tool with the given definition and arguments"
     requires_authentication = True
 
     @classmethod
@@ -126,27 +128,27 @@ class ExecuteAgentCommand(RTOCommand):
         Keyword arguments:
         parser -- The argument parser to configure
         """
-        # Define mutually exclusive group for agent definition
-        agent_definition_group = parser.add_mutually_exclusive_group(required=True)
+        # Define mutually exclusive group for tool definition
+        tool_definition_group = parser.add_mutually_exclusive_group(required=True)
 
-        agent_definition_group.add_argument("--agent-definition", help="JSON string containing the agent definition", type=json.loads)
+        tool_definition_group.add_argument("--tool-definition", help="JSON string containing the tool definition", type=json.loads)
 
-        agent_definition_group.add_argument("--agent-definition-path", help="Path to the agent definition file on the server", type=str)
+        tool_definition_group.add_argument("--tool-definition-path", help="Path to the tool definition file on the server", type=str)
         
         # Other arguments
-        parser.add_argument("--arguments", help="JSON string containing arguments for the agent", type=json.loads)
+        parser.add_argument("--arguments", help="JSON string containing arguments for the tool", type=json.loads)
 
-        parser.add_argument("--execute-as", help="Execute the agent as a specific entity (admin only)", type=str)
+        parser.add_argument("--execute-as", help="Execute the tool as a specific entity (admin only)", type=str)
 
-        parser.add_argument("--working-directory", help="Working directory for agent execution", type=str)
+        parser.add_argument("--working-directory", help="Working directory for tool execution", type=str)
 
         parser.add_argument("--json", help="Output raw JSON response", action="store_true", default=False)
 
-        parser.add_argument("--max-wait-periods", help="Maximum wait periods for agent execution", type=int, default=10)
+        parser.add_argument("--max-wait-periods", help="Maximum wait periods for tool execution", type=int, default=10)
 
-        parser.add_argument("--wait-period-seconds", help="Wait period in seconds for agent execution", type=int, default=15)
+        parser.add_argument("--wait-period-seconds", help="Wait period in seconds for tool execution", type=int, default=15)
 
-        parser.add_argument("--wait", help="Wait for the agent execution to complete", action="store_true", default=False)
+        parser.add_argument("--wait", help="Wait for the tool execution to complete", action="store_true", default=False)
 
     def execute(self, client: Ratio, config: RTOConfig, args):
         """
@@ -156,15 +158,15 @@ class ExecuteAgentCommand(RTOCommand):
         client -- The Ratio client
         args -- The command line arguments
         """
-        agent_definition_path = args.agent_definition_path
+        tool_definition_path = args.tool_definition_path
 
         # Resolve the file path
-        agent_definition_path = config.resolve_path(args.agent_definition_path)
+        tool_definition_path = config.resolve_path(args.tool_definition_path)
 
         # Create the request - passing the path directly to the API
-        request = ExecuteAgentRequest(
-            agent_definition=args.agent_definition,
-            agent_definition_path=agent_definition_path,
+        request = ExecuteToolRequest(
+            tool_definition=args.tool_definition,
+            tool_definition_path=tool_definition_path,
             arguments=args.arguments,
             execute_as=args.execute_as,
             working_directory=args.working_directory
@@ -174,7 +176,7 @@ class ExecuteAgentCommand(RTOCommand):
 
         if resp.status_code != 200:
             if resp.status_code == 403:
-                raise RTOErrorMessage("Permission denied: Not authorized to execute agent")
+                raise RTOErrorMessage("Permission denied: Not authorized to execute tool")
 
             elif resp.status_code == 400:
                 try:
@@ -186,7 +188,7 @@ class ExecuteAgentCommand(RTOCommand):
                     raise RTOErrorMessage(f"Invalid request: {resp.response_body}")
 
             else:
-                raise RTOErrorMessage(f"Error executing agent: {resp.status_code}")
+                raise RTOErrorMessage(f"Error executing tool: {resp.status_code}")
 
         # For successful execution, get the process ID
         process_id = resp.response_body.get("process_id")
@@ -196,14 +198,11 @@ class ExecuteAgentCommand(RTOCommand):
 
             return
 
-        print(f"Agent execution started with process ID: {process_id}")
+        print(f"Tool execution started with process ID: {process_id}")
         
         # If wait flag is set, wait for the process to complete
         if args.wait:
-            from ratio.client.requests.agent import DescribeProcessRequest
-            import time
-
-            print("Waiting for agent execution to complete...")
+            print("Waiting for tool execution to complete...")
 
             max_wait_periods = args.max_wait_periods
 
@@ -225,7 +224,7 @@ class ExecuteAgentCommand(RTOCommand):
                 process_status = describe_resp.response_body.get("execution_status")
 
                 if process_status == "COMPLETED":
-                    print("Agent execution completed successfully.")
+                    print("Tool execution completed successfully.")
 
                     # Display response path if available
                     response_path = describe_resp.response_body.get("response_path")
@@ -238,14 +237,14 @@ class ExecuteAgentCommand(RTOCommand):
                 elif process_status == "FAILED":
                     status_message = describe_resp.response_body.get("status_message", "Unknown error")
 
-                    raise RTOErrorMessage(f"Agent execution failed: {status_message}")
+                    raise RTOErrorMessage(f"Tool execution failed: {status_message}")
 
                 elif process_status == "TERMINATED":
-                    raise RTOErrorMessage("Agent execution was terminated")
+                    raise RTOErrorMessage("Tool execution was terminated")
 
                 print(f"Process status: {process_status} (waited {(attempt + 1) * wait_period_seconds} seconds)")
 
-            print(f"Timeout waiting for agent execution to complete. Check status with: rto describe-process {process_id}")
+            print(f"Timeout waiting for tool execution to complete. Check status with: rto describe-process {process_id}")
 
 
 class ListProcessesCommand(RTOCommand):

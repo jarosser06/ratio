@@ -19,7 +19,7 @@ from da_vinci_cdk.constructs.service import SimpleRESTService
 from da_vinci_cdk.framework_stacks.services.event_bus.stack import EventBusStack
 
 from ratio.core.stack import RatioCoreStack
-from ratio.core.services.agent_manager.stack import AgentManagerStack
+from ratio.core.services.process_manager.stack import ProcessManagerStack
 from ratio.core.services.storage_manager.stack import StorageManagerStack
 
 from ratio.core.tables.entities.stack import Entity, EntitiesTableStack
@@ -57,7 +57,7 @@ class SchedulerStack(Stack):
             architecture=architecture,
             requires_exceptions_trap=True,
             required_stacks=[
-                AgentManagerStack,
+                ProcessManagerStack,
                 EntitiesTableStack,
                 EventBusStack,
                 FilesystemSubscriptionsTableStack,
@@ -142,7 +142,7 @@ class SchedulerStack(Stack):
             memory_size=256,
             resource_access_requests=[
                 ResourceAccessRequest(
-                    resource_name="agent_manager",
+                    resource_name="process_manager",
                     resource_type=ResourceType.REST_SERVICE,
                 ),
                 ResourceAccessRequest(
@@ -185,7 +185,7 @@ class SchedulerStack(Stack):
             memory_size=256,
             resource_access_requests=[
                 ResourceAccessRequest(
-                    resource_name="agent_manager",
+                    resource_name="process_manager",
                     resource_type=ResourceType.REST_SERVICE,
                 ),
                 ResourceAccessRequest(

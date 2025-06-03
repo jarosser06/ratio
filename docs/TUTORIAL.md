@@ -1,6 +1,6 @@
 # Ratio Tutorial
 
-Three examples using only core agents to help get you started.
+Three examples using only core tools to help get you started.
 
 ## Setup
 
@@ -12,7 +12,7 @@ cd ratio-tutorial
 
 ## Example 1: Hello World
 
-**Goal**: Execute a single agent and get text back.
+**Goal**: Execute a single tool and get text back.
 
 ```bash
 # Set up output directory
@@ -20,9 +20,9 @@ rto mkdir /output
 
 # Just generate some text
 rto execute \
-  --agent-definition-path=/agents/core/bedrock_text.agent \
+  --tool-definition-path=/tools/core/bedrock_text.tool \
   --arguments='{
-    "prompt": "Write a simple hello world message for a new developer learning Ratio agents.",
+    "prompt": "Write a simple hello world message for a new developer learning Ratio tools.",
     "model_id": "anthropic.claude-3-5-haiku-20241022-v1:0",
     "max_tokens": 100,
     "result_file_path": "/output/hello.txt"
@@ -33,7 +33,7 @@ rto execute \
 rto cat ratio:/output/hello.txt
 ```
 
-That's it. One agent, text in, text out.
+That's it. One tool, text in, text out.
 
 ## Example 2: File Processing
 
@@ -56,10 +56,10 @@ rto mkdir /data
 rto sync -f sample-data.txt ratio:/data/
 ```
 
-### Create a simple file analysis agent:
+### Create a simple file analysis tool:
 
 ```bash
-cat > file-analyzer.agent << 'EOF'
+cat > file-analyzer.tool << 'EOF'
 {
   "description": "Load a file and analyze it",
   "arguments": [
@@ -79,7 +79,7 @@ cat > file-analyzer.agent << 'EOF'
   "instructions": [
     {
       "execution_id": "analyze_file",
-      "agent_definition_path": "/agents/core/bedrock_text.agent",
+      "tool_definition_path": "/tools/core/bedrock_text.tool",
       "arguments": {
         "prompt": "REF:arguments.question",
         "model_id": "anthropic.claude-3-5-haiku-20241022-v1:0",
@@ -111,15 +111,15 @@ cat > file-analyzer.agent << 'EOF'
 }
 EOF
 
-rto mkdir /agents/custom
+rto mkdir /tools/custom
 
 # Upload and run it
-rto sync -f file-analyzer.agent ratio:/agents/custom/
+rto sync -f file-analyzer.tool ratio:/tools/custom/
 
-rto chmod 755 /agents/custom/file-analyzer.agent
+rto chmod 755 /tools/custom/file-analyzer.tool
 
 rto execute \
-  --agent-definition-path=/agents/custom/file-analyzer.agent \
+  --tool-definition-path=/tools/custom/file-analyzer.tool \
   --arguments='{
     "file_to_analyze": "/data/sample-data.txt",
     "question": "What are the top 3 priorities this company should focus on?"
@@ -127,11 +127,11 @@ rto execute \
   --wait
 ```
 
-Once the process completes, run `rto cat` with the reported response.aio to show what the agent's response values look like.
+Once the process completes, run `rto cat` with the reported response.aio to show what the tool's response values look like.
 
 Example:
 ```bash
-rto cat /run/agent_exec-3db8410e-2ee6-4ae5-9f47-daf566526231/response.aio
+rto cat /run/tool_exec-3db8410e-2ee6-4ae5-9f47-daf566526231/response.aio
 ```
 
 ## Example 3: Multi-File Report
@@ -169,7 +169,7 @@ rto sync -f -r *.txt ratio:/data/
 ### Create a report generator:
 
 ```bash
-cat > report-generator.agent << 'EOF'
+cat > report-generator.tool << 'EOF'
 {
   "description": "Generate a summary report from multiple data files",
   "arguments": [
@@ -183,7 +183,7 @@ cat > report-generator.agent << 'EOF'
   "instructions": [
     {
       "execution_id": "combine_data",
-      "agent_definition_path": "/agents/core/combine_content.agent",
+      "tool_definition_path": "/tools/core/combine_content.tool",
       "arguments": {
         "file_paths": ["/data/metrics.txt", "/data/feedback.txt", "/data/roadmap.txt"],
         "separator": "\n\n--- SECTION ---\n\n"
@@ -191,7 +191,7 @@ cat > report-generator.agent << 'EOF'
     },
     {
       "execution_id": "create_report",
-      "agent_definition_path": "/agents/core/bedrock_text.agent",
+      "tool_definition_path": "/tools/core/bedrock_text.tool",
       "arguments": {
         "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0",
         "max_tokens": 1000,
@@ -211,7 +211,7 @@ cat > report-generator.agent << 'EOF'
     },
     {
       "execution_id": "format_final_report",
-      "agent_definition_path": "/agents/core/render_template.agent",
+      "tool_definition_path": "/tools/core/render_template.tool",
       "arguments": {
         "template": "# {{title}}\\n\\nGenerated: {{date}}\\n\\n{{content}}\\n\\n---\\n*Report generated automatically*",
         "variables": {
@@ -223,7 +223,7 @@ cat > report-generator.agent << 'EOF'
     },
     {
       "execution_id": "save_report",
-      "agent_definition_path": "/agents/core/put_file.agent",
+      "tool_definition_path": "/tools/core/put_file.tool",
       "arguments": {
         "file_path": "/output/summary-report.md",
         "file_type": "ratio::markdown",
@@ -253,12 +253,12 @@ cat > report-generator.agent << 'EOF'
 EOF
 
 # Upload and run
-rto sync -f report-generator.agent ratio:/agents/custom/
+rto sync -f report-generator.tool ratio:/tools/custom/
 
-rto chmod 755 /agents/custom/report-generator.agent
+rto chmod 755 /tools/custom/report-generator.tool
 
 rto execute \
-  --agent-definition-path=/agents/custom/report-generator.agent \
+  --tool-definition-path=/tools/custom/report-generator.tool \
   --arguments='{
     "report_title": "Q4 2024 Business Summary"
   }' \

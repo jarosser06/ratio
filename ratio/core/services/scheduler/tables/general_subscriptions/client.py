@@ -14,7 +14,7 @@ from da_vinci.core.orm.client import (
 class GeneralSubscription(TableObject):
     table_name = "general_subscriptions"
 
-    table_description = "Tracks agent subscriptions to general system events"
+    table_description = "Tracks tool subscriptions to general system events"
 
     partition_key_attribute = TableObjectAttribute(
         name="event_type",
@@ -38,9 +38,9 @@ class GeneralSubscription(TableObject):
 
     attributes = [
         TableObjectAttribute(
-            name="agent_definition",
+            name="tool_definition",
             attribute_type=TableObjectAttributeType.STRING,
-            description="The path to the agent that will be executed for the subscription.",
+            description="The path to the tool that will be executed for the subscription.",
             optional=False,
         ),
 
@@ -55,7 +55,7 @@ class GeneralSubscription(TableObject):
         TableObjectAttribute(
             name="execution_working_directory",
             attribute_type=TableObjectAttributeType.STRING,
-            description="The optional working directory for the agent execution.",
+            description="The optional working directory for the tool execution.",
             optional=True,
         ),
 

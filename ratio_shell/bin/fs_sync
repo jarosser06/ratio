@@ -8,7 +8,7 @@ set -e  # Exit on any error
 # Configuration
 FS_SOURCE="_fs"
 RATIO_DEST="ratio:/"
-AGENT_FILE_PERMS="755"
+TOOL_FILE_PERMS="755"
 
 # Colors for output
 RED='\033[0;31m'
@@ -39,7 +39,7 @@ show_usage() {
     echo "Usage: fs_sync [OPTIONS]"
     echo ""
     echo "Sync _fs directory to Ratio installation with direct 1:1 mapping"
-    echo "Maps _fs/* directly to ratio:/* (e.g., _fs/agents/aws/file.agent -> ratio:/agents/aws/file.agent)"
+    echo "Maps _fs/* directly to ratio:/* (e.g., _fs/tools/aws/file.tool -> ratio:/tools/aws/file.tool)"
     echo ""
     echo "Options:"
     echo "  --source PATH     Source directory to sync (default: _fs)"
@@ -51,7 +51,7 @@ show_usage() {
     echo "  --help            Show this help message"
     echo ""
     echo "The script will:"
-    echo "  - Sync all files with 644 permissions (except agent files get 755)"
+    echo "  - Sync all files with 644 permissions (except tool files get 755)"
     echo "  - Create directories with 755 permissions"
     echo "  - Exclude .gitkeep files"
     echo "  - Ensure run directory exists"
@@ -112,22 +112,22 @@ fi
 print_status "Syncing _fs contents to Ratio root (direct 1:1 mapping)..."
 
 # Sync each top-level directory/file individually to ensure correct mapping
-# This maps _fs/agents -> ratio:/agents, _fs/run -> ratio:/run, etc.
+# This maps _fs/tools -> ratio:/tools, _fs/run -> ratio:/run, etc.
 pushd "$FS_SOURCE" &> /dev/null
 
 rto sync $COMMON_ARGS * "$RATIO_DEST"
 
 print_success "Filesystem sync completed successfully!"
 
-print_status "Setting agent file permissions..."
+print_status "Setting tool file permissions..."
 
-agent_files=$(find . -type f -name "*.agent")
+tool_files=$(find . -type f -name "*.tool")
 
-for agent_file in $agent_files; do
-    # Get the relative path for the agent file
-    full_path=${agent_file#.}
+for tool_file in $tool_files; do
+    # Get the relative path for the tool file
+    full_path=${tool_file#.}
 
-    # Sync the agent file with specific permissions
+    # Sync the tool file with specific permissions
     print_status "Setting executable permissions for: $full_path"
 
     rto chmod 755 "$full_path"
@@ -135,4 +135,4 @@ done
 
 popd &> /dev/null
 
-print_success "Agents all set to executable permissions!"
+print_success "Tools all set to executable permissions!"

@@ -18,7 +18,7 @@ from ratio.core.cdk.managed_policies import (
     SSMSecretManagerManagedPolicy,
 )
 
-from ratio.core.services.agent_manager.stack import AgentManagerStack
+from ratio.core.services.process_manager.stack import ProcessManagerStack
 from ratio.core.services.scheduler.stack import SchedulerStack
 from ratio.core.services.storage_manager.stack import StorageManagerStack
 
@@ -49,7 +49,7 @@ class RatioAPIStack(Stack):
             requires_event_bus=True,
             requires_exceptions_trap=True,
             required_stacks=[
-                AgentManagerStack,
+                ProcessManagerStack,
                 EntitiesTableStack,
                 GroupsTableStack,
                 SchedulerStack,
@@ -81,7 +81,7 @@ class RatioAPIStack(Stack):
             managed_policies=[secret_manager_policy.managed_policy],
             resource_access_requests=[
                 ResourceAccessRequest(
-                    resource_name="agent_manager",
+                    resource_name="process_manager",
                     resource_type=ResourceType.REST_SERVICE,
                 ),
                 ResourceAccessRequest(

@@ -5,11 +5,11 @@ from da_vinci_cdk.stack import Stack
 
 from ratio.core.api.stack import RatioAPIStack
 
-from ratio.agents.bedrock.stack import RatioBedrockAgents
-from ratio.agents.combine_content.stack import RatioCombineContentAgent
-from ratio.agents.internal_api.stack import RatioAgentInternalAPI
-from ratio.agents.math.stack import RatioMathAgent
-from ratio.agents.render_template.stack import RatioRenderTemplateAgent
+from ratio.tools.bedrock.stack import RatioBedrockTools
+from ratio.tools.combine_content.stack import RatioCombineContentTool
+from ratio.tools.internal_api.stack import RatioInternalAPITool
+from ratio.tools.math.stack import RatioMathTool
+from ratio.tools.render_template.stack import RatioRenderTemplateTool
 
 base_dir = Stack.absolute_dir(__file__)
 
@@ -27,14 +27,14 @@ ratio = Application(
 
 ratio.add_uninitialized_stack(RatioAPIStack)
 
-ratio.add_uninitialized_stack(RatioAgentInternalAPI)
+ratio.add_uninitialized_stack(RatioInternalAPITool)
 
-ratio.add_uninitialized_stack(RatioBedrockAgents)
+ratio.add_uninitialized_stack(RatioBedrockTools)
 
-ratio.add_uninitialized_stack(RatioCombineContentAgent)
+ratio.add_uninitialized_stack(RatioCombineContentTool)
 
-ratio.add_uninitialized_stack(RatioMathAgent)
+ratio.add_uninitialized_stack(RatioMathTool)
 
-ratio.add_uninitialized_stack(RatioRenderTemplateAgent)
+ratio.add_uninitialized_stack(RatioRenderTemplateTool)
 
 ratio.synth()

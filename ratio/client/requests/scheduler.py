@@ -23,7 +23,7 @@ class CreateSubscriptionRequest(RequestBody):
             optional=False,
         ),
         RequestBodyAttribute(
-            name="agent_definition",
+            name="tool_definition",
             attribute_type=RequestAttributeType.STRING,
             optional=False,
         ),
@@ -55,7 +55,7 @@ class CreateSubscriptionRequest(RequestBody):
         ),
     ]
 
-    def __init__(self, event_type: str, agent_definition: str, expiration: Optional[datetime] = None,
+    def __init__(self, event_type: str, tool_definition: str, expiration: Optional[datetime] = None,
                  execution_working_directory: Optional[str] = None, owner: Optional[str] = None, 
                  single_use: Optional[bool] = None, filter_conditions: Optional[dict] = None):
         """
@@ -63,16 +63,16 @@ class CreateSubscriptionRequest(RequestBody):
 
         Keyword arguments:
         event_type -- The type of event to subscribe to (e.g., process_start, process_stop, file_type_update).
-        agent_definition -- The path to the agent that will be executed for the subscription.
+        tool_definition -- The path to the tool that will be executed for the subscription.
         expiration -- The optional datetime the subscription will expire.
-        execution_working_directory -- The optional working directory for the agent execution.
+        execution_working_directory -- The optional working directory for the tool execution.
         owner -- The owner of the process. This can only be set by the admin, the default is the creator.
         single_use -- Whether the subscription is single use or not.
         filter_conditions -- Event-specific filter conditions. For filesystem events: include file_path, file_event_type, file_type.
         """
         super().__init__(
             event_type=event_type,
-            agent_definition=agent_definition,
+            tool_definition=tool_definition,
             expiration=expiration,
             execution_working_directory=execution_working_directory,
             owner=owner,

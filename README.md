@@ -162,10 +162,9 @@ Designed for agent development with integrated debugging, exception handling, an
 
 ## Documentation
 
-- [Getting Started Guide](GETTING_STARTED.md) - Installation and setup
-- [Agent Authoring](docs/AGENT_AUTHORING.md) - Creating agents
-- [CLI Reference](docs/CLI_CHEAT_SHEET.md) - Command reference
-- [Agent Composition](docs/agent_definition_appendix/AGENT_COMPOSITION.md) - Workflow orchestration
+- [Getting Started Guide](GETTING_STARTED.md)
+- [Primitive Agent Authoring](docs/PRIMITIVE_AGENT_AUTHORING.md)
+- [Composite Agent Authoring](_fs/system/docs/AGENT_COMPOSITION.md)
 
 ## Development
 

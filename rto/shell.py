@@ -55,7 +55,7 @@ from rto.commands.navigation import (
 )
 from rto.commands.process import (
     DescribeProcessCommand,
-    ExecuteAgentCommand,
+    ExecuteToolCommand,
     ListProcessesCommand,
 
 )
@@ -301,7 +301,7 @@ def main():
         DescribeEntityCommand,
         DescribeProcessCommand,
         DescribeSubscriptionCommand,
-        ExecuteAgentCommand,
+        ExecuteToolCommand,
         GetCurrentProfileCommand,
         GetFileVersionCommand,
         ListEntitiesCommand,

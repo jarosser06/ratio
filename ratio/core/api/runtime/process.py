@@ -128,7 +128,7 @@ class ProcessAPI(ChildAPI):
             token=token,
         )
 
-        path = request_context["path"].replace("/tool", "")
+        path = request_context["path"].replace("/process", "")
 
         logging.debug(f"Calling tool manager {path} with request body: {request_body.to_dict()}")
 

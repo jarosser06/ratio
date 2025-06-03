@@ -60,8 +60,8 @@ class SyncCommand(RTOCommand):
     }
 
     DEFAULT_TYPE_MAP = {
-        # Agent files
-        "agent": "ratio::agent",
+        # Tool files
+        "tool": "ratio::tool",
 
         # Text files
         "txt": "ratio::text",

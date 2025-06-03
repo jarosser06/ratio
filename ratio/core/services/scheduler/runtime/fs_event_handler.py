@@ -21,8 +21,8 @@ from ratio.core.tables.entities.client import (
     EntitiesTableClient,
 )
 
-from ratio.core.services.agent_manager.request_definitions import (
-    ExecuteAgentRequest,
+from ratio.core.services.process_manager.request_definitions import (
+    ExecuteToolRequest,
 )
 
 from ratio.core.services.storage_manager.request_definitions import (
@@ -38,7 +38,7 @@ from ratio.core.services.scheduler.tables.filesystem_subscriptions.client import
 from ratio.core.services.scheduler.runtime.token import generate_token
 
 
-_FN_NAME = "ratio.services.agents.scheduler.fs_update_handler"
+_FN_NAME = "ratio.services.tools.scheduler.fs_update_handler"
 
 
 @fn_event_response(exception_reporter=ExceptionReporter(), function_name=_FN_NAME, logger=Logger(_FN_NAME))
@@ -121,10 +121,10 @@ def fs_update_handler(event, context):
 
         token = generate_token(entity_id=subscription.process_owner)
 
-        # Validate the agent definition path
+        # Validate the tool definition path
         validate_file_access_request = ObjectBody(
             body={
-                "file_path": subscription.agent_definition,
+                "file_path": subscription.tool_definition,
                 "requested_permission_names": ["execute"],
             },
             schema=ValidateFileAccessRequest,
@@ -140,9 +140,9 @@ def fs_update_handler(event, context):
         logging.debug(f"Validation response: {validation_response}")
 
         if validation_response.status_code == 404:
-            logging.debug(f"Subscribed file {subscription.agent_definition} not found")
+            logging.debug(f"Subscribed file {subscription.tool_definition} not found")
 
-            err_msg = f"agent definition path {subscription.agent_definition} for subscription {subscription.file_path} - {subscription.subscription_id} not found"
+            err_msg = f"tool definition path {subscription.tool_definition} for subscription {subscription.file_path} - {subscription.subscription_id} not found"
 
             exception_reporter.report(
                 function_name=_FN_NAME,
@@ -156,9 +156,9 @@ def fs_update_handler(event, context):
         entity_has_access = validation_response.response_body.get("entity_has_access", False)
 
         if not entity_has_access:
-            logging.debug(f"Entity {subscription.process_owner} does not have access to {subscription.agent_definition}")
+            logging.debug(f"Entity {subscription.process_owner} does not have access to {subscription.tool_definition}")
 
-            err_msg = f"entity {subscription.process_owner} does not have access to agent definition path {subscription.agent_definition} for subscription {subscription.file_path} - {subscription.subscription_id}"
+            err_msg = f"entity {subscription.process_owner} does not have access to tool definition path {subscription.tool_definition} for subscription {subscription.file_path} - {subscription.subscription_id}"
 
             exception_reporter.report(
                 function_name=_FN_NAME,
@@ -169,37 +169,37 @@ def fs_update_handler(event, context):
 
             continue
 
-        agent_mgr = RatioInternalClient(
-            service_name="agent_manager",
+        tool_mgr = RatioInternalClient(
+            service_name="process_manager",
             token=token,
         )
 
         try:
-            agent_exec_req = ObjectBody(
+            tool_exec_req = ObjectBody(
                 body={
                     "arguments": {
                         "event_details": event_body.get("details"),
                         "file_path": event_body["file_path"],
                         "file_event_type": event_body["file_event_type"],
                     },
-                    "agent_definition_path": subscription.agent_definition,
+                    "tool_definition_path": subscription.tool_definition,
                     "working_directory": subscription.execution_working_directory,
                 },
-                schema=ExecuteAgentRequest,
+                schema=ExecuteToolRequest,
             )
 
-            logging.debug(f"Executing agent {subscription.agent_definition} with request {agent_exec_req}")
+            logging.debug(f"Executing tool {subscription.tool_definition} with request {tool_exec_req}")
 
-            agent_response = agent_mgr.request(
+            tool_response = tool_mgr.request(
                 path="/execute",
-                request=agent_exec_req,
+                request=tool_exec_req,
             )
 
-            assert agent_response.status_code == 200, f"Agent execution failed with status code {agent_response.status_code} and message {agent_response.response_body}"
+            assert tool_response.status_code == 200, f"Tool execution failed with status code {tool_response.status_code} and message {tool_response.response_body}"
 
-            process_id = agent_response.response_body["process_id"]
+            process_id = tool_response.response_body["process_id"]
 
-            logging.debug(f"Agent executed with process ID {process_id}")
+            logging.debug(f"Tool executed with process ID {process_id}")
 
             if subscription.single_use:
                 # Delete the subscription if it is single use
@@ -211,10 +211,10 @@ def fs_update_handler(event, context):
 
                 subscriptions_client.put(subscription=subscription)
 
-        except Exception as agent_exec_error:
-            logging.debug(f"Agent execution failed: {agent_exec_error}")
+        except Exception as tool_exec_error:
+            logging.debug(f"Tool execution failed: {tool_exec_error}")
 
-            err_msg = f"Agent execution failed for subscription {subscription.file_path} - {subscription.subscription_id} with error {agent_exec_error}"
+            err_msg = f"Tool execution failed for subscription {subscription.file_path} - {subscription.subscription_id} with error {tool_exec_error}"
 
             exception_reporter.report(
                 function_name=_FN_NAME,

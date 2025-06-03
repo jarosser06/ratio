@@ -17,7 +17,7 @@ from da_vinci.core.orm.client import (
 class FilesystemSubscription(TableObject):
     table_name = "filesystem_subscriptions"
 
-    table_description = "Tracks agent subscriptions to file system events"
+    table_description = "Tracks tool subscriptions to file system events"
 
     partition_key_attribute = TableObjectAttribute(
         name="full_path_hash",
@@ -41,9 +41,9 @@ class FilesystemSubscription(TableObject):
 
     attributes = [
         TableObjectAttribute(
-            name="agent_definition",
+            name="tool_definition",
             attribute_type=TableObjectAttributeType.STRING,
-            description="The path to the agent that will be executed for the subscription.",
+            description="The path to the tool that will be executed for the subscription.",
             optional=True,
         ),
 
@@ -58,7 +58,7 @@ class FilesystemSubscription(TableObject):
         TableObjectAttribute(
             name="execution_working_directory",
             attribute_type=TableObjectAttributeType.STRING,
-            description="The optional working directory for the agent execution.",
+            description="The optional working directory for the tool execution.",
             optional=True,
         ),
 

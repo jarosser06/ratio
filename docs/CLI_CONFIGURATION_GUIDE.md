@@ -236,8 +236,8 @@ rto configure --name=prod --config-entity=prod_alice --config-key=prod_alice_pri
 
 ```bash
 # Separate profiles prevent accidental cross-environment actions
-rto --profile=dev execute --agent-definition-path=/agents/test.agent    # Safe
-rto --profile=prod execute --agent-definition-path=/agents/test.agent   # Explicit
+rto --profile=dev execute --tool-definition-path=/tools/test.tool    # Safe
+rto --profile=prod execute --tool-definition-path=/tools/test.tool   # Explicit
 
 # Always specify profile for production commands
 rto --profile=prod list-processes
@@ -261,7 +261,7 @@ When no `--profile` flag is specified, the CLI uses the default profile:
 ```bash
 # Uses default profile (as specified in config.json)
 rto list-files
-rto execute --agent-definition-path=/agents/my_agent.agent
+rto execute --tool-definition-path=/tools/my_tool.tool
 
 # Check which profile is default
 cat ~/.rto/config.json | grep default_profile
@@ -276,12 +276,12 @@ Override the default for a single command:
 rto --profile=prod list-files
 
 # All global options must come before the command
-rto --profile=staging --config-path=/alt/config execute --agent-definition-path=/agents/test.agent
+rto --profile=staging --config-path=/alt/config execute --tool-definition-path=/tools/test.tool
 
 # Multiple profile uses
 rto --profile=dev list-processes
 rto --profile=prod describe-process 1234-5678
-rto --profile=dev execute --agent-definition-path=/agents/test.agent
+rto --profile=dev execute --tool-definition-path=/tools/test.tool
 ```
 
 #### Switching Default Profile
@@ -485,7 +485,7 @@ rto cd /data/dev_projects
 
 # Work normally
 rto ls
-rto execute --agent-definition-path=agents/test_agent.agent
+rto execute --tool-definition-path=tools/test_tool.tool
 ```
 
 ### Multi-Environment Workflow
@@ -498,7 +498,7 @@ rto configure --name=prod --config-deployment=prod --config-entity=prod_admin --
 
 # Switch between environments
 rto --profile=dev list-processes
-rto --profile=staging execute --agent-definition-path=/agents/test.agent
+rto --profile=staging execute --tool-definition-path=/tools/test.tool
 rto --profile=prod list-files  # Uses prod as default
 
 # Working directory is shared across all profiles

@@ -49,7 +49,7 @@ Development Process
 ### Branching
 
 Always create a new branch for your work
-Use descriptive branch names (e.g., feature/add-agent-scheduling, fix/storage-permissions-issue)
+Use descriptive branch names (e.g., feature/add-tool-scheduling, fix/storage-permissions-issue)
 Keep your branches focused on a single feature or fix
 
 ### Pull Requests
@@ -129,9 +129,9 @@ Before submitting your PR, use git rebase -i to squash your work-in-progress com
 Single change:
 
 ```
-Add agent scheduling capability to task manager
+Add tool scheduling capability to task manager
 
-Implement scheduling functionality that allows agents to be
+Implement scheduling functionality that allows tools to be
 scheduled for future execution. Includes cron-style scheduling
 and one-time scheduled tasks.
 ```
@@ -153,22 +153,22 @@ Documentation
 - Update the README.md if you're adding new features
 - Add docstrings to all new functions and classes following the Ratio pattern
 - Update any relevant examples in the codebase
-- If you're adding new agents, include agent definition files
+- If you're adding new tools, include tool definition files
 - If you're adding new CDK constructs, include example usage
 - Update the API documentation for any new endpoints
 - Document any new environment variables or configuration options
 
 
-Agent Development
+Tool Development
 ------------------
 
-When contributing new agents:
+When contributing new tools:
 
-- Create the agent definition file in the appropriate directory
-- Include comprehensive argument definitions in the `.agent` file notation
-- Add appropriate response schemas, if the agent returns anything
+- Create the tool definition file in the appropriate directory
+- Include comprehensive argument definitions in the `.tool` file notation
+- Add appropriate response schemas, if the tool returns anything
 - Include example usage in the documentation
-- Add tests for the agent functionality as able
+- Add tests for the tool functionality as able
 
 Storage System
 ---------------

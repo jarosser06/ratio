@@ -19,7 +19,7 @@ from ratio.core.services.scheduler.request_definitions import (
 
 class SchedulerAPI(ChildAPI):
     """
-    Scheduler API Proxy for managing agent execution subscriptions.
+    Scheduler API Proxy for managing tool execution subscriptions.
     """
     routes = [
         Route(

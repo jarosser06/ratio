@@ -14,7 +14,7 @@ from ratio.core.services.storage_manager.tables.files.client import FilesTableCl
 from ratio.core.services.storage_manager.tables.file_lineage.client import FileLineageTableClient
 from ratio.core.services.storage_manager.tables.file_versions.client import FileVersionsTableClient
 from ratio.core.services.storage_manager.tables.file_types.client import FileTypeTableClient
-from ratio.core.services.agent_manager.tables.processes.client import ProcessTableClient
+from ratio.core.services.process_manager.tables.processes.client import ProcessTableClient
 
 
 def delete_all_objects_in_versioned_bucket(bucket_name: str):
@@ -184,7 +184,7 @@ if __name__ == "__main__":
 
     all_file_types = file_types_client._all_objects()
 
-    SKIP_FILE_TYPES = ["ratio::file", "ratio::directory", "ratio::root", "ratio::agent", "ratio::agent_io"]
+    SKIP_FILE_TYPES = ["ratio::file", "ratio::directory", "ratio::root", "ratio::tool", "ratio::tool_io"]
 
     for file_type in all_file_types:
         if file_type.type_name in SKIP_FILE_TYPES:

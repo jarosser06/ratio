@@ -137,7 +137,7 @@ class CrudAPI(ChildAPI):
 
         validate_file_access_request = ObjectBody(
             body={
-                "file_path": request_body["agent_definition"],
+                "file_path": request_body["tool_definition"],
                 "requested_permission_names": ["execute"],
             },
             schema=ValidateFileAccessRequest,
@@ -151,21 +151,21 @@ class CrudAPI(ChildAPI):
         logging.debug(f"Validation response: {validation_response}")
 
         if validation_response.status_code == 404:
-            logging.debug(f"Agent definition path does not exist: {request_body['agent_definition']}")
+            logging.debug(f"Tool definition path does not exist: {request_body['tool_definition']}")
 
             return self.respond(
-                body={"message": f"agent {request_body['agent_definition']} definition file not found"},
+                body={"message": f"tool {request_body['tool_definition']} definition file not found"},
                 status_code=404,
             )
 
         entity_has_access = validation_response.response_body.get("entity_has_access", False)
 
-        logging.debug(f"Entity has access to agent definition path: {entity_has_access}")
+        logging.debug(f"Entity has access to tool definition path: {entity_has_access}")
 
         if not entity_has_access:
-            logging.debug(f"Requestor does not have access to agent definition path: {request_body['agent_definition']}")
+            logging.debug(f"Requestor does not have access to tool definition path: {request_body['tool_definition']}")
             return self.respond(
-                body={"message": f"unauthorized to access agent definition path {request_body['agent_definition']}"},
+                body={"message": f"unauthorized to access tool definition path {request_body['tool_definition']}"},
                 status_code=403,
             )
 
@@ -178,7 +178,7 @@ class CrudAPI(ChildAPI):
 
         # Create the filesystem subscription
         subscription = FilesystemSubscription(
-            agent_definition=request_body["agent_definition"],
+            tool_definition=request_body["tool_definition"],
             execution_working_directory=request_body.get("execution_working_directory"),
             expiration=expiration,
             full_path_hash=FilesystemSubscription.create_full_path_hash_from_path(file_path),
@@ -213,7 +213,7 @@ class CrudAPI(ChildAPI):
                 body={"message": "not permitted to create subscriptions on behalf of another entity"},
             )
 
-        # Validate access to the agent definition
+        # Validate access to the tool definition
         storage_client = RatioInternalClient(
             service_name="storage_manager",
             token=request_context["signed_token"],
@@ -221,7 +221,7 @@ class CrudAPI(ChildAPI):
 
         validate_file_access_request = ObjectBody(
             body={
-                "file_path": request_body["agent_definition"],
+                "file_path": request_body["tool_definition"],
                 "requested_permission_names": ["execute"],
             },
             schema=ValidateFileAccessRequest,
@@ -235,20 +235,20 @@ class CrudAPI(ChildAPI):
         logging.debug(f"Validation response: {validation_response}")
 
         if validation_response.status_code == 404:
-            logging.debug(f"Agent definition path does not exist: {request_body['agent_definition']}")
+            logging.debug(f"Tool definition path does not exist: {request_body['tool_definition']}")
 
             return self.respond(
-                body={"message": f"agent {request_body['agent_definition']} definition file not found"},
+                body={"message": f"tool {request_body['tool_definition']} definition file not found"},
                 status_code=404,
             )
 
         entity_has_access = validation_response.response_body.get("entity_has_access", False)
 
         if not entity_has_access:
-            logging.debug(f"Requestor does not have access to agent definition path: {request_body['agent_definition']}")
+            logging.debug(f"Requestor does not have access to tool definition path: {request_body['tool_definition']}")
 
             return self.respond(
-                body={"message": f"unauthorized to access agent definition path {request_body['agent_definition']}"},
+                body={"message": f"unauthorized to access tool definition path {request_body['tool_definition']}"},
                 status_code=403,
             )
 
@@ -262,7 +262,7 @@ class CrudAPI(ChildAPI):
         # Create the general subscription
         subscription = GeneralSubscription(
             event_type=request_body["event_type"],
-            agent_definition=request_body["agent_definition"],
+            tool_definition=request_body["tool_definition"],
             execution_working_directory=request_body.get("execution_working_directory"),
             expiration=expiration,
             process_owner=owner,

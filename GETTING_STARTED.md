@@ -108,7 +108,7 @@ fs_sync
 ```
 
 The `fs_sync` command maps your local `_fs` directory structure directly to the Ratio filesystem
-(e.g., `_fs/agents/` → `ratio:/agents/`). This must be run from the ratio project root where the 
+(e.g., `_fs/tools/` → `ratio:/tools/`). This must be run from the ratio project root where the 
 `_fs` directory is located.
 
 ## Interactive Shell
@@ -128,7 +128,7 @@ The shell provides:
 ## Next Steps
 
 - Create additional entities: `rto create-entity username`
-- Define agent workflows in `/agents/`
+- Define tool workflows in `/tools/`
 - Set up file monitoring with subscriptions
 - Explore the file system: `rto ls /` to see available directories
 
@@ -155,5 +155,5 @@ Common commands:
 - `rto cd /path` - Change working directory  
 - `rto pwd` - Print current directory
 - `rto create-file /path/file.txt "content"` - Create a file
-- `rto execute --agent-definition-path /path/agent.def` - Run an agent
+- `rto execute --tool-definition-path /path/my.tool` - Run an tool
 - `rto list-processes` - View running processes

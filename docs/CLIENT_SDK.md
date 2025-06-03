@@ -3,7 +3,7 @@
 ## Overview
 
 The Ratio Client Library provides a Python interface for interacting with the Ratio system. Based on the codebase, it offers APIs
-for authentication, file storage, agent execution, and scheduling.
+for authentication, file storage, tool execution, and scheduling.
 
 ## Client Initialization
 
@@ -285,16 +285,16 @@ delete_group_request = DeleteGroupRequest(
 response = client.request(delete_group_request)
 ```
 
-## Agent API
+## Tool API
 
-### Agent Execution
+### Tool Execution
 
 ```python
-from ratio.client.requests.agent import ExecuteAgentRequest
+from ratio.client.requests.tool import ExecuteToolRequest
 
 # Execute with inline definition
-execute_request = ExecuteAgentRequest(
-    agent_definition={"key": "value"},  # JSON object
+execute_request = ExecuteToolRequest(
+    tool_definition={"key": "value"},  # JSON object
     arguments={"arg1": "value1"},
     execute_as="other_user",
     working_directory="/work/dir"
@@ -302,28 +302,28 @@ execute_request = ExecuteAgentRequest(
 response = client.request(execute_request)
 
 # Execute from file path
-execute_request = ExecuteAgentRequest(
-    agent_definition_path="/path/to/agent.json",
+execute_request = ExecuteToolRequest(
+    tool_definition_path="/path/to/tool.json",
     arguments={"arg1": "value1"},
     working_directory="/work/dir"
 )
 response = client.request(execute_request)
 ```
 
-### Agent Validation
+### Tool Validation
 
 ```python
-from ratio.client.requests.agent import ValidateAgentRequest
+from ratio.client.requests.tool import ValidateToolRequest
 
 # Validate inline definition
-validate_request = ValidateAgentRequest(
-    agent_definition={"key": "value"}
+validate_request = ValidateToolRequest(
+    tool_definition={"key": "value"}
 )
 response = client.request(validate_request)
 
 # Validate from file
-validate_request = ValidateAgentRequest(
-    agent_definition_path="/path/to/agent.json"
+validate_request = ValidateToolRequest(
+    tool_definition_path="/path/to/tool.json"
 )
 response = client.request(validate_request)
 ```
@@ -331,7 +331,7 @@ response = client.request(validate_request)
 ### Process Management
 
 ```python
-from ratio.client.requests.agent import (
+from ratio.client.requests.tool import (
     DescribeProcessRequest,
     ListProcessesRequest
 )
@@ -363,7 +363,7 @@ from ratio.client.requests.scheduler import (
 
 # Create subscription
 create_request = CreateSubscriptionRequest(
-    agent_definition="/path/to/agent.py",
+    tool_definition="/path/to/tool.py",
     file_path="/watched/path",
     file_event_type="created",  # "created", "deleted", "updated", "version_created", "version_deleted"
     expiration=datetime_object,

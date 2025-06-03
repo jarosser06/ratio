@@ -1,19 +1,19 @@
-# Primitive Agent Creation Guide
+# Primitive Tool Creation Guide
 
 ## Overview
 
-Primitive agents in Ratio are single-function agents that execute a specific task and return results. They consist of two parts:
+Primitive tools in Ratio are single-function tools that execute a specific task and return results. They consist of two parts:
 
-1. **Agent Definition** (`.agent` file): JSON schema defining inputs, outputs, and execution endpoint
+1. **Tool Definition** (`.tool` file): JSON schema defining inputs, outputs, and execution endpoint
 2. **Runtime Implementation** (Python code): The actual execution logic
 
-## Agent Definition Structure
+## Tool Definition Structure
 
-Primitive agents have a `system_event_endpoint` field that distinguishes them from composite agents:
+Primitive tools have a `system_event_endpoint` field that distinguishes them from composite tools:
 
 ```json
 {
-  "description": "Brief description of what the agent does",
+  "description": "Brief description of what the tool does",
   "arguments": [
     {
       "name": "parameter_name",
@@ -31,7 +31,7 @@ Primitive agents have a `system_event_endpoint` field that distinguishes them fr
       "required": true
     }
   ],
-  "system_event_endpoint": "ratio::agent::your_agent_name::execution"
+  "system_event_endpoint": "ratio::tool::your_tool_name::execution"
 }
 ```
 
@@ -45,13 +45,13 @@ from typing import Dict
 from da_vinci.core.logging import Logger
 from da_vinci.event_bus.client import fn_event_response
 from da_vinci.exception_trap.client import ExceptionReporter
-from ratio.agents.agent_lib import RatioSystem
+from ratio.tools.tool_lib import RatioSystem
 
-_FN_NAME = "ratio.agents.your_agent_name"
+_FN_NAME = "ratio.tools.your_tool_name"
 
 @fn_event_response(exception_reporter=ExceptionReporter(), function_name=_FN_NAME, logger=Logger(_FN_NAME))
 def handler(event: Dict, context: Dict):
-    """Execute the agent"""
+    """Execute the tool"""
     system = RatioSystem.from_da_vinci_event(event)
 
     with system:
@@ -89,13 +89,13 @@ system.put_file(
     file_path="/path/to/output.json",
     file_type="ratio::file",
     data=content,
-    metadata={"created_by": "my_agent"}
+    metadata={"created_by": "my_tool"}
 )
 ```
 
 ## Stack Definition
 
-Create a CDK stack to deploy the agent:
+Create a CDK stack to deploy the tool:
 
 ```python
 from os import path
@@ -108,7 +108,7 @@ from da_vinci_cdk.constructs.base import resource_namer
 from da_vinci_cdk.constructs.event_bus import EventBusSubscriptionFunction
 from ratio.core.services.storage_manager.stack import StorageManagerStack
 
-class YourAgentStack(Stack):
+class YourToolStack(Stack):
     def __init__(self, app_name: str, app_base_image: str, architecture: str, 
                  deployment_id: str, stack_name: str, scope: Construct):
 
@@ -128,15 +128,15 @@ class YourAgentStack(Stack):
 
         runtime_path = path.join(base_dir, "runtime")
 
-        self.agent_execute = EventBusSubscriptionFunction(
+        self.tool_execute = EventBusSubscriptionFunction(
             base_image=self.app_base_image,
-            construct_id="your-agent-execution",
-            event_type="ratio::agent::your_agent_name::execution",
-            description="Your agent description",
+            construct_id="your-tool-execution",
+            event_type="ratio::tool::your_tool_name::execution",
+            description="Your tool description",
             entry=runtime_path,
             index="run.py",
             handler="handler",
-            function_name=resource_namer("agent-your-name", scope=self),
+            function_name=resource_namer("tool-your-name", scope=self),
             memory_size=256,
             resource_access_requests=[
                 ResourceAccessRequest(
@@ -161,8 +161,8 @@ class YourAgentStack(Stack):
 ## Directory Structure
 
 ```
-your_agent/
-├── your_agent.agent          # Agent definition
+your_tool/
+├── your_tool.tool          # Tool definition
 ├── runtime/
 │   ├── Dockerfile           # Standard Dockerfile
 │   └── run.py              # Runtime implementation
@@ -194,12 +194,12 @@ with system:
 
 ## Complete Example
 
-Here's a simple text processing agent:
+Here's a simple text processing tool:
 
-### hello_world.agent
+### hello_world.tool
 ```json
 {
-  "description": "A simple greeting agent",
+  "description": "A simple greeting tool",
   "arguments": [
     {
       "name": "name",
@@ -224,7 +224,7 @@ Here's a simple text processing agent:
       "required": true
     }
   ],
-  "system_event_endpoint": "ratio::agent::hello_world::execution"
+  "system_event_endpoint": "ratio::tool::hello_world::execution"
 }
 ```
 
@@ -235,13 +235,13 @@ from typing import Dict
 from da_vinci.core.logging import Logger
 from da_vinci.event_bus.client import fn_event_response
 from da_vinci.exception_trap.client import ExceptionReporter
-from ratio.agents.agent_lib import RatioSystem
+from ratio.tools.tool_lib import RatioSystem
 
-_FN_NAME = "ratio.agents.hello_world"
+_FN_NAME = "ratio.tools.hello_world"
 
 @fn_event_response(exception_reporter=ExceptionReporter(), function_name=_FN_NAME, logger=Logger(_FN_NAME))
 def handler(event: Dict, context: Dict):
-    """Execute the hello world agent"""
+    """Execute the hello world tool"""
     logging.info(f"Received request: {event}")
 
     system = RatioSystem.from_da_vinci_event(event)
@@ -271,6 +271,6 @@ COPY ./* ${LAMBDA_TASK_ROOT}/
 
 ## That's It
 
-Primitive agents are simple: define the interface in JSON, implement the logic in Python with the
+Primitive tools are simple: define the interface in JSON, implement the logic in Python with the
 RatioSystem context manager, and deploy with a CDK stack. The system handles argument validation,
 file operations, and error reporting automatically.

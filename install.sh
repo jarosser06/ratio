@@ -135,7 +135,7 @@ main() {
     # Step 2: CDK Deployment (optional)
     if [ "$SKIP_DEPLOY" = false ]; then
         print_status "Starting CDK deployment..."
-        print_warning "This will take at least 10 minutes..."
+        print_warning "This will take at least 20 minutes..."
 
         if [ "$VERBOSE" = true ]; then
             make deploy

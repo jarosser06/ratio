@@ -28,7 +28,7 @@ def handler(event: Dict, context: Dict) -> Dict:
     """
     api = ParentAPI(
         child_apis=[
-            ToolAPI,
+            ProcessAPI,
             AuthAPI,
             SchedulerAPI,
             StorageAPI,

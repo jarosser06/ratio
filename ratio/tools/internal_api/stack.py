@@ -73,7 +73,7 @@ class RatioInternalAPITool(Stack):
                     policy_name="default",
                 ),
                 ResourceAccessRequest(
-                    resource_name="tool_manager",
+                    resource_name="process_manager",
                     resource_type=ResourceType.REST_SERVICE,
                 ),
                 ResourceAccessRequest(

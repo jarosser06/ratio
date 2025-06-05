@@ -12,13 +12,10 @@ from da_vinci.exception_trap.client import fn_exception_reporter
 
 from ratio.core.core_lib.factories.api import ParentAPI
 
-from ratio.core.api.runtime.process import ProcessAPI
-from ratio.core.api.runtime.auth import AuthAPI
-from ratio.core.api.runtime.scheduler import SchedulerAPI
-from ratio.core.api.runtime.storage import StorageAPI
+from ratio.core.services.auth.runtime.auth import AuthAPI
 
 
-_FN_NAME = "ratio.core.api"
+_FN_NAME = "ratio.services.auth.api"
 
 
 @fn_exception_reporter(function_name=_FN_NAME, logger=Logger(_FN_NAME), re_raise=True)
@@ -28,10 +25,7 @@ def handler(event: Dict, context: Dict) -> Dict:
     """
     api = ParentAPI(
         child_apis=[
-            ProcessAPI,
             AuthAPI,
-            SchedulerAPI,
-            StorageAPI,
         ],
         function_name=_FN_NAME,
     )

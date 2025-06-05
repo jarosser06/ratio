@@ -1,5 +1,5 @@
 """
-API Interface
+Storage Manager API Interface
 """
 import json
 import logging

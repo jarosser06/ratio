@@ -31,22 +31,22 @@ from ratio.core.services.storage_manager.runtime.events import (
 class FileTypesAPI(ChildAPI):
     routes = [
         Route(
-            path="/delete_file_type",
+            path="/storage/delete_file_type",
             method_name="delete_file_type",
             request_body_schema=DeleteFileTypeRequest,
         ),
         Route(
-            path="/describe_file_type",
+            path="/storage/describe_file_type",
             method_name="describe_file_type",
             request_body_schema=DescribeFileTypeRequest,
         ),
         Route(
-            path="/list_file_types",
+            path="/storage/list_file_types",
             method_name="list_file_types",
             request_body_schema=None,
         ),
         Route(
-            path="/put_file_type",
+            path="/storage/put_file_type",
             method_name="put_file_type",
             request_body_schema=PutFileTypeRequest,
         ),

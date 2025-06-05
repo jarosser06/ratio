@@ -1,7 +1,7 @@
 """
 Internal API Call Tool
 
-Simply executes an internal API request and returns the response.
+Simply executes an internal API request
 """
 import json
 import logging
@@ -64,7 +64,6 @@ def handler(event: Dict, context: Dict):
 
                 response_body = {"message": api_resp.response_body}
 
-        # Return the response
         system.success(
             response_body={
                 "response_body": response_body,

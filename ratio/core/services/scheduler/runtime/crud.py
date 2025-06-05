@@ -144,7 +144,7 @@ class CrudAPI(ChildAPI):
         )
 
         validation_response = storage_client.request(
-            path="/validate_file_access",
+            path="/storage/validate_file_access",
             request=validate_file_access_request,
         )
 
@@ -228,7 +228,7 @@ class CrudAPI(ChildAPI):
         )
 
         validation_response = storage_client.request(
-            path="/validate_file_access",
+            path="/storage/validate_file_access",
             request=validate_file_access_request,
         )
 

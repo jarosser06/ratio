@@ -7,7 +7,7 @@ from da_vinci.core.tables.global_settings import GlobalSettings
 
 # Import API Tables
 from ratio.core.tables.entities.client import EntitiesTableClient
-from ratio.core.api.tables.groups.client import GroupsTableClient
+from ratio.core.tables.groups.client import GroupsTableClient
 
 # Import Storage Manager Tables
 from ratio.core.services.storage_manager.tables.files.client import FilesTableClient

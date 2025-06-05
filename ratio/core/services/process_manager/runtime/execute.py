@@ -57,12 +57,12 @@ from ratio.core.services.process_manager.runtime.validator import RefValidator
 class ExecuteAPI(ChildAPI):
     routes = [
         Route(
-            path="/execute",
+            path="/process/execute",
             method_name="execute_tool",
             request_body_schema=ExecuteToolRequest,
         ),
         Route(
-            path="/validate_definition",
+            path="/process/validate_definition",
             method_name="validate_tool_definition",
             request_body_schema=ValidateToolDefinitionRequest,
         ),
@@ -96,7 +96,7 @@ class ExecuteAPI(ChildAPI):
             )
 
             validate_file_access_response = storage_client.request(
-                path="/validate_file_access",
+                path="/storage/validate_file_access",
                 request=validate_file_access_request,
             )
 
@@ -197,7 +197,7 @@ class ExecuteAPI(ChildAPI):
         )
 
         validate_file_access_response = storage_client.request(
-            path="/validate_file_access",
+            path="/storage/validate_file_access",
             request=validate_file_access_request,
         )
 
@@ -230,7 +230,7 @@ class ExecuteAPI(ChildAPI):
             )
 
             validate_file_access_response = storage_client.request(
-                path="/validate_file_access",
+                path="/storage/validate_file_access",
                 request=validate_file_access_request,
             )
 

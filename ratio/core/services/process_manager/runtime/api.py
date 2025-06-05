@@ -1,5 +1,5 @@
 """
-Agent API Interface
+Process API Interface
 """
 import json
 import logging
@@ -28,17 +28,17 @@ from ratio.core.services.process_manager.runtime.execute import ExecuteAPI
 class DescribeAPI(ChildAPI):
     routes = [
         Route(
-            path="/describe_process",
+            path="/process/describe_process",
             method_name="describe_process",
             request_body_schema=DescribeProcessRequest,
         ),
         Route(
-            path="/kill_process",
+            path="/process/kill_process",
             method_name="not_implemented",
             request_body_schema=KillProcessRequest,
         ),
         Route(
-            path="/list_processes",
+            path="/process/list_processes",
             method_name="list_processes",
             request_body_schema=ListProcessesRequest,
         ),
@@ -104,9 +104,13 @@ class DescribeAPI(ChildAPI):
             execution_status=request_body.get("execution_status"),
         )
 
+        response = [process.to_dict(json_compatible=True, exclude_attribute_names=["time_to_live"]) for process in processes]
+
+        logging.debug(f"Returning {response}")
+
         return self.respond(
             status_code=200,
-            body=[process.to_dict(json_compatible=True, exclude_attribute_names=["time_to_live"]) for process in processes],
+            body={"processes": response},
         )
 
 

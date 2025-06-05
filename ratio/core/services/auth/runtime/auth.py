@@ -3,7 +3,6 @@ Auth API
 """
 import json
 import logging
-import re
 import secrets
 
 from dataclasses import dataclass
@@ -21,12 +20,15 @@ from da_vinci.core.immutable_object import (
 )
 
 from ratio.core.core_lib.client import RatioInternalClient
-from ratio.core.core_lib.factories.api import ChildAPI, Route
+from ratio.core.core_lib.factories.api import (
+    ChildAPI,
+    Route,
+)
 from ratio.core.core_lib.jwt import JWTClaims, InternalJWTManager
 
 from ratio.core.tables.entities.client import Entity, EntitiesTableClient
 
-from ratio.core.api.tables.groups.client import Group, GroupsTableClient
+from ratio.core.tables.groups.client import Group, GroupsTableClient
 
 from ratio.core.services.storage_manager.request_definitions import DescribeFileRequest, PutFileRequest
 
@@ -108,7 +110,6 @@ class CreateEntityRequest(ObjectBodySchema):
             description="The ID of the entity. This is used to identify the entity in the system.",
             required=True,
             type_name=SchemaAttributeType.STRING,
-            regex_pattern=r"^[a-z0-9_-]+$",
         ),
         SchemaAttribute(
             name="groups",
@@ -133,7 +134,6 @@ class CreateEntityRequest(ObjectBodySchema):
                     value=False,
                 )
             ],
-            regex_pattern=r"^[a-z0-9_-]+$",
         ),
         SchemaAttribute(
             name="public_key",
@@ -157,7 +157,6 @@ class CreateGroupRequest(ObjectBodySchema):
             description="The ID of the group. This is used to identify the group in the system.",
             required=True,
             type_name=SchemaAttributeType.STRING,
-            regex_pattern=r"^[a-z0-9_-]+$"
         ),
     ]
 
@@ -220,7 +219,6 @@ class IntializeRequest(ObjectBodySchema):
             description="The ID of the admin entity. This is used to identify the admin entity in the system.",
             required=True,
             type_name=SchemaAttributeType.STRING,
-            regex_pattern=r"^[a-z0-9_-]+$",
         ),
         SchemaAttribute(
             name="admin_group_id",
@@ -382,24 +380,13 @@ class AuthAPI(ChildAPI):
     @staticmethod
     def validate_auth_id(auth_id: str, protected_words: list) -> bool:
         """
-        Validates the requested auth id against a list of protected words and a regex pattern.
+        Validates if the given auth_id is not a protected word.
 
         Keyword arguments:
         entity_name -- The name of the entity to validate
         protected_words -- A list of protected words that are not allowed in the entity name
         """
-        # Check if entity_name is a protected word
-        if auth_id.lower() in [word.lower() for word in protected_words]:
-            return False
-        
-        # Check if entity_name follows the allowed pattern
-        # Only alphanumeric characters, underscores, and hyphens are allowed
-        pattern = r"^[a-z0-9_-]+$"
-        
-        if not re.match(pattern, auth_id):
-            return False
-        
-        return True
+        return auth_id not in protected_words
 
     def _validate_admin_entity(self, request_context: Dict) -> bool:
         """
@@ -564,7 +551,7 @@ class AuthAPI(ChildAPI):
                 schema=DescribeFileRequest,
             )
 
-            describe_res = storage_client.request(path="/describe_file", request=describe_req)
+            describe_res = storage_client.request(path="/storage/describe_file", request=describe_req)
 
             # Only create the home directory if it doesn't exist
             if describe_res.status_code != 200:
@@ -579,7 +566,7 @@ class AuthAPI(ChildAPI):
                     schema=PutFileRequest,
                 )
 
-                home_dir_res = storage_client.request(path="/put_file", request=home_dir_req)
+                home_dir_res = storage_client.request(path="/storage/put_file", request=home_dir_req)
 
                 if home_dir_res.status_code < 200 or home_dir_res.status_code > 201:
                     if home_dir_res.status_code >= 500:
@@ -1160,21 +1147,21 @@ class AuthAPI(ChildAPI):
             schema=DescribeFileRequest,
         )
 
-        describe_res = storage_client.request(path="/describe_file", request=describe_req)
+        describe_res = storage_client.request(path="/storage/describe_file", request=describe_req)
 
         # Only create the home directory if it doesn't exist
         if describe_res.status_code != 200:
             logging.debug("Home directory does not exist ... creating")
 
             # Create the home directory
-            resp = storage_client.request(path="/put_file", request=root_dir_req)
+            resp = storage_client.request(path="/storage/put_file", request=root_dir_req)
 
             if resp.status_code != 200:
-                logging.debug(f"Failed to create admin home directory: {resp.body}")
+                logging.error(f"Failed to create admin home directory: {resp.response_body}")
 
                 return self.respond(
                     status_code=500,
-                    body={"message": "failed to create home directory"},
+                    body={"message": f"failed to create home directory: {resp.response_body}"},
                 )
 
         # Save the admin entity id

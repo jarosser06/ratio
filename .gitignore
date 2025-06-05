@@ -169,3 +169,5 @@ test_entities
 private_key.pem
 *.pem
 *_pub_key
+
+deploy.log

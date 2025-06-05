@@ -56,7 +56,7 @@
         "system_event_endpoint": "ratio::tool::internal_api::execution"
       },
       "arguments": {
-        "path": "/delete_subscription",
+        "path": "/scheduler/delete_subscription",
         "target_service": "SCHEDULER",
         "request": {
           "subscription_id": "REF:arguments.subscription_id"

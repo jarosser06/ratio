@@ -202,7 +202,7 @@ class ReferenceValueFile(ReferenceValueBase):
             )
 
             file_version_response = storage_client.request(
-                path="/get_file_version",
+                path="/storage/get_file_version",
                 request=file_version_request,
             )
 
@@ -226,7 +226,7 @@ class ReferenceValueFile(ReferenceValueBase):
         )
 
         file_response = storage_client.request(
-            path="/describe_file",
+            path="/storage/describe_file",
             request=file_request,
         )
 

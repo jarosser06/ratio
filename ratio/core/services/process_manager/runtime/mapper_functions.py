@@ -577,7 +577,7 @@ def list_files_function(context: MappingContext, directory_path: str, pattern: s
         )
 
         resp = context.ratio_client.request(
-            path="/find_file",
+            path="/storage/find_file",
             request=find_request
         )
 
@@ -628,7 +628,7 @@ def list_file_versions_function(context: MappingContext, file_path: str) -> List
         )
 
         resp = context.ratio_client.request(
-            path="/list_file_versions", 
+            path="/storage/list_file_versions", 
             request=request
         )
 
@@ -671,7 +671,7 @@ def describe_version_function(context: MappingContext, file_path: str, version_i
         )
 
         resp = context.ratio_client.request(
-            path="/describe_file_version",
+            path="/storage/describe_file_version",
             request=request
         )
 
@@ -714,7 +714,7 @@ def read_file_function(context: MappingContext, file_path: str, version_id: str 
         )
 
         resp = context.ratio_client.request(
-            path="/get_file_version",
+            path="/storage/get_file_version",
             request=request
         )
 

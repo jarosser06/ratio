@@ -122,7 +122,7 @@
         "system_event_endpoint": "ratio::tool::internal_api::execution"
       },
       "arguments": {
-        "path": "/describe_subscription",
+        "path": "/scheduler/describe_subscription",
         "target_service": "SCHEDULER",
         "request": {
           "subscription_id": "REF:arguments.subscription_id"

@@ -4,7 +4,7 @@ import logging
 
 from datetime import datetime, UTC as utc_tz
 from enum import StrEnum
-from typing import Any, Callable, Dict, List, Optional, Union, Type
+from typing import Any, List, Optional, Union, Type
 
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes, serialization

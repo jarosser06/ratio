@@ -205,7 +205,7 @@ class ExecutionEngine:
         )
 
         resp = ratio_client.request(
-            path="/get_file_version",
+            path="/storage/get_file_version",
             request=file_version_request
         )
 
@@ -448,7 +448,7 @@ class ExecutionEngine:
         )
 
         resp = ratio_client.request(
-            path="/put_file",
+            path="/storage/put_file",
             request=put_file_request,
         )
 
@@ -469,7 +469,7 @@ class ExecutionEngine:
         )
 
         resp = ratio_client.request(
-            path="/put_file_version",
+            path="/storage/put_file_version",
             request=put_file_version_request,
         )
 
@@ -743,7 +743,7 @@ class ExecutionEngine:
 
         # Create the directory
         resp = ratio_client.request(
-            path="/put_file",
+            path="/storage/put_file",
             request=put_file_request,
         )
 
@@ -773,7 +773,7 @@ class ExecutionEngine:
         )
 
         resp = ratio_client.request(
-            path="/put_file",
+            path="/storage/put_file",
             request=put_file_request
         )
 
@@ -794,7 +794,7 @@ class ExecutionEngine:
         )
 
         resp = ratio_client.request(
-            path="/put_file_version",
+            path="/storage/put_file_version",
             request=put_file_version_request,
         )
 
@@ -928,7 +928,7 @@ class ExecutionEngine:
         )
 
         resp = ratio_client.request(
-            path="/describe_file",
+            path="/storage/describe_file",
             request=describe_dir_req,
         )
 
@@ -945,7 +945,7 @@ class ExecutionEngine:
                 )
 
                 resp = ratio_client.request(
-                    path="/put_file",
+                    path="/storage/put_file",
                     request=put_file_request,
                 )
 
@@ -980,7 +980,7 @@ class ExecutionEngine:
         )
 
         resp = ratio_client.request(
-            path="/put_file",
+            path="/storage/put_file",
             request=put_file_request,
         )
 
@@ -1001,7 +1001,7 @@ class ExecutionEngine:
         )
 
         resp = ratio_client.request(
-            path="/put_file_version",
+            path="/storage/put_file_version",
             request=put_file_version_request,
         )
 

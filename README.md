@@ -17,7 +17,6 @@ infrastructure designed to support AI evolution systematically rather than chaot
 Ratio's architecture is designed to work with existing AI infrastructure rather than replace it:
 
 - **Execution Flexibility**: While currently Lambda-based, the system can potentially support any execution environment that reports back through Ratio's event system
-- **Framework Integration**: The model could be extended to orchestrate MCP clients, Bedrock Agents, or other AI frameworks
 - **Compute Options**: Future tools could spawn traditional servers, containers, or specialized hardware
 
 The core requirement is simply that execution completes and reports status back to Ratio. This approach means Ratio can be updated to

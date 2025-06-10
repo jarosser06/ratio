@@ -15,7 +15,7 @@ from da_vinci.core.global_settings import setting_value
 
 from da_vinci.core.immutable_object import ObjectBody
 
-from ratio.core.core_lib.factories.api import ChildAPI, Route
+from ratio.core.core_lib.factories.api import Authorizer, ChildAPI, Route
 from ratio.core.core_lib.jwt import JWTClaims
 
 from ratio.core.services.storage_manager.tables.files.client import File, FilesTableClient
@@ -90,79 +90,79 @@ def normalize_path(file_path: str) -> Tuple[str, str]:
 class FileAPI(ChildAPI):
     routes = [
         Route(
-            path="/delete_file",
+            path="/storage/delete_file",
             method_name="delete_file",
             request_body_schema=DeleteFileRequest,
         ),
         Route(
-            path="/delete_file_version",
+            path="/storage/delete_file_version",
             method_name="delete_file_version",
             request_body_schema=DeleteFileVersionRequest,
         ),
         Route(
-            path="/describe_file",
+            path="/storage/describe_file",
             method_name="describe_file",
             request_body_schema=DescribeFileRequest,
         ),
         Route(
-            path="/describe_file_version",
+            path="/storage/describe_file_version",
             method_name="describe_file_version",
             request_body_schema=DescribeFileVersionRequest,
         ),
         Route(
-            path="/find_file",
+            path="/storage/find_file",
             method_name="find_file",
             request_body_schema=FindFileRequest,
         ),
         Route(
-            path="/get_file_version",
+            path="/storage/get_file_version",
             method_name="get_file_version",
             request_body_schema=GetFileVersionRequest,
         ),
         Route(
-            path="/get_direct_file_version",
+            path="/storage/get_direct_file_version",
             method_name="get_direct_file_version",
             request_body_schema=GetFileVersionRequest,
         ),
         Route(
-            path="/list_files",
+            path="/storage/list_files",
             method_name="list_files",
             request_body_schema=ListFilesRequest,
         ),
         Route(
-            path="/list_file_versions",
+            path="/storage/list_file_versions",
             method_name="list_file_versions",
             request_body_schema=ListFileVersionsRequest,
         ),
         Route(
-            path="/put_file",
+            path="/storage/put_file",
             method_name="put_file",
             request_body_schema=PutFileRequest,
         ),
         Route(
-            path="/put_file_version",
+            path="/storage/put_file_version",
             method_name="put_file_version",
             request_body_schema=PutFileVersionRequest,
         ),
         Route(
-            path="/put_direct_file_version_complete",
+            path="/storage/put_direct_file_version_complete",
             method_name="put_direct_file_version_complete",
             request_body_schema=PutDirectFileVersionCompleteRequest,
         ),
         Route(
-            path="/put_direct_file_version_start",
+            path="/storage/put_direct_file_version_start",
             method_name="put_direct_file_version_start",
             request_body_schema=PutDirectFileVersionStartRequest,
         ),
         Route(
-            path="/validate_file_access",
+            path="/storage/validate_file_access",
             method_name="validate_file_access",
             request_body_schema=ValidateFileAccessRequest,
         )
     ]
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, authorizer: Authorizer = None):
+        super().__init__(authorizer=authorizer)
 
         self.raw_bucket_name = setting_value(
             namespace="ratio::storage",

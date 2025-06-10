@@ -102,7 +102,7 @@ def _create_noop_response_file(execution_id: str, process_id: str, execution_eng
     )
 
     put_file_resp = storage_client.request(
-        path="/put_file",
+        path="/storage/put_file",
         request=put_file_request
     )
 
@@ -125,7 +125,7 @@ def _create_noop_response_file(execution_id: str, process_id: str, execution_eng
     )
 
     put_version_resp = storage_client.request(
-        path="/put_file_version",
+        path="/storage/put_file_version",
         request=put_file_version_request
     )
 

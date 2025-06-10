@@ -42,17 +42,17 @@ from ratio.core.services.storage_manager.request_definitions import (
 class ActionsAPI(ChildAPI):
     routes = [
         Route(
-            path="/change_file_permissions",
+            path="/storage/change_file_permissions",
             method_name="change_file_permissions",
             request_body_schema=ChangeFilePermissionsRequest,
         ),
         Route(
-            path="/copy_file",
+            path="/storage/copy_file",
             method_name="copy_file",
             request_body_schema=CopyFileRequest,
         ),
         Route(
-            path="/move_file",
+            path="/storage/move_file",
             method_name="move_file",
             request_body_schema=MoveFileRequest,
         ),

@@ -260,7 +260,7 @@ class RatioSystem:
         arguments_path -- The path to the arguments file
         """
         resp = self._storage_request(
-            path="/get_file_version",
+            path="/storage/get_file_version",
             request={
                 "file_path": arguments_path,
             },
@@ -338,7 +338,7 @@ class RatioSystem:
         """
         if not source_file_version:
             desc_resp = self._storage_request(
-                path="/describe_file",
+                path="/storage/describe_file",
                 request={
                     "file_path": source_file_path,
                 },
@@ -367,7 +367,7 @@ class RatioSystem:
         logging.debug(f"Describing file {file_path}")
 
         resp = self._storage_request(
-            path="/describe_file",
+            path="/storage/describe_file",
             request={
                 "file_path": file_path,
             },
@@ -392,7 +392,7 @@ class RatioSystem:
         logging.debug(f"Describing file version {file_path} - {version_id}")
 
         resp = self._storage_request(
-            path="/describe_file_version",
+            path="/storage/describe_file_version",
             request={
                 "file_path": file_path,
                 "version_id": version_id,
@@ -422,7 +422,7 @@ class RatioSystem:
 
         # Get file type details
         resp = self._storage_request(
-            path="/describe_file_type",
+            path="/storage/describe_file_type",
             request={
                 "file_type": file_type_name,
             },
@@ -451,7 +451,7 @@ class RatioSystem:
         logging.debug(f"Getting file version {file_path} - {version_id}")
 
         resp = self._storage_request(
-            path="/get_file_version",
+            path="/storage/get_file_version",
             request={
                 "file_path": file_path,
                 "version_id": version_id,
@@ -565,7 +565,7 @@ class RatioSystem:
         logging.debug(f"Putting file {file_path} of type {file_type}")
 
         self._storage_request(
-            path="/put_file",
+            path="/storage/put_file",
             request={
                 "file_path": file_path,
                 "file_type": file_type,
@@ -587,7 +587,7 @@ class RatioSystem:
                 data = base64.b64encode(data).decode("utf-8")
 
             self._storage_request(
-                path="/put_file_version",
+                path="/storage/put_file_version",
                 request={
                     "file_path": file_path,
                     "data": data,

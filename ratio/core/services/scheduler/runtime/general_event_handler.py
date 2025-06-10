@@ -135,7 +135,7 @@ def general_event_handler(event, context):
         storage_client = RatioInternalClient(service_name="storage_manager", token=token)
 
         validation_response = storage_client.request(
-            path="/validate_file_access", 
+            path="/storage/validate_file_access", 
             request=validate_file_access_request
         )
 
@@ -190,7 +190,7 @@ def general_event_handler(event, context):
 
             logging.debug(f"Executing tool {subscription.tool_definition} with request {tool_exec_req}")
 
-            tool_response = tool_mgr.request(path="/execute", request=tool_exec_req)
+            tool_response = tool_mgr.request(path="/process/execute", request=tool_exec_req)
 
             assert tool_response.status_code == 200, f"Tool execution failed with status code {tool_response.status_code} and message {tool_response.response_body}"
 

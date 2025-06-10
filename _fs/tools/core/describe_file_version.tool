@@ -123,7 +123,7 @@
         "system_event_endpoint": "ratio::tool::internal_api::execution"
       },
       "arguments": {
-        "path": "/describe_file_version",
+        "path": "/storage/describe_file_version",
         "target_service": "STORAGE",
         "request": {
           "file_path": "REF:arguments.file_path",

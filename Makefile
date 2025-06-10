@@ -4,15 +4,9 @@ define cdk_deploy
 	cdk deploy --require-approval never $(1)
 endef
 
-# Wipes any lingering test credentials
-wipe_test_credentials:
-	@echo "Wiping test credentials..."
-
-	rm -rf test_entities
-
 # Wipes the system by removing all entities and resetting the initialization
 # state
-wipe: wipe_test_credentials
+wipe:
 	@echo "Wiping system..."
 
 	python utils/cleanup.py
@@ -24,9 +18,10 @@ test: wipe
 	pytest --disable-warnings
 
 # Wipes local files created during deployment and testing
-clean: wipe_test_credentials
+clean:
 	@echo "Clearning cdk.out..."
 
+	rm -f deploy.log
 	rm -rf cdk.out
 
 # Runs CDK Garbage Collection on the ECR repository
@@ -46,10 +41,10 @@ deploy_process:
 
 	$(call cdk_deploy, -e ratio-dev-processmanagerstack)
 
-deploy_api:
-	@echo "Deploying API..."
+deploy_auth:
+	@echo "Deploying Auth..."
 
-	$(call cdk_deploy, -e ratio-dev-ratioapistack)
+	$(call cdk_deploy, -e ratio-dev-authstack)
 
 deploy_scheduler:
 	@echo "Deploying Scheduler..."
@@ -71,4 +66,4 @@ deploy_tools:
 	$(call cdk_deploy, -e ratio-dev-ratiointernalapitool)
 
 
-deploy_compute: deploy_api, deploy_storage, deploy_tools, deploy_process, deploy_scheduler
+deploy_compute: deploy_auth deploy_storage deploy_process deploy_scheduler deploy_tools 

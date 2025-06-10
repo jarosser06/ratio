@@ -9,12 +9,25 @@ from constructs import Construct
 
 from aws_cdk.aws_s3 import Bucket, BucketEncryption
 
+from aws_cdk.aws_apigatewayv2 import (
+    HttpApi,
+    HttpMethod,
+    HttpRoute,
+    HttpRouteKey,
+)
+from aws_cdk.aws_apigatewayv2_integrations import (
+    HttpLambdaIntegration,
+)
+
 from da_vinci.core.resource_discovery import ResourceType
 
 from da_vinci_cdk.stack import Stack
 
 from da_vinci_cdk.constructs.access_management import ResourceAccessRequest
-from da_vinci_cdk.constructs.global_setting import GlobalSetting
+from da_vinci_cdk.constructs.global_setting import (
+    GlobalSetting,
+    GlobalSettingLookup,
+)
 from da_vinci_cdk.constructs.service import SimpleRESTService
 
 from da_vinci_cdk.framework_stacks.services.event_bus.stack import EventBusStack
@@ -100,6 +113,10 @@ class StorageManagerStack(Stack):
                     resource_type=ResourceType.ASYNC_SERVICE,
                 ),
                 ResourceAccessRequest(
+                    resource_name="PUBLIC_API_ACCESS",
+                    resource_type="RATIO_CUSTOM_POLICY",
+                ),
+                ResourceAccessRequest(
                     resource_name=File.table_name,
                     resource_type=ResourceType.TABLE,
                     policy_name="read_write",
@@ -131,6 +148,32 @@ class StorageManagerStack(Stack):
         )
 
         self.raw_bucket.grant_read_write(self.storage_manager.handler.function)
+
+        api_id = GlobalSettingLookup(
+            scope=self,
+            construct_id="rest-api-id-lookup",
+            namespace="ratio::core",
+            setting_key="rest_api_id",
+        )
+
+        self.api = HttpApi.from_http_api_attributes(
+            scope=self,
+            id="ratio-api",
+            http_api_id=api_id.get_value()
+        )
+
+        route_key = HttpRouteKey.with_(path="/storage/{proxy+}", method=HttpMethod.POST)
+
+        HttpRoute(
+            scope=self,
+            id="api-route",
+            integration=HttpLambdaIntegration(
+                "api-lambda-integration",
+                handler=self.storage_manager.handler.function,
+            ),
+            route_key=route_key,
+            http_api=self.api,
+        )
 
         RegisteredFileType(
             scope=self,

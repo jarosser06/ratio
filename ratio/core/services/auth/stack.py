@@ -4,30 +4,35 @@ from aws_cdk import (
     Duration,
 )
 
+from aws_cdk.aws_apigatewayv2 import (
+    HttpApi,
+    HttpMethod,
+    HttpRoute,
+    HttpRouteKey,
+)
+from aws_cdk.aws_apigatewayv2_integrations import (
+    HttpLambdaIntegration,
+)
+
 from constructs import Construct
 
-from da_vinci.core.global_settings import GlobalSetting
+from da_vinci.core.global_settings import GlobalSetting as GlobalSettingTblObj
 from da_vinci.core.resource_discovery import ResourceType
 
 from da_vinci_cdk.stack import Stack
 
-from da_vinci_cdk.constructs.access_management import ResourceAccessRequest
-from da_vinci_cdk.constructs.service import SimpleRESTService
-
-from ratio.core.cdk.managed_policies import (
-    SSMSecretManagerManagedPolicy,
+from da_vinci_cdk.constructs.access_management import (
+    ResourceAccessRequest,
 )
+from da_vinci_cdk.constructs.base import resource_namer
+from da_vinci_cdk.constructs.global_setting import GlobalSettingLookup
+from da_vinci_cdk.constructs.lambda_function import LambdaFunction
 
-from ratio.core.services.process_manager.stack import ProcessManagerStack
-from ratio.core.services.scheduler.stack import SchedulerStack
+from ratio.core.stack import RatioCoreStack
 from ratio.core.services.storage_manager.stack import StorageManagerStack
 
-from ratio.core.tables.entities.stack import Entity, EntitiesTableStack
 
-from ratio.core.api.tables.groups.stack import Group, GroupsTableStack
-
-
-class RatioAPIStack(Stack):
+class AuthStack(Stack):
     def __init__(self, app_name: str, app_base_image: str, architecture: str, deployment_id: str,
                  stack_name: str, scope: Construct):
         """
@@ -41,7 +46,6 @@ class RatioAPIStack(Stack):
         stack_name -- Name of the stack
         scope -- The parent of the construct
         """
-
         super().__init__(
             app_name=app_name,
             app_base_image=app_base_image,
@@ -49,10 +53,7 @@ class RatioAPIStack(Stack):
             requires_event_bus=True,
             requires_exceptions_trap=True,
             required_stacks=[
-                ProcessManagerStack,
-                EntitiesTableStack,
-                GroupsTableStack,
-                SchedulerStack,
+                RatioCoreStack,
                 StorageManagerStack,
             ],
             deployment_id=deployment_id,
@@ -64,26 +65,16 @@ class RatioAPIStack(Stack):
 
         self.runtime_path = path.join(base_dir, "runtime")
 
-        secret_manager_policy = SSMSecretManagerManagedPolicy(
-            app_name=self.app_name,
-            deployment_id=self.deployment_id,
-            construct_id="api-ssm-secret-mgr",
-            scope=self,
-        )
-
-        self.api_handler = SimpleRESTService(
-            description="Ratio API Service",
+        self.auth_handler = LambdaFunction(
+            construct_id="ratio-auth-handler",
+            description="Ratio Auth Service Handler",
             ignore_settings_table_access=True, # Setting this up in resource_access_requests
             base_image=self.app_base_image,
+            function_name=resource_namer(name="ratio-auth-handler", scope=self),
             entry=self.runtime_path,
             index="api",
             handler="handler",
-            managed_policies=[secret_manager_policy.managed_policy],
             resource_access_requests=[
-                ResourceAccessRequest(
-                    resource_name="process_manager",
-                    resource_type=ResourceType.REST_SERVICE,
-                ),
                 ResourceAccessRequest(
                     resource_name="event_bus",
                     resource_type=ResourceType.ASYNC_SERVICE,
@@ -94,31 +85,57 @@ class RatioAPIStack(Stack):
                     policy_name="signer",
                 ),
                 ResourceAccessRequest(
-                    resource_name=Entity.table_name,
-                    resource_type=ResourceType.TABLE,
-                    policy_name="read_write",
+                    resource_name="PUBLIC_API_ACCESS",
+                    resource_type="RATIO_CUSTOM_POLICY",
                 ),
                 ResourceAccessRequest(
-                    resource_name=GlobalSetting.table_name,
+                    resource_name=GlobalSettingTblObj.table_name,
                     resource_type=ResourceType.TABLE,
                     policy_name="read_write",
-                ),
-                ResourceAccessRequest(
-                    resource_name=Group.table_name,
-                    resource_type=ResourceType.TABLE,
-                    policy_name="read_write",
-                ),
-                ResourceAccessRequest(
-                    resource_name="scheduler",
-                    resource_type=ResourceType.REST_SERVICE,
                 ),
                 ResourceAccessRequest(
                     resource_name="storage_manager",
                     resource_type=ResourceType.REST_SERVICE,
                 ),
             ],
-            public=False,
             scope=self,
-            service_name="api",
-            timeout=Duration.seconds(90),
+            timeout=Duration.seconds(30),
+        )
+
+        api_id = GlobalSettingLookup(
+            scope=self,
+            construct_id="rest-api-id-lookup",
+            namespace="ratio::core",
+            setting_key="rest_api_id",
+        )
+
+        self.api = HttpApi.from_http_api_attributes(
+            scope=self,
+            id="ratio-api",
+            http_api_id=api_id.get_value()
+        )
+
+        route_key = HttpRouteKey.with_(path="/auth/{proxy+}", method=HttpMethod.POST)
+
+        HttpRoute(
+            scope=self,
+            id="api-route",
+            integration=HttpLambdaIntegration(
+                "api-lambda-integration",
+                handler=self.auth_handler.function,
+            ),
+            route_key=route_key,
+            http_api=self.api,
+        )
+
+        # Special System Initialize Route
+        HttpRoute(
+            scope=self,
+            id="system-initialize-route",
+            integration=HttpLambdaIntegration(
+                "system-initialize-lambda-integration",
+                handler=self.auth_handler.function,
+            ),
+            route_key=HttpRouteKey.with_(path="/initialize", method=HttpMethod.POST),
+            http_api=self.api,
         )

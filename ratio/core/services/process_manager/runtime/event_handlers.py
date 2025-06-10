@@ -110,7 +110,7 @@ def _aggregate_parallel_responses(all_children: List[Process], original_executio
             )
 
             resp = storage_client.request(
-                path="/get_file_version",
+                path="/storage/get_file_version",
                 request=file_version_request
             )
 
@@ -249,7 +249,7 @@ def _load_arguments(arguments_path: str, token: str) -> Union[ObjectBody, None]:
 
     # Get the arguments
     response = storage_client.request(
-        path="/get_file_version",
+        path="/storage/get_file_version",
         request=req,
     )
 
@@ -354,7 +354,7 @@ def _try_complete_parallel_group(original_execution_id: str, parent_proc: Proces
     unique_thread_id = str(uuid4())
 
     # Create the file (or overwrite if exists)
-    storage_client.request(path="/put_file", request=put_file_request)
+    storage_client.request(path="/storage/put_file", request=put_file_request)
 
     put_file_version_request = ObjectBody(
         schema=PutFileVersionRequest,
@@ -364,7 +364,7 @@ def _try_complete_parallel_group(original_execution_id: str, parent_proc: Proces
         }
     )
 
-    storage_client.request(path="/put_file_version", request=put_file_version_request)
+    storage_client.request(path="/storage/put_file_version", request=put_file_version_request)
 
     # Wait for timing variability
     time.sleep(random.uniform(0.1, 0.8))
@@ -375,7 +375,7 @@ def _try_complete_parallel_group(original_execution_id: str, parent_proc: Proces
         body={"file_path": lock_file_path}
     )
 
-    resp = storage_client.request(path="/get_file_version", request=file_version_request)
+    resp = storage_client.request(path="/storage/get_file_version", request=file_version_request)
 
     logging.debug(f"Lock file read response: {resp}")
     
@@ -858,7 +858,7 @@ def execute_composite_tool_handler(event: Dict, context: Dict):
     )
 
     validate_file_access_response = storage_client.request(
-        path="/validate_file_access",
+        path="/storage/validate_file_access",
         request=validate_file_access_request,
     )
 

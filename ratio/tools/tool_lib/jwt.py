@@ -98,7 +98,9 @@ class JWTClient:
         segment -- The segment to encode (header or payload)
         """
         json_segment = json.dumps(segment)
+
         encoded = base64.urlsafe_b64encode(json_segment.encode('utf-8'))
+
         return encoded.decode('utf-8').rstrip('=')
 
     @staticmethod
@@ -110,6 +112,7 @@ class JWTClient:
         data -- The bytes to encode
         """
         encoded = base64.urlsafe_b64encode(data)
+
         return encoded.decode('utf-8').rstrip('=')
 
     @staticmethod
@@ -122,8 +125,11 @@ class JWTClient:
         """
         # Add padding if needed
         padding = '=' * (4 - (len(segment) % 4)) if len(segment) % 4 else ''
+
         padded_segment = segment + padding
+
         json_segment = base64.urlsafe_b64decode(padded_segment).decode('utf-8')
+
         return json.loads(json_segment)
 
     @staticmethod
@@ -136,7 +142,9 @@ class JWTClient:
         """
         # Add padding if needed
         padding = '=' * (4 - (len(signature) % 4)) if len(signature) % 4 else ''
+
         padded_signature = signature + padding
+
         return base64.urlsafe_b64decode(padded_signature)
 
     @classmethod
@@ -155,50 +163,53 @@ class JWTClient:
         """
         try:
             header_b64, _, _ = token.split('.')
+
         except ValueError:
             raise JWTVerificationException("invalid JWT format")
-        
+
         # Decode the header to get the key ID
         header = cls.decode_segment(header_b64)
+
         kms_key_id = header.get('kid')
-        
+
         if not kms_key_id:
             raise JWTVerificationException("missing key ID in JWT header")
-            
+
         return kms_key_id
 
     @classmethod
     def verify_token(cls, token: str) -> JWTClaims:
         """
         Verify a JWT token and return its claims
-        
+
         Keyword arguments:
         token -- The JWT token to verify
-            
+
         Returns:
             JWTClaims object containing the payload claims
-            
+
         Raises:
             JWTVerificationException if verification fails
         """
         # Get the KMS ID from the token
         kms_key_id = cls.extract_kms_id(token)
-        
+
         # Create a KMS client
         kms_client = boto3.client('kms')
-        
+
         # Split the token
         try:
             header_b64, payload_b64, signature = token.split('.')
+
         except ValueError:
             raise JWTVerificationException("invalid JWT format")
 
         unsigned_token = f"{header_b64}.{payload_b64}"
-        
+
         # Verify the signature with KMS
         try:
             decoded_signature = cls.decode_signature(signature)
-            
+
             response = kms_client.verify(
                 KeyId=kms_key_id,
                 Message=unsigned_token.encode('utf-8'),
@@ -206,22 +217,24 @@ class JWTClient:
                 Signature=decoded_signature,
                 SigningAlgorithm=cls.signing_algorithm,
             )
-            
+
             if not response.get('SignatureValid', False):
                 raise JWTVerificationException("invalid signature")
+
         except Exception as e:
             raise JWTVerificationException(f"KMS verification error: {str(e)}")
-        
+
         # Decode the payload
         payload = cls.decode_segment(payload_b64)
-        
+
         # Check for expiration
         now = datetime.now(tz=utc_tz).timestamp()
+
         payload_expiration = payload.get('exp', 0)
-        
+
         if now >= payload_expiration:
             raise JWTVerificationException("token has expired")
-        
+
         # Return claims object
         return JWTClaims.from_claims(claims=payload)
 
@@ -229,33 +242,34 @@ class JWTClient:
     def verify_with_public_key(cls, token: str, public_key: str) -> JWTClaims:
         """
         Verify a JWT token using an RSA public key
-        
+
         Keyword arguments:
         token -- The JWT token to verify
         public_key -- The RSA public key in PEM format
-            
+
         Returns:
             JWTClaims object containing the payload claims
-            
+
         Raises:
             JWTVerificationException if verification fails
         """
         # Split the token
         try:
             header_b64, payload_b64, signature = token.split('.')
+
         except ValueError:
             raise JWTVerificationException("invalid JWT format")
 
         unsigned_token = f"{header_b64}.{payload_b64}"
-        
+
         # Verify with public key
         try:
             # Decode the signature
             decoded_signature = cls.decode_signature(signature)
-            
+
             # Load the public key
             key = load_pem_public_key(public_key.encode('utf-8'))
-            
+
             # Verify the signature
             try:
                 key.verify(
@@ -264,21 +278,23 @@ class JWTClient:
                     padding.PKCS1v15(),
                     hashes.SHA256()
                 )
+
             except InvalidSignature:
                 raise JWTVerificationException("invalid signature")
-                
+
         except Exception as e:
             raise JWTVerificationException(f"public key verification error: {str(e)}")
-        
+
         # Decode the payload
         payload = cls.decode_segment(payload_b64)
-        
+
         # Check for expiration
         now = datetime.now(tz=utc_tz).timestamp()
+
         payload_expiration = payload.get('exp', 0)
-        
+
         if now >= payload_expiration:
             raise JWTVerificationException("token has expired")
-        
+
         # Return claims object
         return JWTClaims.from_claims(claims=payload)

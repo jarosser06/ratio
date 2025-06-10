@@ -273,7 +273,7 @@ class ListProcessesCommand(RTOCommand):
     def execute(self, client: Ratio, config: RTOConfig, args):
         """
         Execute the command.
-        
+
         Keyword arguments:
         client -- The Ratio client
         args -- The command line arguments
@@ -308,11 +308,11 @@ class ListProcessesCommand(RTOCommand):
 
         elif args.detailed:
             # Display detailed information for each process
-            self._show_detailed_processes(processes)
+            self._show_detailed_processes(processes["processes"])
 
         else:
             # Display simple table of processes
-            self._show_simple_processes(processes)
+            self._show_simple_processes(processes["processes"])
 
     def _show_simple_processes(self, processes):
         """

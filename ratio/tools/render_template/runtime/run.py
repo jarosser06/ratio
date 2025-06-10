@@ -3,8 +3,6 @@ Template Renderer Tool
 
 This tool renders Jinja templates with provided variables to generate formatted strings.
 """
-import logging
-
 from typing import Dict
 
 

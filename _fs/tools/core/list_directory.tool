@@ -62,7 +62,7 @@
         "system_event_endpoint": "ratio::tool::internal_api::execution"
       },
       "arguments": {
-        "path": "/list_files",
+        "path": "/storage/list_files",
         "target_service": "STORAGE",
         "request": {
           "file_path": "REF:arguments.directory_path"

@@ -4,13 +4,14 @@ Amazon Bedrock Cohere Embedding Tool
 This tool generates embeddings using Cohere Embed models through Amazon Bedrock. 
 It processes text inputs and optionally images to generate embedding vectors.
 """
-import boto3
 import json
 import logging
 import os
 import uuid
 
 from typing import Dict
+
+import boto3
 
 from da_vinci.core.logging import Logger
 

@@ -3,7 +3,7 @@ from constructs import Construct
 from da_vinci_cdk.constructs.dynamodb import DynamoDBTable
 from da_vinci_cdk.stack import Stack
 
-from ratio.core.api.tables.groups.client import Group
+from ratio.core.tables.groups.client import Group
 
 
 class GroupsTableStack(Stack):

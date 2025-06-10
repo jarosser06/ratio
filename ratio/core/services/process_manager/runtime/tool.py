@@ -110,7 +110,7 @@ class ToolDefinition:
 
         # Load the tool definition from the file system
         tool_definition = internal_client.request(
-            path="/get_file_version",
+            path="/storage/get_file_version",
             request=file_version_request,
         )
 
@@ -167,7 +167,7 @@ class ToolDefinition:
 
             # Export the tool definition to the file system
             storage_client.request(
-                path="/put_file",
+                path="/storage/put_file",
                 request=file_request,
             )
 
@@ -180,7 +180,7 @@ class ToolDefinition:
             )
 
             storage_client.request(
-                path="/put_file_version",
+                path="/storage/put_file_version",
                 request=file_version_request,
             )
 
@@ -261,7 +261,7 @@ class ToolInstruction:
 
         # Load the tool definition from the file system
         arguments_file = internal_client.request(
-            path="/get_file_version",
+            path="/storage/get_file_version",
             request=file_version_request,
         )
 

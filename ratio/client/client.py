@@ -1,15 +1,19 @@
 import base64
 import json
 import logging
+import threading
 
 from datetime import datetime, UTC as utc_tz
 from enum import StrEnum
 from typing import Any, List, Optional, Union, Type
 
+import websocket
+
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes, serialization
 
 from da_vinci.core.client_base import RESTClientBase, RESTClientResponse
+from da_vinci.core.resource_discovery import ResourceDiscovery
 
 
 class RequestAttributeError(Exception):
@@ -92,12 +96,12 @@ class RequestBodyAttribute:
         elif self.attribute_type == RequestAttributeType.DATETIME:
             if isinstance(value, datetime):
                 return True
-            
+
             try:
                 datetime.fromisoformat(value)
 
                 return True
-            
+
             except ValueError:
                 return False
 
@@ -106,7 +110,7 @@ class RequestBodyAttribute:
 
         elif self.attribute_type == RequestAttributeType.LIST:
             return isinstance(value, list)
-        
+
         elif self.attribute_type == RequestAttributeType.INTEGER:
             return isinstance(value, int)
 
@@ -122,11 +126,11 @@ class RequestBodyAttribute:
         elif self.attribute_type == RequestAttributeType.OBJECT_LIST:
             if not isinstance(value, list):
                 return False
-            
+
             for item in value:
                 if isinstance(item, dict):
                     return True
-                
+
                 if isinstance(item, RequestBody):
                     if self.supported_request_body_types:
                         return isinstance(item, self.supported_request_body_types)
@@ -148,8 +152,9 @@ class RequestBody:
     path -- The path of the request
     """
     attribute_definitions: List[RequestBodyAttribute]
-    requires_auth: bool = False
     path: str = None
+    requires_auth: bool = False
+    supports_websockets: bool = False
 
     def __init__(self, **kwargs):
         """
@@ -207,6 +212,33 @@ class RequestBody:
                 prepped_attributes[key] = value.to_dict()
 
         return self.attributes
+
+    @property
+    def websocket_action(self) -> str:
+        """
+        Convert a REST path to WebSocket action name.
+
+        "/process/execute" -> "ProcessExecute"
+        "/process/list_processes" -> "ProcessListProcesses"
+
+        Keyword arguments:
+        path -- The REST API path (e.g., "/process/execute")
+        """
+        # Remove leading slash and split on /
+        parts = [part for part in self.path.split('/') if part]
+
+        # Capitalize each part and handle underscores
+        route_parts = []
+
+        for part in parts:
+            # Split on underscores and capitalize each word
+            words = part.split('_')
+
+            capitalized_words = [word.capitalize() for word in words]
+
+            route_parts.append(''.join(capitalized_words))
+
+        return ''.join(route_parts)
 
 
 class ChallengeRequest(RequestBody):
@@ -282,7 +314,7 @@ class ClientJSONEncoder(json.JSONEncoder):
 
 
 class Ratio(RESTClientBase):
-    def __init__(self, app_name: Optional[str] = None, auth_header = "X-Ratio-Authorization",
+    def __init__(self, app_name: Optional[str] = None, auth_header = "x-ratio-authorization",
                  deployment_id: Optional[str] = None, entity_id: Optional[str] = None, private_key: Optional[bytes] = None,
                  token: Optional[str] = None, token_expires: Optional[datetime] = None):
         """
@@ -305,6 +337,13 @@ class Ratio(RESTClientBase):
             resource_discovery_storage="dynamodb",
         )
 
+        # Initialize Websocket attributes
+        self.ws = None
+
+        self.ws_connected = False
+
+        self._ws_url = None
+
         self.auth_header = auth_header
 
         self._acquired_token = token
@@ -316,6 +355,25 @@ class Ratio(RESTClientBase):
 
         if not token and (private_key and entity_id):
             self._acquired_token = self.refresh_token(entity_id=entity_id, private_key=private_key) 
+
+    def _discover_websocket_url(self) -> str:
+        """
+        Discover WebSocket API endpoint using ResourceDiscovery
+        """
+        if self._ws_url:
+            return self._ws_url
+
+        discovery = ResourceDiscovery(
+            resource_type="RATIO_WEBSOCKET_API",
+            resource_name="ws_api",
+            app_name=self.app_name,
+            deployment_id=self.deployment_id,
+            storage_solution=self.resource_discovery_storage
+        )
+
+        self._ws_url = discovery.endpoint_lookup()
+
+        return self._ws_url
 
     def refresh_token(self, entity_id: str, private_key: Optional[bytes] = None) -> None:
         """
@@ -360,7 +418,7 @@ class Ratio(RESTClientBase):
     def sign_message_rsa(private_key_pem: bytes, message: str):
         """
         Sign a message using an RSA private key.
-        
+
         Keyword arguments:
         private_key_pem -- The RSA private key in PEM format
         message -- The message to be signed
@@ -370,14 +428,14 @@ class Ratio(RESTClientBase):
             private_key_pem,
             password=None
         )
-        
+
         # Sign the message
         signature = private_key.sign(
             message.encode('utf-8'),
             padding.PKCS1v15(),
             hashes.SHA256()
         )
-        
+
         return base64.b64encode(signature).decode('utf-8')
 
     def request(self, request: RequestBody, raise_for_status: Optional[bool] = True) -> RESTClientResponse:
@@ -415,3 +473,92 @@ class Ratio(RESTClientBase):
             raise ValueError(f"Error response: {response.status_code} - {response.response_body}")
 
         return response
+
+    def connect_websocket(self, connect_timeout: Optional[float] = None, on_close: Optional[callable] = None,
+                          on_error: Optional[callable] = None, on_message: Optional[callable] = None,
+                          on_open: Optional[callable] = None):
+        """
+        Connect to WebSocket
+
+        Keyword arguments:
+        connect_timeout -- Timeout for the WebSocket connection
+        on_open -- Callback function for when the WebSocket connection is opened
+        on_close -- Callback function for when the WebSocket connection is closed
+        on_message -- Callback function for when a message is received
+        on_error -- Callback function for when an error occurs
+        """
+        if self.ws_connected or self.ws:
+            return
+
+        ws_url = self._discover_websocket_url()
+
+        headers = {}
+
+        if self._acquired_token:
+            headers[self.auth_header] = self._acquired_token
+
+        connect_event = None
+
+        if connect_timeout is not None:
+            connect_event = threading.Event()
+
+        def internal_on_open(ws):
+            self.ws_connected = True
+
+            if connect_event:
+                connect_event.set()
+
+            if on_open:
+                on_open(ws)
+
+        def internal_on_close(ws, close_status_code, close_msg):
+            self.ws_connected = False
+
+            if on_close:
+                on_close(ws, close_status_code, close_msg)
+
+        self.ws = websocket.WebSocketApp(
+            url=ws_url,
+            header=headers,
+            on_open=internal_on_open,
+            on_message=on_message,
+            on_error=on_error,
+            on_close=internal_on_close,
+        )
+
+        threading.Thread(target=self.ws.run_forever, daemon=True).start()
+
+        if connect_timeout is not None:
+            if not connect_event.wait(timeout=connect_timeout):
+                raise ConnectionError(f"WebSocket connection timeout after {connect_timeout} seconds")
+
+    def close_websocket(self):
+        """
+        Close the WebSocket connection
+        """
+        if self.ws:
+            self.ws.close()
+
+            self.ws = None
+
+            self.ws_connected = False
+
+    def send_message(self, message: RequestBody):
+        """
+        Send message over WebSocket
+
+        Keyword arguments:
+        message -- The message to send, must be a subclass of RequestBody that supports WebSocket
+        """
+        if not message.supports_websockets:
+            raise ValueError(f"Message type {type(message).__name__} does not support WebSocket")
+
+        if not self.ws:
+            self.connect_websocket()
+
+        if not self.ws_connected:
+            raise ConnectionError("WebSocket not connected yet")
+
+        data = {"action": message.websocket_action, **message.to_dict()}
+
+        self.ws.send(json.dumps(data, cls=ClientJSONEncoder)) 

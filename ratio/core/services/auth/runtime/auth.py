@@ -26,11 +26,11 @@ from ratio.core.core_lib.factories.api import (
 )
 from ratio.core.core_lib.jwt import JWTClaims, InternalJWTManager
 
+from ratio.core.services.storage_manager.request_definitions import DescribeFileRequest, PutFileRequest
+
 from ratio.core.tables.entities.client import Entity, EntitiesTableClient
 
 from ratio.core.tables.groups.client import Group, GroupsTableClient
-
-from ratio.core.services.storage_manager.request_definitions import DescribeFileRequest, PutFileRequest
 
 
 # PROTECTED ENTITY/GROUP WORDS
@@ -40,6 +40,9 @@ _PROTECTED_WORDS = [
 
 
 class ChallengeRequest(ObjectBodySchema):
+    """
+    Request schema for creating a challenge for an entity.
+    """
     attributes = [
         SchemaAttribute(
             name="entity_id",
@@ -50,6 +53,9 @@ class ChallengeRequest(ObjectBodySchema):
 
 
 class AddEntityToGroupRequest(ObjectBodySchema):
+    """
+    Request schema for adding an entity to a group.
+    """
     attributes = [
         SchemaAttribute(
             name="entity_id",
@@ -67,6 +73,9 @@ class AddEntityToGroupRequest(ObjectBodySchema):
 
 
 class RemoveEntityFromGroupRequest(ObjectBodySchema):
+    """
+    Request schema for removing an entity from a group.
+    """
     attributes = [
         SchemaAttribute(
             name="entity_id",
@@ -84,6 +93,9 @@ class RemoveEntityFromGroupRequest(ObjectBodySchema):
 
 
 class CreateEntityRequest(ObjectBodySchema):
+    """
+    Request schema for creating a new entity.
+    """
     attributes = [
         SchemaAttribute(
             name="create_group",
@@ -145,6 +157,9 @@ class CreateEntityRequest(ObjectBodySchema):
 
 
 class CreateGroupRequest(ObjectBodySchema):
+    """
+    Request schema for creating a new group.
+    """
     attributes = [
         SchemaAttribute(
             name="description",
@@ -162,6 +177,9 @@ class CreateGroupRequest(ObjectBodySchema):
 
 
 class DeleteGroupRequest(ObjectBodySchema):
+    """
+    Delete group request schema.
+    """
     attributes = [
         SchemaAttribute(
             name="group_id",
@@ -180,6 +198,9 @@ class DeleteGroupRequest(ObjectBodySchema):
 
 
 class DeleteEntityRequest(ObjectBodySchema):
+    """
+    Request schema for deleting an entity.
+    """
     attributes = [
         SchemaAttribute(
             name="entity_id",
@@ -191,6 +212,9 @@ class DeleteEntityRequest(ObjectBodySchema):
 
 
 class DescribeGroupRequest(ObjectBodySchema):
+    """
+    Request schema for describing a group.
+    """
     attributes = [
         SchemaAttribute(
             name="group_id",
@@ -202,6 +226,9 @@ class DescribeGroupRequest(ObjectBodySchema):
 
 
 class DescribeEntityRequest(ObjectBodySchema):
+    """
+    Request schema for describing an entity.
+    """
     attributes = [
         SchemaAttribute(
             name="entity_id",
@@ -213,6 +240,9 @@ class DescribeEntityRequest(ObjectBodySchema):
 
 
 class IntializeRequest(ObjectBodySchema):
+    """
+    Request schema for initializing the system with the admin entity's public key.
+    """
     attributes = [
         SchemaAttribute(
             name="admin_entity_id",
@@ -236,6 +266,9 @@ class IntializeRequest(ObjectBodySchema):
 
 
 class TokenRequest(ObjectBodySchema):
+    """
+    Request schema for verifying a challenge response from an entity.
+    """
     attributes = [
         SchemaAttribute(
             name="challenge",
@@ -259,6 +292,9 @@ class TokenRequest(ObjectBodySchema):
 
 
 class TokenRotateRequest(ObjectBodySchema):
+    """
+    Request schema for rotating the entity's public key.
+    """
     attributes = [
         SchemaAttribute(
             name="entity_id",
@@ -299,80 +335,72 @@ class AuthAPI(ChildAPI):
         Route(
             path="/auth/challenge",
             method_name="challenge",
+            requires_auth=False,
             request_body_schema=ChallengeRequest,
         ),
         Route(
             path="/initialize",
             method_name="initialize",
+            requires_auth=False,
             request_body_schema=IntializeRequest,
         ),
         Route(
             path="/auth/add_entity_to_group",
             method_name="add_entity_to_group",
-            requires_auth=True,
             request_body_schema=AddEntityToGroupRequest,
         ),
         Route(
             path="/auth/remove_entity_from_group",
             method_name="remove_entity_from_group",
-            requires_auth=True,
             request_body_schema=RemoveEntityFromGroupRequest,
         ),
         Route(
             path="/auth/create_entity",
             method_name="create_entity",
-            requires_auth=True,
             request_body_schema=CreateEntityRequest,
         ),
         Route(
             path="/auth/create_group",
             method_name="create_group",
-            requires_auth=True,
             request_body_schema=CreateGroupRequest,
         ),
         Route(
             path="/auth/delete_group",
             method_name="delete_group",
-            requires_auth=True,
             request_body_schema=DeleteGroupRequest,
         ),
         Route(
             path="/auth/delete_entity",
             method_name="delete_entity",
-            requires_auth=True,
             request_body_schema=DeleteEntityRequest,
         ),
         Route(
             path="/auth/describe_group",
             method_name="describe_group",
-            requires_auth=True,
             request_body_schema=DescribeGroupRequest,
         ),
         Route(
             path="/auth/describe_entity",
             method_name="describe_entity",
-            requires_auth=True,
             request_body_schema=DescribeEntityRequest,
         ),
         Route(
             path="/auth/list_entities",
             method_name="list_entities",
-            requires_auth=True,
         ),
         Route(
             path="/auth/list_groups",
             method_name="list_groups",
-            requires_auth=True,
         ),
         Route(
             path="/auth/rotate_entity_key",
             method_name="rotate_entity_key",
-            requires_auth=True,
             request_body_schema=TokenRotateRequest,
         ),
         Route(
             path="/auth/token",
             method_name="token",
+            requires_auth=False,
             request_body_schema=TokenRequest,
         ),
     ]
@@ -422,7 +450,7 @@ class AuthAPI(ChildAPI):
         request_body -- The request body containing the entity_id
         request_context -- The request context containing the entity_id
         """
-        entity_id = request_body['entity_id'].lower()
+        entity_id = request_body['entity_id']
 
         # Generate a random nonce
         nonce = secrets.token_urlsafe(16)
@@ -477,7 +505,7 @@ class AuthAPI(ChildAPI):
         # Validate the entity by checking if it exists
         entities_client = EntitiesTableClient()
 
-        formatted_entity_id = request_body['entity_id'].lower()
+        formatted_entity_id = request_body["entity_id"]
 
         existing_entity = entities_client.get(entity_id=formatted_entity_id)
 
@@ -615,7 +643,7 @@ class AuthAPI(ChildAPI):
                 body={"message": "access denied"},
             )
 
-        proper_group_id = request_body['group_id'].lower()
+        proper_group_id = request_body["group_id"]
 
         # Validate the group ID
         if not self.validate_auth_id(auth_id=proper_group_id, protected_words=_PROTECTED_WORDS):
@@ -667,7 +695,7 @@ class AuthAPI(ChildAPI):
         # Validate the entity ID
         entities_client = EntitiesTableClient()
 
-        formatted_entity_id = request_body['entity_id'].lower()
+        formatted_entity_id = request_body["entity_id"]
 
         existing_entity = entities_client.get(entity_id=formatted_entity_id)
 
@@ -680,7 +708,7 @@ class AuthAPI(ChildAPI):
         # Validate the group ID
         groups_client = GroupsTableClient()
 
-        formatted_group_id = request_body['group_id'].lower()
+        formatted_group_id = request_body["group_id"]
 
         existing_group = groups_client.get(group_id=formatted_group_id)
 
@@ -729,7 +757,7 @@ class AuthAPI(ChildAPI):
         # Validate the entity ID
         entities_client = EntitiesTableClient()
 
-        formatted_entity_id = request_body['entity_id'].lower()
+        formatted_entity_id = request_body["entity_id"]
 
         existing_entity = entities_client.get(entity_id=formatted_entity_id)
 
@@ -742,7 +770,7 @@ class AuthAPI(ChildAPI):
         # Validate the group ID
         groups_client = GroupsTableClient()
 
-        formatted_group_id = request_body['group_id'].lower()
+        formatted_group_id = request_body["group_id"]
 
         existing_group = groups_client.get(group_id=formatted_group_id)
 
@@ -787,7 +815,7 @@ class AuthAPI(ChildAPI):
         # Validate the group ID
         groups_client = GroupsTableClient()
 
-        formatted_group_id = request_body['group_id'].lower()
+        formatted_group_id = request_body["group_id"]
 
         existing_group = groups_client.get(group_id=formatted_group_id)
 
@@ -864,7 +892,7 @@ class AuthAPI(ChildAPI):
         # Validate the entity ID
         entities_client = EntitiesTableClient()
 
-        formatted_entity_id = request_body['entity_id'].lower()
+        formatted_entity_id = request_body["entity_id"]
 
         if formatted_entity_id == "system":
             return self.respond(
@@ -898,7 +926,7 @@ class AuthAPI(ChildAPI):
         """
         logging.debug("Describing group")
 
-        formatted_group_id = request_body['group_id'].lower()
+        formatted_group_id = request_body["group_id"]
 
         if not self._validate_admin_entity(request_context=request_context):
             return self.respond(
@@ -932,7 +960,7 @@ class AuthAPI(ChildAPI):
         """
         logging.debug("Describing entity")
 
-        formatted_entity_id = request_body['entity_id'].lower()
+        formatted_entity_id = request_body["entity_id"]
 
         if not self._validate_admin_entity(request_context=request_context):
 
@@ -1054,7 +1082,7 @@ class AuthAPI(ChildAPI):
                 body={"message": "unavailable"},
             )
 
-        admin_entity_id = request_body['admin_entity_id'].lower()
+        admin_entity_id = request_body["admin_entity_id"]
 
         # Validate the admin entity ID
         if not self.validate_auth_id(auth_id=admin_entity_id, protected_words=_PROTECTED_WORDS):
@@ -1067,13 +1095,11 @@ class AuthAPI(ChildAPI):
 
         if admin_group_id:
             # Validate the admin group ID
-            if not self.validate_auth_id(auth_id=admin_group_id.lower(), protected_words=_PROTECTED_WORDS):
+            if not self.validate_auth_id(auth_id=admin_group_id, protected_words=_PROTECTED_WORDS):
                 return self.respond(
                     status_code=400,
                     body={"message": "invalid group id"},
                 )
-
-            admin_group_id = admin_group_id.lower()
 
         else:
             admin_group_id = admin_entity_id
@@ -1236,8 +1262,6 @@ class AuthAPI(ChildAPI):
         changing_entity = request_body.get("entity_id")
 
         if changing_entity:
-            changing_entity = changing_entity.lower()
-
             if requesting_entity != changing_entity and not self._validate_admin_entity(request_context=request_context):
                 return self.respond(
                     status_code=403,

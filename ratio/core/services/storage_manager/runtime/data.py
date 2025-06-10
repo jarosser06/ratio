@@ -23,7 +23,7 @@ def stored_name(file_name: str, file_extension: str = FILE_EXTENSION) -> str:
 def copy_version(bucket_name: str, dest_file: str, source_file: str, version_id: str) -> str:
     """
     Copy a specific version of an S3 object to another location within the same bucket.
-    
+
     Keyword arguments:
     bucket_name -- The name of the S3 bucket.
     dest_file -- The name of the destination file in S3.
@@ -31,7 +31,7 @@ def copy_version(bucket_name: str, dest_file: str, source_file: str, version_id:
     version_id -- The specific version ID to copy.
     """
     s3 = boto3.client("s3")
-    
+
     # Copy the specific version to the destination within the same bucket
     response = s3.copy_object(
         Bucket=bucket_name,
@@ -42,12 +42,12 @@ def copy_version(bucket_name: str, dest_file: str, source_file: str, version_id:
         },
         Key=stored_name(dest_file),
     )
-    
+
     version_id = response.get('VersionId')
 
     if not version_id:
         raise ValueError("Version ID not returned from S3. Check if versioning is enabled on the bucket.")
-    
+
     return version_id
 
 
@@ -77,7 +77,6 @@ def delete_object_completely(bucket_name: str, file_name: str):
     bucket_name -- The name of the S3 bucket.
     file_name -- The name of the file in S3.
     """
-
     key = stored_name(file_name)
 
     s3_client = boto3.client('s3')
@@ -131,7 +130,7 @@ def delete_object_completely(bucket_name: str, file_name: str):
 def get_version(bucket_name: str, file_name: str, version_id: str) -> bytes:
     """
     Get data from the system.
-    
+
     Keyword arguments:
     bucket_name -- The name of the S3 bucket.
     stored_name -- The name of the file in S3.
@@ -151,26 +150,27 @@ def get_version(bucket_name: str, file_name: str, version_id: str) -> bytes:
 def put_version(data: Union[str, bytes], bucket_name: str, file_name: str) -> str:
     """
     Put data in the system and return the version ID.
-    
+
     Parameters:
     data (Union[str, bytes]): The data to put
     bucket_name (str): The name of the S3 bucket
     stored_name (str): The key name to use in S3
-    
+
     Returns:
     str: The version ID assigned by S3
     """
     if isinstance(data, str):
         data = data.encode("utf-8")
-    
+
     # Store the data in S3
     s3 = boto3.client("s3")
+
     response = s3.put_object(
         Bucket=bucket_name,
         Key=stored_name(file_name=file_name),
         Body=data,
     )
-    
+
     # Extract and return the version ID
     version_id = response.get('VersionId')
 

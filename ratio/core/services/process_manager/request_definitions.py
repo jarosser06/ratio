@@ -249,21 +249,6 @@ class ExecuteToolRequest(ObjectBodySchema):
     ]
 
 
-class KillProcessRequest(ObjectBodySchema):
-    """
-    Schema for killing a process. This is used to kill a process that is currently running.
-    """
-    attributes = [
-        SchemaAttribute(
-            name="process_id",
-            type_name=SchemaAttributeType.STRING,
-            description="The ID of the process to kill",
-            required=True,
-            regex_pattern="^[a-zA-Z0-9_\\-]+$",
-        ),
-    ]
-
-
 class ListProcessesRequest(ObjectBodySchema):
     """
     Schema for listing processes. This is used to list all the processes that are currently running.

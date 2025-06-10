@@ -1,7 +1,6 @@
 """
 Process API Interface
 """
-import json
 import logging
 
 from typing import Dict
@@ -16,12 +15,12 @@ from ratio.core.core_lib.jwt import JWTClaims
 
 from ratio.core.services.process_manager.request_definitions import (
     DescribeProcessRequest,
-    KillProcessRequest,
     ListProcessesRequest,
 )
 
 from ratio.core.services.process_manager.tables.processes.client import ProcessTableClient
 
+# Local runtime imports
 from ratio.core.services.process_manager.runtime.execute import ExecuteAPI
 
 
@@ -31,11 +30,6 @@ class DescribeAPI(ChildAPI):
             path="/process/describe_process",
             method_name="describe_process",
             request_body_schema=DescribeProcessRequest,
-        ),
-        Route(
-            path="/process/kill_process",
-            method_name="not_implemented",
-            request_body_schema=KillProcessRequest,
         ),
         Route(
             path="/process/list_processes",
@@ -134,20 +128,4 @@ def handler(event: Dict, context: Dict) -> Dict:
         function_name=_FN_NAME,
     )
 
-    body = event.get("body")
-
-    logging.debug(f"Agent API called with: {body}")
-
-    kwargs = {}
-
-    if body:
-        kwargs = json.loads(body)
-
-    headers = event.get("headers", {})
-
-    if headers:
-        kwargs["_headers"] = headers
-
-    logging.debug(f"Executing path: {event["rawPath"]}")
-
-    return api.execute_path(path=event["rawPath"], **kwargs)
+    return api.execute_path_from_event(event=event)

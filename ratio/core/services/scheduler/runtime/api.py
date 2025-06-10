@@ -1,9 +1,6 @@
 """
 Scheduler API Interface
 """
-import json
-import logging
-
 from typing import Dict
 
 from da_vinci.core.logging import Logger
@@ -30,18 +27,4 @@ def handler(event: Dict, context: Dict) -> Dict:
         function_name=_FN_NAME,
     )
 
-    body = event.get("body")
-
-    kwargs = {}
-
-    if body:
-        kwargs = json.loads(body)
-
-    headers = event.get("headers", {})
-
-    if headers:
-        kwargs["_headers"] = headers
-
-    logging.debug(f"Executing path: {event["rawPath"]}")
-
-    return api.execute_path(path=event["rawPath"], **kwargs)
+    return api.execute_path_from_event(event=event)

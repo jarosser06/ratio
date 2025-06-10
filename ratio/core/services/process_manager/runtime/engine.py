@@ -27,6 +27,7 @@ from ratio.core.services.storage_manager.request_definitions import (
     PutFileVersionRequest,
 )
 
+# Local runtime imports
 from ratio.core.services.process_manager.runtime.tool import (
     ToolDefinition,
     ToolInstruction,
@@ -105,14 +106,15 @@ class ExecutionEngine:
         Initialize the Engine object.
 
         Keyword arguments:
-        arguments -- The arguments to pass to the 
-        argument_schema -- The schema for the arguments
+        arguments -- The arguments to pass to the tool
         process_id -- The ID of the process
         token -- The token to use for authentication
         working_directory -- The working directory for the execution
-        instructions -- The instructions
-        response_definition -- The response definition for the execution
-        response_reference_map -- The response reference map 
+        argument_schema -- The schema for the arguments
+        instructions -- The instructions for the tool execution
+        response_definition -- The response definition for the tool execution
+        response_reference_map -- The response reference map for the tool execution
+        system_event_endpoint -- The endpoint to send system events to, if any
         """
         self.arguments = arguments
 
@@ -258,7 +260,13 @@ class ExecutionEngine:
 
         # Check if it's a REF that needs resolving, or a direct value
         if isinstance(iterate_over_value, str) and iterate_over_value.startswith("REF:"):
-            resolved_value = self.reference.resolve(reference_string=iterate_over_value, token=self.token)
+            try:
+                resolved_value = self.reference.resolve(reference_string=iterate_over_value, token=self.token)
+
+            except InvalidReferenceError as ref_err:
+                logging.debug(f"Failed to resolve reference {iterate_over_value}: {ref_err}")
+
+                raise InvalidSchemaError(message=strip_class_from_error(str(ref_err)))
 
         else:
             # It's a direct value (could be a list, or anything else)

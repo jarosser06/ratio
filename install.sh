@@ -16,9 +16,11 @@ RTO_DIR="$HOME/.rto"
 SHELL_DIR="$RTO_DIR/shell"
 BIN_DIR="$SHELL_DIR/bin"
 KEYS_DIR="$RTO_DIR/keys"
+FS_SYNC_SCRIPT="ratio_shell/bin/fs_sync"
 
 # Default values
 SKIP_DEPLOY=false
+SYNC_FS=false
 ENTITY_ID="admin"
 DEPLOYMENT_ID="dev"
 VERBOSE=false
@@ -54,6 +56,7 @@ show_usage() {
     echo "  --skip-deploy         Skip CDK deployment (deploy runs by default)"
     echo "  --entity-id ID        Entity ID for admin user (default: admin)"
     echo "  --deployment-id ID    Deployment ID (default: dev)"
+    echo "  --sync-fs             Sync _fs directory to Ratio installation"
     echo "  --verbose             Show detailed output"
     echo "  --help                Show this help message"
     echo ""
@@ -68,6 +71,10 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --skip-deploy)
             SKIP_DEPLOY=true
+            shift
+            ;;
+        --sync-fs)
+            SYNC_FS=true
             shift
             ;;
         --entity-id)
@@ -226,6 +233,30 @@ main() {
         print_error "Installation test failed"
 
         exit 1
+    fi
+
+    if [ "$SYNC_FS" = true ]; then
+        print_status "Syncing _fs directory to Ratio installation..."
+
+        if [ -f "$FS_SYNC_SCRIPT" ]; then
+            # Run the filesystem sync script
+            if bash "$FS_SYNC_SCRIPT" --executable-tools; then
+                print_success "Filesystem sync completed successfully"
+
+            else
+                print_error "Filesystem sync failed"
+
+                exit 1
+            fi
+
+        else
+            print_error "Filesystem sync script not found: $FS_SYNC_SCRIPT"
+
+            exit 1
+        fi
+
+    else
+        print_warning "Skipping filesystem sync"
     fi
 
     # Installation complete

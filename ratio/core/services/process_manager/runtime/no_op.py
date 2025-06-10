@@ -1,3 +1,7 @@
+"""
+Execute no-op tools for skipped executions.
+"""
+
 import json
 import logging
 import os

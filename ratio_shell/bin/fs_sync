@@ -8,6 +8,7 @@ set -e  # Exit on any error
 # Configuration
 FS_SOURCE="_fs"
 RATIO_DEST="ratio:/"
+SET_TOOL_PERMS=""
 TOOL_FILE_PERMS="755"
 
 # Colors for output
@@ -47,6 +48,7 @@ show_usage() {
     echo "  --force           Overwrite existing files"
     echo "  --dry-run         Show what would be done without making changes"
     echo "  --verbose         Show detailed progress"
+    echo "  --executable-tools  Set tool files to executable permissions (755)"
     echo "  --cleanup         Remove incorrectly created _fs directory from ratio root"
     echo "  --help            Show this help message"
     echo ""
@@ -72,6 +74,10 @@ while [[ $# -gt 0 ]]; do
         --dest)
             RATIO_DEST="$2"
             shift 2
+            ;;
+        --executable-tools)
+            SET_TOOL_PERMS="true"
+            shift
             ;;
         --verbose)
             VERBOSE="--verbose"
@@ -119,20 +125,22 @@ rto sync $COMMON_ARGS * "$RATIO_DEST"
 
 print_success "Filesystem sync completed successfully!"
 
-print_status "Setting tool file permissions..."
+if [ -n "$SET_TOOL_PERMS" ]; then
+    print_status "Setting tool file permissions..."
 
-tool_files=$(find . -type f -name "*.tool")
+    tool_files=$(find . -type f -name "*.tool")
 
-for tool_file in $tool_files; do
-    # Get the relative path for the tool file
-    full_path=${tool_file#.}
+    for tool_file in $tool_files; do
+        # Get the relative path for the tool file
+        full_path=${tool_file#.}
 
-    # Sync the tool file with specific permissions
-    print_status "Setting executable permissions for: $full_path"
+        # Sync the tool file with specific permissions
+        print_status "Setting executable permissions for: $full_path"
 
-    rto chmod 755 "$full_path"
-done
+        rto chmod 755 "$full_path"
+    done
+
+    print_success "Tools all set to executable permissions!"
+fi
 
 popd &> /dev/null
-
-print_success "Tools all set to executable permissions!"

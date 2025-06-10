@@ -29,6 +29,11 @@ from ratio.core.tables.entities.client import Entity, EntitiesTableClient
 
 from ratio.core.tables.groups.client import Group, GroupsTableClient
 
+from ratio.core.tables.websocket_connections.client import (
+    WebsocketConnection,
+    WebsocketConnectionsTableClient,
+)
+
 
 AUTH_HEADER = "x-ratio-authorization"
 
@@ -47,7 +52,7 @@ class UnauthorizedError(Exception):
 class Route:
     path: str
     method_name: str
-    requires_auth: bool = False
+    requires_auth: bool = True
     requires_group_id: str = None
     request_body_schema: Type[ObjectBodySchema] = None
     supports_websockets: bool = False
@@ -226,6 +231,8 @@ class OAuthJWTAuthorizer(Authorizer):
         Keyword arguments:
         headers -- The headers dictionary containing Authorization header
         """
+        logging.debug(f"OAuthJWTAuthorizer called with headers: {headers}")
+
         if not headers:
             logging.debug("No headers provided, nothing to authorize")
 
@@ -255,6 +262,8 @@ class OAuthJWTAuthorizer(Authorizer):
 
         # Fall back to JWT auth (same logic as JWTAuthorizer)
         if AUTH_HEADER not in headers:
+            logging.debug("No Authorization header found, nothing to authorize")
+
             return None
 
         auth_header = headers[AUTH_HEADER]
@@ -273,23 +282,6 @@ class OAuthJWTAuthorizer(Authorizer):
             raise UnauthorizedError("Invalid JWT token")
 
 
-def connection_id(request_context: Dict) -> Union[str, None]:
-    """
-    Extract the connection ID from the request context.
-
-    If there is no connection ID, return None.
-
-    Keyword arguments:
-    request_context -- The request context containing connection details
-    """
-    if "_websocket_details" not in request_context:
-        return None
-
-    websocket_details = request_context["_websocket_details"]
-
-    return websocket_details.get("connection_id")
-
-
 def split_on_capital_letters(text: str) -> List[str]:
     """
     Split a string on capital letters.
@@ -300,27 +292,21 @@ def split_on_capital_letters(text: str) -> List[str]:
     return re.split(r'(?=[A-Z])', text)[1:]  # Skip the first empty string
 
 
-def try_websocket_client(request_context: Dict) -> Union[Dict, None]:
+def websocket_client(socket_details: Dict) -> Union[Dict, None]:
     """
     Try to create a WebSocket client for API Gateway Management API
 
     If there is no websocket connection details, return None.
 
     Keyword arguments:
-    request_context -- The request context containing connection details
+    socket_details -- The details of the WebSocket connection, including domain name and stage
     """
+    domain_name = socket_details.get("domain_name")
 
-    if "_websocket_details" not in request_context:
-        return None
-
-    websocket_details = request_context["_websocket_details"]
-
-    domain_name = websocket_details.get("domain_name")
-
-    stage = websocket_details.get("stage")
+    stage = socket_details.get("stage")
 
     return boto3.client(
-        'apigatewaymanagementapi', 
+        "apigatewaymanagementapi",
         endpoint_url=f"https://{domain_name}/{stage}",
     )
 
@@ -355,6 +341,8 @@ class ChildAPI:
 
         # Check if the request is a WebSocket request
         if "_websocket_details" in kwargs:
+            logging.debug(f"WebSocket request detected for path: {path}")
+
             if not route_value.supports_websockets:
                 return self.respond(
                     body={"message": "WebSocket support not enabled for this route ... use HTTP instead"},
@@ -363,31 +351,59 @@ class ChildAPI:
 
             self.websocket_details = kwargs["_websocket_details"]
 
-        headers = kwargs.get("_headers")
+            # Lookup information in the WebSocket connections table
+            ws_tbl_client = WebsocketConnectionsTableClient()
 
-        # Remove headers from kwargs
-        if headers:
-            del kwargs["_headers"]
+            websocket_conn = ws_tbl_client.get(
+                connection_id=self.websocket_details["connection_id"]
+            )
 
-        try:
-            request_context = self.authorizer(headers)
+            if not websocket_conn:
+                logging.warning(f"WebSocket connection {self.websocket_details["connection_id"]} not found")
 
-        except UnauthorizedError:
-            return self.respond(body={"message": "unauthorized"}, status_code=401)
-
-        if request_context:
-            request_context["path"] = path
-
-        else:
-            if route_value.requires_auth:
                 return self.respond(
-                    body={"message": "unauthorized"},
-                    status_code=401
+                    body={"message": "WebSocket connection not found"},
+                    status_code=404
                 )
 
             request_context = {
                 "path": path,
+                "request_claims": websocket_conn.session_claims,
+                "signed_token": websocket_conn.session_token,
+                "websocket_details": self.websocket_details,
             }
+
+        # Only handle authentication if not websocket request. Websocket authentication is handled during connection
+        else:
+            headers = kwargs.get("_headers")
+
+            # Remove headers from kwargs
+            if headers:
+                del kwargs["_headers"]
+
+            try:
+                request_context = self.authorizer(headers)
+
+            except UnauthorizedError as auth_err:
+                logging.warning(f"Unauthorized access attempt to {path}: {auth_err}")
+
+                return self.respond(body={"message": "unauthorized"}, status_code=401)
+
+            if request_context:
+                request_context["path"] = path
+
+            else:
+                if route_value.requires_auth:
+                    logging.warning(f"Unauthorized access attempt to {path}")
+
+                    return self.respond(
+                        body={"message": "unauthorized"},
+                        status_code=401
+                    )
+
+                request_context = {
+                    "path": path,
+                }
 
         if route_value.request_body_schema:
             try:
@@ -459,24 +475,31 @@ class ChildAPI:
             body = json.dumps(body)
 
         if self.websocket_details:
+            logging.debug(f"WebSocket response detected for connection ID: {self.websocket_details['connection_id']}")
+
             # If this is a WebSocket response, we need to use the WebSocket client
-            websocket_client = try_websocket_client(self.websocket_details)
-
-            if not websocket_client:
-                logging.error("WebSocket client could not be created")
-
-                return {
-                    "body": json.dumps({"message": "WebSocket response failed"}),
-                    "statusCode": 500,
-                }
+            ws_client = websocket_client(self.websocket_details)
 
             try:
-                websocket_client.post_to_connection(
-                    ConnectionId=connection_id(self.websocket_details),
-                    Data=body
+                websocket_body = body
+
+                # If the status code is 400 or less, we assume it's an error and send it as an error message
+                if status_code >= 400:
+                    websocket_body = json.dumps({
+                        "error": True,
+                        "original_body": body,
+                        "status_code": status_code,
+                    })
+
+                ws_client.post_to_connection(
+                    ConnectionId=self.websocket_details["connection_id"],
+                    Data=websocket_body.encode('utf-8'),
                 )
 
-                return
+                return {
+                    "statusCode": 200,
+                    "body": ""
+                }
 
             except Exception as excp:
                 logging.error(f"Error sending WebSocket message: {excp}")
@@ -544,7 +567,7 @@ class ParentAPI(ChildAPI):
         if headers:
             kwargs["_headers"] = headers
 
-        path = event["rawPath"]
+        path = event.get("rawPath")
 
         if "requestContext" in event:
             if "connectionId" in event["requestContext"]:
@@ -562,13 +585,55 @@ class ParentAPI(ChildAPI):
 
                 route_key = event['requestContext']['routeKey']
 
+                # Retrieve and store the Websocket session details
                 if route_key == "$connect":
-                    return self.respond(
-                        body={"message": "Connection established"},
-                        status_code=200,
+                    logging.debug("WebSocket connection attempt detected")
+
+                    if not headers:
+                        logging.warning("No headers provided for WebSocket connection attempt")
+
+                        return self.respond(
+                            body={"message": "unauthorized"},
+                            status_code=401
+                        )
+
+                    request_context = self.authorizer(headers)
+
+                    if not request_context:
+                        logging.warning("Unauthorized connection attempt")
+
+                        return self.respond(
+                            body={"message": "unauthorized"},
+                            status_code=401
+                        )
+
+                    session_claims = request_context["request_claims"]
+
+                    session_token = request_context["signed_token"]
+
+                    websocket_conn = WebsocketConnection(
+                        connection_id=event["requestContext"]["connectionId"],
+                        domain_name=domain_name,
+                        session_claims=session_claims,
+                        session_token=session_token,
+                        stage=stage
                     )
 
+                    ws_tbl_client = WebsocketConnectionsTableClient()
+
+                    ws_tbl_client.put(websocket_conn)
+
+                    return self.respond(body={"message": "Connection established"}, status_code=200)
+
                 elif route_key == "$disconnect":
+                    ws_tbl_client = WebsocketConnectionsTableClient()
+
+                    connection_id = event["requestContext"]["connectionId"]
+
+                    logging.debug(f"Disconnecting WebSocket connection ID: {connection_id}")
+
+                    ws_tbl_client.delete_by_id(connection_id=connection_id)
+
                     return self.respond(
                         body={"message": "Connection closed"},
                         status_code=200,
@@ -581,13 +646,21 @@ class ParentAPI(ChildAPI):
 
                     service = path_parts[0].lower()
 
-                    action = path_parts[1:].lower()
+                    action = ''.join([part.lower() for part in path_parts[1:]])
 
                     path = f"/{service}/{action}"
 
                     logging.debug(f"Extracted path {path} from route key {route_key}")
 
-        logging.debug(f"Executing path: {event["rawPath"]}")
+        logging.debug(f"Executing path: {path}")
+
+        if not path:
+            logging.error("No path found, cannot execute")
+
+            return self.respond(
+                body={"message": "No path found in event"},
+                status_code=500
+            )
 
         return self.execute_path(path=path, **kwargs)
 
@@ -599,6 +672,8 @@ class ParentAPI(ChildAPI):
         path -- The path
         """
         if not self.has_route(path):
+            logging.error(f"Path {path} not found in route map")
+
             return self.respond(
                 body={"message": f"{path} route not found"},
                 status_code=404

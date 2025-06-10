@@ -15,6 +15,8 @@ class ExecuteToolRequest(RequestBody):
 
     requires_auth = True
 
+    supports_websockets = True
+
     attribute_definitions = [
         RequestBodyAttribute(
             name="arguments",

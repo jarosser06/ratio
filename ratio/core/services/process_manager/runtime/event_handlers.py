@@ -40,6 +40,7 @@ from ratio.core.services.process_manager.runtime.tool import (
     ToolDefinition,
     ToolInstruction,
     ToolExportError,
+    TOOL_IO_FILE_TYPE,
 )
 
 from ratio.core.services.process_manager.runtime.engine import (
@@ -61,20 +62,20 @@ from ratio.core.services.process_manager.runtime.no_op import execute_no_ops
 from ratio.core.services.process_manager.runtime.reference import (
     InvalidReferenceError,
 )
+from ratio.core.services.process_manager.runtime.streaming import stream_response
 
 from ratio.core.services.process_manager.runtime.token import (
     token_check_and_refresh
 )
 
 
-def _aggregate_parallel_responses(all_children: List[Process], original_execution_id: str, parent_proc: Process, execution_engine: ExecutionEngine,
+def _aggregate_parallel_responses(all_children: List[Process], original_execution_id: str, execution_engine: ExecutionEngine,
                                   token: str) -> None:
     """
     Aggregate all parallel responses and add to execution engine references as a list.
 
     Keyword arguments:
     original_execution_id -- The original execution ID of the parallel group.
-    parent_proc -- The parent process that initiated the parallel group.
     execution_engine -- The execution engine for the parallel group.
     token -- The authentication token for the request.
     """
@@ -116,12 +117,46 @@ def _aggregate_parallel_responses(all_children: List[Process], original_executio
 
             if resp.status_code == 200:
                 child_response = json.loads(resp.response_body["data"])
+
                 individual_responses.append(child_response)
+
             else:
                 # Handle missing response - append None or empty object
                 individual_responses.append(None)
 
     logging.debug(f"Aggregated {len(individual_responses)} parallel responses for execution {original_execution_id}")
+
+    # Save the aggregated response to file system
+    aggregated_response_path = os.path.join(
+        execution_engine.get_path(), 
+        f"{original_execution_id}_response.aio"
+    )
+
+    # Create and save the response file
+    put_file_request = ObjectBody(
+        schema=PutFileRequest,
+        body={
+            "file_path": aggregated_response_path,
+            "file_type": TOOL_IO_FILE_TYPE,
+            "permissions": "644",
+            "metadata": {
+                "description": "Aggregated parallel responses",
+                "execution_id": original_execution_id,
+            }
+        }
+    )
+
+    storage_client.request(path="/storage/put_file", request=put_file_request)
+
+    put_file_version_request = ObjectBody(
+        schema=PutFileVersionRequest,
+        body={
+            "file_path": aggregated_response_path,
+            "data": json.dumps({"response": individual_responses}),
+        }
+    )
+
+    storage_client.request(path="/storage/put_file_version", request=put_file_version_request)
 
     # Add the aggregated response as a list to the execution engine's reference system
     execution_engine.reference.add_response(
@@ -133,11 +168,14 @@ def _aggregate_parallel_responses(all_children: List[Process], original_executio
 
     logging.debug(f"Added aggregated response list to references: {original_execution_id}.response")
 
+    return aggregated_response_path
+
 
 def _close_out_process(process: Process, token: str, failure_reason: Optional[str] = None, notify_parent: bool = False,
                        response_path: str = None, skip_failure_notification: bool = False):
     """
-    Close out the process with the given status.
+    Close out the process and notify the parent if necessary. If the execution is streaming with websockets,
+    it will also stream the response or failure reason.
 
     Keyword arguments:
     process -- The process to close out.
@@ -200,6 +238,8 @@ def _close_out_process(process: Process, token: str, failure_reason: Optional[st
             )
         )
 
+        
+
     if failure_reason and not skip_failure_notification:
         parent_proc = proc_client.get_by_id(process_id=process.parent_process_id)
 
@@ -216,7 +256,6 @@ def _close_out_process(process: Process, token: str, failure_reason: Optional[st
         )
 
         # Send the event to the parent process
-
         event_publisher.submit(
             event=EventBusEvent(
                 body=event_body,
@@ -539,13 +578,16 @@ def _execute_children(claims: JWTClaims, execution_engine: ExecutionEngine, exec
         logging.debug(f"Event published for {execution_id}: {event}")
 
 
+
+
+
 _COMPLETE_FN_NAME = "ratio.services.process.process_complete_handler"
 
 
 @fn_event_response(exception_reporter=ExceptionReporter(), function_name=_COMPLETE_FN_NAME, logger=Logger(_COMPLETE_FN_NAME))
 def process_complete_handler(event: Dict, context: Dict):
     """
-    Execute the tool
+    Handler for tool completion events. This function is responsible for coordinating completion of tools.
     """
     logging.debug(f"Received request: {event}")
 
@@ -583,7 +625,20 @@ def process_complete_handler(event: Dict, context: Dict):
             token=token,
         )
 
+        stream_response(
+            process=proc,
+            failure_reason=failure,
+            final_response=True,
+            source_event=source_event,
+        )
+
         return
+
+    stream_response(
+        final_response=False,
+        process=proc,
+        response_path=event_body["response"],
+    )
 
     self_is_parent = False
 
@@ -684,7 +739,7 @@ def process_complete_handler(event: Dict, context: Dict):
                 try:
                     execution_engine.mark_completed(execution_id=child.execution_id, response_path=child.response_path)
 
-                except InvalidSchemaError as invalid_err:
+                except (InvalidSchemaError, InvalidReferenceError) as invalid_err:
                     logging.debug(f"Error marking execution {child.execution_id} as completed: {invalid_err}")
 
                     _close_out_process(
@@ -725,7 +780,6 @@ def process_complete_handler(event: Dict, context: Dict):
             aggregated_response_path = _aggregate_parallel_responses(
                 all_children=all_children,
                 original_execution_id=parallel_group,
-                parent_proc=parent_proc,
                 execution_engine=execution_engine,
                 token=token
             )
@@ -741,7 +795,19 @@ def process_complete_handler(event: Dict, context: Dict):
 
             return
 
-    execution_ids, skipped_ids = execution_engine.get_available_executions()
+    try:
+        execution_ids, skipped_ids = execution_engine.get_available_executions()
+
+    except InvalidSchemaError as invalid_err:
+        logging.debug(f"Error getting available executions: {invalid_err}")
+
+        _close_out_process(
+            process=parent_proc,
+            failure_reason=f"error getting available executions {invalid_err}",
+            token=token,
+        )
+
+        return
 
     claims = InternalJWTManager.verify_token(token=token)
 
@@ -772,6 +838,12 @@ def process_complete_handler(event: Dict, context: Dict):
 
         try:
             response_path = execution_engine.close()
+
+            stream_response(
+                process=parent_proc,
+                response_path=response_path,
+                source_event=source_event.to_dict(),
+            )
 
         except InvalidSchemaError as invalid_err:
             logging.debug(f"Error closing execution engine, encountered invalid schema: {invalid_err}")

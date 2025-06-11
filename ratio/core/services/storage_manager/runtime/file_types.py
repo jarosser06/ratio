@@ -52,11 +52,6 @@ class FileTypesAPI(ChildAPI):
         ),
     ]
 
-    def __init__(self):
-        super().__init__()
-
-        self.file_types_table_client = FileTypeTableClient()
-
     def delete_file_type(self, request_body: ObjectBody, request_context: Dict):
         """
         Delete a file type from the database.
@@ -76,8 +71,9 @@ class FileTypesAPI(ChildAPI):
                 status_code=403,
                 body={"message": "insufficient permissions"},
             )
+        file_types_table_client = FileTypeTableClient()
 
-        f_type = self.file_types_table_client.get(type_name=request_body["file_type"])
+        f_type = file_types_table_client.get(type_name=request_body["file_type"])
 
         if not f_type:
             return self.respond(
@@ -95,7 +91,7 @@ class FileTypesAPI(ChildAPI):
                 body={"message": "cannot delete file type that is in use"},
             )
 
-        self.file_types_table_client.delete(file_type=f_type)
+        file_types_table_client.delete(file_type=f_type)
 
         publish_file_type_update_event(
             file_type=f_type.type_name,
@@ -122,7 +118,9 @@ class FileTypesAPI(ChildAPI):
         """
         logging.info("Executing describe_file_type")
 
-        f_type = self.file_types_table_client.get(type_name=request_body["file_type"])
+        file_types_table_client = FileTypeTableClient()
+
+        f_type = file_types_table_client.get(type_name=request_body["file_type"])
 
         if not f_type:
             return self.respond(
@@ -145,7 +143,9 @@ class FileTypesAPI(ChildAPI):
         """
         logging.info("Executing list_file_types")
 
-        file_types = self.file_types_table_client.list()
+        file_types_table_client = FileTypeTableClient()
+
+        file_types = file_types_table_client.list()
 
         return self.respond(
             body={"file_types": [f_type.to_dict(json_compatible=True) for f_type in file_types]},
@@ -186,7 +186,9 @@ class FileTypesAPI(ChildAPI):
             name_restrictions=request_body["name_restrictions"],
         )
 
-        self.file_types_table_client.put(file_type=f_type)
+        file_types_table_client = FileTypeTableClient()
+
+        file_types_table_client.put(file_type=f_type)
 
         publish_file_type_update_event(
             file_type=f_type.type_name,

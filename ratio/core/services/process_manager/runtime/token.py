@@ -87,6 +87,7 @@ def token_check_and_refresh(token: str) -> str:
         # Token expired, try to refresh if we can decode it
         try:
             _, payload_b64, _ = token.split('.')
+
             payload = InternalJWTManager.decode_segment(payload_b64)
 
             expired_claims = JWTClaims.from_claims(claims=payload)

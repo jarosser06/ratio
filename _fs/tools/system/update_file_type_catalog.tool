@@ -5,7 +5,7 @@
       "execution_id": "fetch_file_types",
       "tool_definition_path": "/tools/core/internal_api.tool",
       "arguments": {
-        "path": "/list_file_types",
+        "path": "/storage/list_file_types",
         "target_service": "STORAGE",
         "request": {}
       }

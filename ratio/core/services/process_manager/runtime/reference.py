@@ -207,7 +207,7 @@ class ReferenceValueFile(ReferenceValueBase):
             )
 
             if file_version_response.status_code != 200:
-                raise ValueError(f"Failed to get file {self.original_value}: {file_version_response.status_code} - {file_version_response.response_body}")
+                raise InvalidReferenceError(f"Failed to get file {self.original_value}: {file_version_response.status_code} - {file_version_response.response_body}")
 
             return file_version_response.response_body["data"]
 
@@ -365,7 +365,7 @@ class Reference:
 
         Keyword arguments:
         ref_string -- The REF string to resolve (e.g., "REF:arguments.input_file.path")
-        token -- Optional token for file access (if needed)
+        token -- Optional token for file type references that require authentication
         """
         logging.debug(f"Resolving reference: {reference_string}")
 

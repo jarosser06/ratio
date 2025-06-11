@@ -60,6 +60,7 @@ class ExecuteAPI(ChildAPI):
             path="/process/execute",
             method_name="execute_tool",
             request_body_schema=ExecuteToolRequest,
+            supports_websockets=True,
         ),
         Route(
             path="/process/validate_definition",
@@ -283,9 +284,20 @@ class ExecuteAPI(ChildAPI):
 
         claims = JWTClaims.from_claims(claims=request_context["request_claims"])
 
+        websocket_connection_id = None
+
+        # Check for websocket information in request context
+        if "websocket_details" in request_context:
+            logging.debug("Websocket details found in request context ... setting up for streaming responses")
+
+            websocket_details = request_context["websocket_details"]
+
+            websocket_connection_id = websocket_details["connection_id"]
+
         # Create a new process, this will be the parent for composite tools and the process for the tool
         proc = Process(
             process_owner=claims.entity,
+            websocket_connection_id=websocket_connection_id,
             working_directory=working_directory,
         )
 
@@ -555,7 +567,6 @@ class ExecuteAPI(ChildAPI):
             # Publish the event
             event_bus_client.submit(event=event)
 
-        # Initialize the engine with 
         return self.respond(
             status_code=200,
             body={

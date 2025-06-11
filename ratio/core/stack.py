@@ -18,10 +18,16 @@ from da_vinci_cdk.constructs.base import resource_namer
 from da_vinci_cdk.constructs.global_setting import GlobalSetting, GlobalSettingType
 from da_vinci_cdk.constructs.service import APIGatewayRESTService
 
+from da_vinci_cdk.constructs.resource_discovery import DiscoverableResource
 
 from ratio.core.tables.entities.stack import Entity, EntitiesTableStack
 
 from ratio.core.tables.groups.stack import Group, GroupsTableStack
+
+from ratio.core.tables.websocket_connections.stack import (
+    WebsocketConnection,
+    WebsocketConnectionsTableStack,
+)
 
 
 
@@ -33,6 +39,7 @@ class RatioCoreStack(Stack):
             required_stacks=[
                 EntitiesTableStack,
                 GroupsTableStack,
+                WebsocketConnectionsTableStack,
             ],
             scope=scope,
             stack_name=stack_name
@@ -124,7 +131,7 @@ class RatioCoreStack(Stack):
             ),
         )
 
-        admin_table_actions = [
+        rest_provider_table_actions = [
             "dynamodb:BatchGetItem",
             "dynamodb:BatchWriteItem",
             "dynamodb:DescribeTable",
@@ -139,7 +146,7 @@ class RatioCoreStack(Stack):
             "dynamodb:Scan"
         ]
 
-        admin_table_arns = [
+        rest_provider_table_arns = [
             Stack.of(self).format_arn(
                 service="dynamodb",
                 resource="table",
@@ -150,9 +157,14 @@ class RatioCoreStack(Stack):
                 resource="table",
                 resource_name=resource_namer(name=Group.table_name, scope=self),
             ),
+            Stack.of(self).format_arn(
+                service="dynamodb",
+                resource="table",
+                resource_name=resource_namer(name=WebsocketConnection.table_name, scope=self),
+            ),
         ]
 
-        admin_table_resources = admin_table_arns + [f"{tbl_arn}/*" for tbl_arn in admin_table_arns]
+        rest_provider_table_resources = rest_provider_table_arns + [f"{tbl_arn}/*" for tbl_arn in rest_provider_table_arns]
 
         ResourceAccessPolicy(
             scope=self,
@@ -164,8 +176,8 @@ class RatioCoreStack(Stack):
                 ),
                 cdk_iam.PolicyStatement(
                     effect=cdk_iam.Effect.ALLOW,
-                    actions=admin_table_actions,
-                    resources=admin_table_resources,
+                    actions=rest_provider_table_actions,
+                    resources=rest_provider_table_resources,
                 )
             ],
             resource_name="PUBLIC_API_ACCESS",
@@ -214,6 +226,15 @@ class RatioCoreStack(Stack):
         # Set up the Websocket API
         self.ws_api = WebSocketApi(self, "ratio-ws-api")
 
+        # Make the WebSocket API discoverable
+        DiscoverableResource(
+            construct_id="ratio-ws-api-discovery",
+            scope=self,
+            resource_name="ws_api",
+            resource_type="RATIO_WEBSOCKET_API",
+            resource_endpoint=f"{self.ws_api.api_endpoint}/{self.node.get_context('deployment_id')}",
+        )
+
         WebSocketStage(
             self,
             "ratio-ws-api-stage",
@@ -227,10 +248,25 @@ class RatioCoreStack(Stack):
             resources=[f"arn:aws:execute-api:{self.region}:{self.account}:{self.ws_api.api_id}/*"]
         )
 
-        self.default_access_policy = ResourceAccessPolicy(
+        ws_table_resources = [
+            Stack.of(self).format_arn(
+                service="dynamodb",
+                resource="table",
+                resource_name=resource_namer(name=WebsocketConnection.table_name, scope=self),
+            ),
+        ]
+
+        ws_table_resources += [f"{tbl_arn}/*" for tbl_arn in ws_table_resources]
+
+        ResourceAccessPolicy(
             scope=self,
             policy_statements=[
                 self.websocket_access_statement,
+                cdk_iam.PolicyStatement(
+                    effect=cdk_iam.Effect.ALLOW,
+                    actions=rest_provider_table_actions,
+                    resources=ws_table_resources,
+                )
             ],
             resource_name="websocket_api",
             resource_type="RATIO_CUSTOM_POLICY",

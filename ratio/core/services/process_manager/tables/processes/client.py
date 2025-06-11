@@ -111,6 +111,13 @@ class Process(TableObject):
         ),
 
         TableObjectAttribute(
+            name="websocket_connection_id",
+            attribute_type=TableObjectAttributeType.STRING,
+            description="The websocket connection id for the process. Used for real-time updates.",
+            optional=True,
+        ),
+
+        TableObjectAttribute(
             name="working_directory",
             attribute_type=TableObjectAttributeType.STRING,
             description="The working directory of the process.",
@@ -135,12 +142,13 @@ class Process(TableObject):
             execution_id=execution_id,
             execution_status=execution_status,
             parent_process_id=self.process_id,
-            working_directory=working_directory,
             process_owner=process_owner or self.process_owner,
             process_id=process_id or str(uuid4()),
             status_message=None,
             started_on=datetime.now(utc_tz),
             ended_on=None,
+            websocket_connection_id=self.websocket_connection_id,
+            working_directory=working_directory,
         )
 
 

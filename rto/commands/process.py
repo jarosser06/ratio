@@ -1,6 +1,7 @@
 
 import json
 import time
+import threading
 
 from argparse import ArgumentParser
 
@@ -148,7 +149,74 @@ class ExecuteToolCommand(RTOCommand):
 
         parser.add_argument("--wait-period-seconds", help="Wait period in seconds for tool execution", type=int, default=15)
 
-        parser.add_argument("--wait", help="Wait for the tool execution to complete", action="store_true", default=False)
+        wait_group = parser.add_mutually_exclusive_group()
+
+        wait_group.add_argument("--wait", help="Wait for the tool execution to complete", action="store_true", default=False)
+
+        wait_group.add_argument("--stream", help="Stream execution updates via WebSocket", action="store_true", default=False)
+
+    def _execute_with_streaming(self, client: Ratio, request: ExecuteToolRequest, args):
+        """
+        Execute tool with WebSocket streaming
+
+        Keyword arguments:
+        client -- The Ratio client
+        request -- The ExecuteToolRequest object
+        """
+        execution_complete = threading.Event()
+
+        def on_message(ws, message):
+            print(f"WebSocket message received: {message}")
+
+            data = json.loads(message)
+
+            if "error" in data and data["error"]:
+                execution_complete.set()
+
+                raise RTOErrorMessage(f"Error during execution: {data["original_body"]}")
+
+            if "final_response" in data:
+                if data["final_response"] == True:
+                    print("Execution complete")
+
+                    execution_complete.set()
+
+        def on_error(ws, error):
+            print(f"WebSocket error: {error}")
+
+            execution_complete.set()
+
+        def on_close(ws, close_status_code, close_msg):
+            if not execution_complete.is_set():
+                print("WebSocket connection closed unexpectedly")
+
+            execution_complete.set()
+
+        # Connect to WebSocket and send request
+        try:
+            client.connect_websocket(
+                on_message=on_message,
+                on_error=on_error, 
+                on_close=on_close,
+                connect_timeout=10.0  # Wait for connection
+            )
+
+            # Send the execution request
+            client.send_message(request)
+
+            # Wait for execution to complete
+            if not args.json:
+                print("Waiting for execution to complete...")
+
+            execution_complete.wait()
+
+            client.close_websocket()
+
+        except ConnectionError as e:
+            raise RTOErrorMessage(f"Failed to establish WebSocket connection: {e}")
+
+        except Exception as e:
+            raise RTOErrorMessage(f"Error during streaming execution: {e}")
 
     def execute(self, client: Ratio, config: RTOConfig, args):
         """
@@ -171,6 +239,9 @@ class ExecuteToolCommand(RTOCommand):
             execute_as=args.execute_as,
             working_directory=args.working_directory
         )
+
+        if args.stream:
+            return self._execute_with_streaming(client, request, args)
 
         resp = client.request(request, raise_for_status=False)
 

@@ -3,7 +3,7 @@
   "arguments": [
     {
       "name": "tools_directory",
-      "type_name": "file",
+      "type_name": "string",
       "description": "Directory containing tool definitions to analyze",
       "default_value": "/tools/core",
       "required": false
@@ -23,13 +23,9 @@
       "arguments": {
         "directory_path": "REF:arguments.tools_directory"
       },
-      "transform_results": {
-        "variables": {
-          "all_files": "REF:response.files",
-        },
+      "transform_responses": {
         "transforms": {
-          "tool_files": "pipeline(all_files, [filter(array=current, condition_string=\"item.file_path contains '.tool'\"), map(array=current, template=\"item.file_path\")])",
-          "file_count": "REF:response.files.length"
+          "tool_files": "pipeline(files, [filter(array=current, condition_string=\"item.file_path contains '.tool'\"), map(array=current, template=\"item.file_path\")])"
         }
       }
     },

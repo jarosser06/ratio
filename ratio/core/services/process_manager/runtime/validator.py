@@ -1,7 +1,6 @@
 """
 Reference validation module for tool instructions.
 """
-
 import re
 import logging
 from typing import Any, Dict, List, Tuple

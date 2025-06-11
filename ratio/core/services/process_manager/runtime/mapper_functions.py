@@ -1,10 +1,10 @@
 """
 Mapper functions for Tool Manager Transformations
 """
+import fnmatch
 import json
 import logging
 import re
-import fnmatch
 
 from datetime import datetime, UTC as utc_tz
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -25,6 +25,13 @@ from ratio.core.services.storage_manager.request_definitions import (
 
 class MappingContext:
     def __init__(self, data: Dict, token: str):
+        """
+        Initializes the mapping context with data and token.
+
+        Keyword Arguments:
+        data -- The data to use in the mapping context, typically a dictionary of variables.
+        token -- The authentication token for the Ratio service
+        """
         self.data = data
 
         self.token = token
@@ -80,33 +87,41 @@ class ExpressionEvaluator:
             return not self.evaluate(expr[4:])
 
         # Handle comparison operators
-        operators = ['>=', '<=', '==', '!=', '>', '<']
+        operators = ['>=', '<=', '==', '!=', '>', '<', 'contains']
 
         for op in operators:
-            if op in expr:
-                left, right = expr.split(op, 1)
+            if f" {op} " in expr:
+                left, right = expr.split(f" {op} ", 1)
 
                 left_val = self._resolve_value(left.strip())
 
                 right_val = self._resolve_value(right.strip())
 
-                if op == '==':
+                if op == "==":
                     return left_val == right_val
 
-                elif op == '!=':
+                elif op == "!=":
                     return left_val != right_val
 
-                elif op == '>':
+                elif op == ">":
                     return left_val > right_val
 
-                elif op == '<':
+                elif op == "<":
                     return left_val < right_val
 
-                elif op == '>=':
+                elif op == ">=":
                     return left_val >= right_val
 
-                elif op == '<=':
+                elif op == "<=":
                     return left_val <= right_val
+
+                elif op == "contains":
+                    # Convert both to strings for contains check
+                    left_str = str(left_val) if left_val is not None else ''
+
+                    right_str = str(right_val) if right_val is not None else ''
+
+                    return right_str in left_str
 
         # If no operators found, treat as boolean value
         return bool(self._resolve_value(expr))
@@ -117,6 +132,9 @@ class ExpressionEvaluator:
 
         Keyword arguments:
         value_str -- The string representation of the value, e.g. "item.error_count", "42", "'active'", etc.
+
+        Returns:
+            The resolved value, which can be a string, int, float, bool, or property from context.
         """
         value_str = value_str.strip()
 

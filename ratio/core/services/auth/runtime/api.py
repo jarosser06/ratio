@@ -1,9 +1,6 @@
 """
-Primary API
+Auth API
 """
-import json
-import logging
-
 from typing import Dict
 
 from da_vinci.core.logging import Logger
@@ -21,7 +18,7 @@ _FN_NAME = "ratio.services.auth.api"
 @fn_exception_reporter(function_name=_FN_NAME, logger=Logger(_FN_NAME), re_raise=True)
 def handler(event: Dict, context: Dict) -> Dict:
     """
-    Function handler for the API Gateway
+    Function handler for auth service
     """
     api = ParentAPI(
         child_apis=[
@@ -30,18 +27,4 @@ def handler(event: Dict, context: Dict) -> Dict:
         function_name=_FN_NAME,
     )
 
-    body = event.get("body")
-
-    kwargs = {}
-
-    if body:
-        kwargs = json.loads(body)
-
-    headers = event.get("headers", {})
-
-    if headers:
-        kwargs["_headers"] = headers
-
-    logging.debug(f"Executing path: {event["rawPath"]}")
-
-    return api.execute_path(path=event["rawPath"], **kwargs)
+    return api.execute_path_from_event(event=event)

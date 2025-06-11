@@ -9,9 +9,12 @@ from aws_cdk.aws_apigatewayv2 import (
     HttpMethod,
     HttpRoute,
     HttpRouteKey,
+    WebSocketApi,
+    WebSocketRoute,
 )
 from aws_cdk.aws_apigatewayv2_integrations import (
     HttpLambdaIntegration,
+    WebSocketLambdaIntegration,
 )
 
 from constructs import Construct
@@ -138,4 +141,47 @@ class AuthStack(Stack):
             ),
             route_key=HttpRouteKey.with_(path="/initialize", method=HttpMethod.POST),
             http_api=self.api,
+        )
+
+        # Set connect and disconnect routes for WebSocket API
+        ws_api_id = GlobalSettingLookup(
+            scope=self,
+            construct_id="ws-api-id-lookup",
+            namespace="ratio::core",
+            setting_key="websocket_api_id",
+        )
+
+        self.ws_api = WebSocketApi.from_web_socket_api_attributes(
+            scope=self,
+            id="ratio-ws-api",
+            web_socket_id=ws_api_id.get_value()
+        )
+
+        ws_integration = WebSocketLambdaIntegration(
+            "auth-execute-integration",
+            handler=self.auth_handler.function,
+        )
+
+        WebSocketRoute(
+            scope=self,
+            id="auth-execute-connect-route",
+            integration=ws_integration,
+            route_key="$connect",
+            web_socket_api=self.ws_api,
+        )
+
+        WebSocketRoute(
+            scope=self,
+            id="auth-execute-disconnect-route",
+            integration=ws_integration,
+            route_key="$disconnect",
+            web_socket_api=self.ws_api,
+        )
+
+        WebSocketRoute(
+            scope=self,
+            id="auth-execute-default-route",
+            integration=ws_integration,
+            route_key="$default",
+            web_socket_api=self.ws_api,
         )

@@ -10,6 +10,9 @@ from da_vinci.core.immutable_object import (
 
 
 class ExecuteToolInternalRequest(ObjectBodySchema):
+    """
+    Event body for internal tool execution requests.
+    """
     attributes = [
         SchemaAttribute(
             name="arguments_path",

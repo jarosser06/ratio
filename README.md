@@ -1,13 +1,9 @@
 Ratio
 =====
 
-Ratio is an AI composition platform designed to support building and evolving AI-based systems. Ratio provides building
-blocks where AI can operate with structured agency.
-
-The system treats everything as files which creates a persistent knowledge base that can be self-referencable, enabling AI to assist in generating other tools, analyze past executions, and build self-documenting catalogs of what works.
-
-Named after the Golden Ratio, it's an attempt to find the right balance between AI capability and engineering safety. Meant to be 
-infrastructure designed to support AI evolution systematically rather than chaotically.
+Ratio is an AI composition platform designed to support building autonomous AI systems. The intent was
+to have a cloud-native framework/platform, that provides an operational safety net around
+flexible process execution.
 
 ## Architecture Overview
 

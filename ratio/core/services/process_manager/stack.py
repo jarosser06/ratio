@@ -338,13 +338,15 @@ class ProcessManagerStack(Stack):
             web_socket_id=ws_api_id.get_value()
         )
 
+        ws_integration = WebSocketLambdaIntegration(
+            "process-execute-integration",
+            handler=self.process_manager.handler.function,
+        )
+
         WebSocketRoute(
             scope=self,
-            id="default-route",
-            integration=WebSocketLambdaIntegration(
-                "default-integration",
-                handler=self.process_manager.handler.function,
-            ),
-            route_key="$default",
+            id="process-execute-route",
+            integration=ws_integration,
+            route_key="ProcessExecute",
             web_socket_api=self.ws_api,
         )
